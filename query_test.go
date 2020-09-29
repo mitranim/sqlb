@@ -143,3 +143,24 @@ func TestQueryAppendNamed(t *testing.T) {
 		}
 	})
 }
+
+func TestQueryAppendQuery(t *testing.T) {
+	var inner Query
+	inner.Append(`$1 $2 $3`, 30, 40, 50)
+
+	var outer Query
+	outer.Append(`$1 $2`, 10, 20)
+	outer.AppendQuery(inner)
+
+	strExpected := `$1 $2 $3 $4 $5`
+	strActual := outer.String()
+	if strExpected != strActual {
+		t.Fatalf(`expected query %q, got %q`, strExpected, strActual)
+	}
+
+	argsExpected := []interface{}{10, 20, 30, 40, 50}
+	argsActual := outer.Args
+	if !reflect.DeepEqual(argsExpected, argsActual) {
+		t.Fatalf(`expected args %#v, got %#v`, argsExpected, argsActual)
+	}
+}

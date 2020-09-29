@@ -1,8 +1,6 @@
 package sqlb
 
 import (
-	"fmt"
-	"reflect"
 	"regexp"
 	"strconv"
 
@@ -12,8 +10,8 @@ import (
 /*
 Scans a struct, accumulating fields tagged with `db` into a map suitable for
 `Query.AppendNamed()`. The input must be a struct or a struct pointer. A nil
-pointer is fine and produces a nil result. Panics on other inputs. Treats an
-embedded struct as part of the enclosing struct.
+pointer is fine and produces a nil result. Panics on other inputs. Treats
+embedded structs as part of enclosing structs.
 */
 func StructMap(input interface{}) map[string]interface{} {
 	dict := map[string]interface{}{}
@@ -37,65 +35,18 @@ func StructNamedArgs(input interface{}) NamedArgs {
 	return args
 }
 
-func traverseStructDbFields(input interface{}, fun func(string, interface{})) {
-	rval := reflect.ValueOf(input)
-	rtype := refut.RtypeDeref(rval.Type())
-
-	if rtype.Kind() != reflect.Struct {
-		panic(Err{
-			Code:  ErrCodeInvalidInput,
-			While: `traversing struct for DB fields`,
-			Cause: fmt.Errorf(`expected struct, got %q`, rtype),
-		})
-	}
-
-	if refut.IsRvalNil(rval) {
-		return
-	}
-
-	err := refut.TraverseStructRval(rval, func(rval reflect.Value, sfield reflect.StructField, _ []int) error {
-		colName := sfieldColumnName(sfield)
-		if colName == "" {
-			return nil
-		}
-		fun(colName, rval.Interface())
-		return nil
-	})
-	if err != nil {
-		panic(err)
-	}
-}
-
 /*
-Sequence of named SQL arguments with utility methods for query building.
-Usually obtained by calling `StructNamedArgs()`.
+Sequence of named SQL arguments with utility methods for query building. Usually
+obtained by calling `StructNamedArgs()`.
 */
 type NamedArgs []NamedArg
 
 /*
-Returns the argument names.
-*/
-func (self NamedArgs) Names() []string {
-	var names []string
-	for _, arg := range self {
-		names = append(names, arg.Name)
-	}
-	return names
-}
+Returns a query whose string representation is suitable for an SQL `select`
+clause. Should be included into other queries via `Query.Append()` or
+`Query.AppendNamed()`.
 
-/*
-Returns the argument values.
-*/
-func (self NamedArgs) Values() []interface{} {
-	var values []interface{}
-	for _, arg := range self {
-		values = append(values, arg.Value)
-	}
-	return values
-}
-
-/*
-Returns comma-separated argument names, suitable for a `select` clause. Example:
+For example, this:
 
 	val := struct {
 		One int64 `db:"one"`
@@ -105,27 +56,31 @@ Returns comma-separated argument names, suitable for a `select` clause. Example:
 		Two: 20,
 	}
 
-	args := StructNamedArgs(val)
+	text := StructNamedArgs(val).Names().String()
 
-	fmt.Sprintf(`select %v`, args.NamesString())
+Is equivalent to:
 
-	// Output:
-	`select "one", "two"`
+	text := `"one", "two"`
 */
-func (self NamedArgs) NamesString() string {
+func (self NamedArgs) Names() Query {
 	var buf []byte
+
 	for i, arg := range self {
 		if i > 0 {
 			buf = append(buf, `, `...)
 		}
 		buf = appendDelimited(buf, `"`, arg.Name, `"`)
 	}
-	return bytesToMutableString(buf)
+
+	return queryFrom(bytesToMutableString(buf), nil)
 }
 
 /*
-Returns parameter placeholders in the Postgres style `$N`, comma-separated,
-suitable for a `values` clause. Example:
+Returns a query whose string representation is suitable for an SQL `values()`
+clause, with arguments. Should be included into other queries via
+`Query.Append()` or `Query.AppendNamed()`.
+
+For example, this:
 
 	val := struct {
 		One int64 `db:"one"`
@@ -135,28 +90,37 @@ suitable for a `values` clause. Example:
 		Two: 20,
 	}
 
-	args := StructNamedArgs(val)
+	query := StructNamedArgs(val).Values()
+	text := query.String()
+	args := query.Args
 
-	fmt.Sprintf(`values (%v)`, args.ValuesString())
+Is equivalent to:
 
-	// Output:
-	`values ($1, $2)`
+	text := `$1, $2`
+	args := []interface{}{10, 20}
 */
-
-func (self NamedArgs) ValuesString() string {
+func (self NamedArgs) Values() Query {
+	args := make([]interface{}, 0, len(self))
 	var buf []byte
-	for i := range self {
+
+	for i, arg := range self {
 		if i > 0 {
 			buf = append(buf, `, `...)
 		}
 		buf = append(buf, `$`...)
 		buf = strconv.AppendInt(buf, int64(i+1), 10)
+		args = append(args, arg.Value)
 	}
-	return bytesToMutableString(buf)
+
+	return queryFrom(bytesToMutableString(buf), args)
 }
 
 /*
-Returns the string of names and values suitable for an `insert` clause. Example:
+Returns a query whose string representation is suitable for an SQL `insert`
+clause, with arguments. Should be included into other queries via
+`Query.Append()` or `Query.AppendNamed()`.
+
+For example, this:
 
 	val := struct {
 		One int64 `db:"one"`
@@ -166,22 +130,55 @@ Returns the string of names and values suitable for an `insert` clause. Example:
 		Two: 20,
 	}
 
-	args := StructNamedArgs(val)
+	query := StructNamedArgs(val).NamesAndValues()
+	text := query.String()
+	args := query.Args
 
-	fmt.Sprintf(`insert into some_table %v`, args.NamesAndValuesString())
+Is equivalent to:
 
-	// Output:
-	`insert into some_table ("one", "two") values ($1, $2)`
+	text := `("one", "two") values ($1, $2)`
+	args := []interface{}{10, 20}
 */
-func (self NamedArgs) NamesAndValuesString() string {
+func (self NamedArgs) NamesAndValues() Query {
 	if len(self) == 0 {
-		return "default values"
+		return queryFrom("default values", nil)
 	}
-	return fmt.Sprintf("(%v) values (%v)", self.NamesString(), self.ValuesString())
+
+	args := make([]interface{}, 0, len(self))
+	var buf []byte
+
+	buf = append(buf, `(`...)
+
+	for i, arg := range self {
+		if i > 0 {
+			buf = append(buf, `, `...)
+		}
+		buf = appendDelimited(buf, `"`, arg.Name, `"`)
+	}
+
+	buf = append(buf, `) values (`...)
+
+	for i, arg := range self {
+		if i > 0 {
+			buf = append(buf, `, `...)
+		}
+		buf = append(buf, `$`...)
+		buf = strconv.AppendInt(buf, int64(i+1), 10)
+
+		args = append(args, arg.Value)
+	}
+
+	buf = append(buf, `)`...)
+
+	return queryFrom(bytesToMutableString(buf), args)
 }
 
 /*
-Returns the string of assignments suitable for an `update set` clause. Example:
+Returns a query whose string representation is suitable for an SQL `update set`
+clause, with arguments. Should be included into other queries via
+`Query.Append()` or `Query.AppendNamed()`.
+
+For example, this:
 
 	val := struct {
 		One int64 `db:"one"`
@@ -191,15 +188,19 @@ Returns the string of assignments suitable for an `update set` clause. Example:
 		Two: 20,
 	}
 
-	args := StructNamedArgs(val)
+	query := StructNamedArgs(val).Assignments()
+	text := query.String()
+	args := query.Args
 
-	fmt.Sprintf(`update some_table set %v`, args.AssignmentsString())
+Is equivalent to:
 
-	// Output:
-	`update some_table set "one" = $1, "two" = $2`
+	text := `"one" = $1, "two" = $2`
+	args := []interface{}{10, 20}
 */
-func (self NamedArgs) AssignmentsString() string {
+func (self NamedArgs) Assignments() Query {
+	args := make([]interface{}, 0, len(self))
 	var buf []byte
+
 	for i, arg := range self {
 		if i > 0 {
 			buf = append(buf, `, `...)
@@ -207,13 +208,18 @@ func (self NamedArgs) AssignmentsString() string {
 		buf = appendDelimited(buf, `"`, arg.Name, `"`)
 		buf = append(buf, ` = $`...)
 		buf = strconv.AppendInt(buf, int64(i+1), 10)
+		args = append(args, arg.Value)
 	}
-	return bytesToMutableString(buf)
+
+	return queryFrom(bytesToMutableString(buf), args)
 }
 
 /*
-Returns the string of conditions suitable for a `where` or `join` clause.
-Example:
+Returns a query whose string representation is suitable for an SQL `where` or
+`on` clause, with arguments. Should be included into other queries via
+`Query.Append()` or `Query.AppendNamed()`.
+
+For example, this:
 
 	val := struct {
 		One int64 `db:"one"`
@@ -223,23 +229,21 @@ Example:
 		Two: 20,
 	}
 
-	args := StructNamedArgs(val)
+	query := StructNamedArgs(val).Conditions()
+	text := query.String()
+	args := query.Args
 
-	fmt.Sprintf(`select * from some_table where %v`, args.ConditionsString())
+Is equivalent to:
 
-	// Output (formatted for readability):
-	`
-	select * from some_table
-	where
-		"one" is not distinct from $1 and
-		"two" is not distinct from $2
-	`
+	text := `"one" is not distinct from $1 and "two" is not distinct from $2`
+	args := []interface{}{10, 20}
 */
-func (self NamedArgs) ConditionsString() string {
+func (self NamedArgs) Conditions() Query {
 	if len(self) == 0 {
-		return "true"
+		return queryFrom("true", nil)
 	}
 
+	args := make([]interface{}, 0, len(self))
 	var buf []byte
 
 	for i, arg := range self {
@@ -249,15 +253,16 @@ func (self NamedArgs) ConditionsString() string {
 		buf = appendDelimited(buf, `"`, arg.Name, `"`)
 		buf = append(buf, ` is not distinct from $`...)
 		buf = strconv.AppendInt(buf, int64(i+1), 10)
+		args = append(args, arg.Value)
 	}
 
-	return bytesToMutableString(buf)
+	return queryFrom(bytesToMutableString(buf), args)
 }
 
 /*
 Returns true if at least one argument satisfies the predicate function. Example:
 
-  args.Some(NamedArg.IsNil)
+  ok := args.Some(NamedArg.IsNil)
 */
 func (self NamedArgs) Some(fun func(NamedArg) bool) bool {
 	for _, arg := range self {
@@ -271,7 +276,7 @@ func (self NamedArgs) Some(fun func(NamedArg) bool) bool {
 /*
 Returns true if every argument satisfies the predicate function. Example:
 
-  args.Every(NamedArg.IsNil)
+  ok := args.Every(NamedArg.IsNil)
 */
 func (self NamedArgs) Every(fun func(NamedArg) bool) bool {
 	for _, arg := range self {
@@ -296,6 +301,7 @@ func (self NamedArg) IsValid() bool {
 	return columnNameRegexp.MatchString(self.Name)
 }
 
+// WTF is this?
 var columnNameRegexp = regexp.MustCompile(`^(?:\w+(?:\.\w+)*|"\w+(?:\.\w+)*")$`)
 
 func (self NamedArg) IsNil() bool {

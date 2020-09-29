@@ -124,3 +124,38 @@ func isScannableRtype(rtype reflect.Type) bool {
 	return rtype != nil &&
 		(rtype == timeRtype || reflect.PtrTo(rtype).Implements(sqlScannerRtype))
 }
+
+func traverseStructDbFields(input interface{}, fun func(string, interface{})) {
+	rval := reflect.ValueOf(input)
+	rtype := refut.RtypeDeref(rval.Type())
+
+	if rtype.Kind() != reflect.Struct {
+		panic(Err{
+			Code:  ErrCodeInvalidInput,
+			While: `traversing struct for DB fields`,
+			Cause: fmt.Errorf(`expected struct, got %q`, rtype),
+		})
+	}
+
+	if refut.IsRvalNil(rval) {
+		return
+	}
+
+	err := refut.TraverseStructRval(rval, func(rval reflect.Value, sfield reflect.StructField, _ []int) error {
+		colName := sfieldColumnName(sfield)
+		if colName == "" {
+			return nil
+		}
+		fun(colName, rval.Interface())
+		return nil
+	})
+	if err != nil {
+		panic(err)
+	}
+}
+
+func queryFrom(str string, args []interface{}) Query {
+	var query Query
+	query.Append(str, args...)
+	return query
+}

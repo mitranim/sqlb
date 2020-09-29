@@ -8,6 +8,10 @@ See the sibling library https://github.com/mitranim/gos for scanning SQL rows in
 
 ## Changelog
 
+### 0.1.2
+
+Breaking: methods of `NamedArgs` now return queries, suitable for inclusion into other queries. Separate methods for strings and arg slices have been removed.
+
 ### 0.1.1
 
 Dependency update.
