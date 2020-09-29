@@ -51,7 +51,7 @@ func must(err error) {
 	}
 }
 
-func isWhitespaceChar(char rune) bool {
+func isWhitespaceChar(char byte) bool {
 	switch char {
 	case ' ', '\n', '\r', '\t', '\v':
 		return true

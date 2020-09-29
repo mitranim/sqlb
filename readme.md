@@ -8,6 +8,10 @@ See the sibling library https://github.com/mitranim/gos for scanning SQL rows in
 
 ## Changelog
 
+### 0.1.1
+
+Dependency update.
+
 ### 0.1.0
 
 First tagged release.
