@@ -7,10 +7,10 @@ import (
 )
 
 /*
-Interface that allows compatibility between different variants of `Query`.
-Subquery insertion / flattening detects instances of this interface, rather than
-the concrete type `Query`, which allows external code to Implement its own
-variants, wrap `Query`, etc.
+Interface that allows compatibility between different query variants. Subquery
+insertion / flattening, supported by `Query.Append()` and `Query.AppendNamed()`,
+detects instances of this interface, rather than the concrete type `Query`,
+allowing external code to implement its own variants, wrap `Query`, etc.
 
 WTB better name.
 */

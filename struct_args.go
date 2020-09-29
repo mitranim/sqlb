@@ -25,7 +25,7 @@ func StructMap(input interface{}) map[string]interface{} {
 Scans a struct, converting fields tagged with `db` into a sequence of named
 `NamedArgs`. The input must be a struct or a struct pointer. A nil pointer is
 fine and produces a nil result. Panics on other inputs. Treats embedded structs
-part of enclosing structs.
+as part of enclosing structs.
 */
 func StructNamedArgs(input interface{}) NamedArgs {
 	var args NamedArgs
