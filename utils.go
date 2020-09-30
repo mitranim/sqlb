@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"reflect"
 	"time"
+	"unicode/utf8"
 	"unsafe"
 
 	"github.com/mitranim/refut"
@@ -51,7 +52,7 @@ func must(err error) {
 	}
 }
 
-func isWhitespaceChar(char byte) bool {
+func isWhitespaceChar(char rune) bool {
 	switch char {
 	case ' ', '\n', '\r', '\t', '\v':
 		return true
@@ -95,12 +96,14 @@ func appendNodesWithSpace(left sqlp.Nodes, right sqlp.Nodes) sqlp.Nodes {
 
 func nodesStartWithWhitespace(nodes sqlp.Nodes) bool {
 	text, _ := sqlp.FirstLeaf(nodes).(sqlp.NodeText)
-	return len(text) > 0 && isWhitespaceChar(text[0])
+	char, size := utf8.DecodeRuneInString(string(text))
+	return size > 0 && isWhitespaceChar(char)
 }
 
 func nodesEndWithWhitespace(nodes sqlp.Nodes) bool {
 	text, _ := sqlp.LastLeaf(nodes).(sqlp.NodeText)
-	return len(text) > 0 && isWhitespaceChar(text[len(text)-1])
+	char, size := utf8.DecodeLastRuneInString(string(text))
+	return size > 0 && isWhitespaceChar(char)
 }
 
 func argsHaveQueries(args []interface{}) bool {
