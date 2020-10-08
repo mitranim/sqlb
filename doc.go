@@ -29,6 +29,6 @@ combining the arguments and automatically renumerating the parameters.
 
 Examples
 
-See `Query()`, `Query.Append()`, `Query.AppendNamed()` for examples.
+See `Query`, `Query.Append()`, `Query.AppendNamed()` for examples.
 */
 package sqlb

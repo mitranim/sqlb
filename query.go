@@ -146,6 +146,16 @@ func (self Query) Copy() Query {
 }
 
 /*
+"Zeroes" the query by resetting inner data structures to `len() == 0` while
+keeping their capacity. Similar to `query = sqlb.Query{}`, but slightly clearer
+and marginally more efficient for subsequent query building.
+*/
+func (self *Query) Clear() {
+	self.Nodes = self.Nodes[:0]
+	self.Args = self.Args[:0]
+}
+
+/*
 Wraps the query to select only the specified expressions.
 
 For example, this:
@@ -158,7 +168,7 @@ For example, this:
 
 Is equivalent to this:
 
-	text := `select one, two from (select * from some_table) as _`
+	text := `with _ as (select * from some_table) select one, two from _`
 */
 func (self *Query) WrapSelect(exprs string) {
 	self.Nodes = sqlp.Nodes{
