@@ -217,7 +217,8 @@ Warning: the provided AST may be immediately mutated; it's also stored inside
 this query's AST and may be mutated later. If the AST is owned by another query,
 it should be copied via `sqlp.CopyDeep()` before calling this.
 
-The provided slice of args is not mutated.
+The provided slice of args is not mutated, and neither are any AST nodes
+returned from `IQuery.Unwrap()` on args.
 */
 func (self *Query) append(nodes sqlp.Nodes, args []interface{}) error {
 	err := validateOrdinalParams(nodes, args)
@@ -354,7 +355,7 @@ func validateOrdinalParams(nodes sqlp.Nodes, args []interface{}) error {
 			return Err{
 				Code:  ErrCodeUnexpectedParameter,
 				While: `validating query ordinal parameters`,
-				Cause: fmt.Errorf(`unexpected named parameter %q`, unwanted),
+				Cause: fmt.Errorf(`unexpected named parameter %q; expected only ordinal parameters`, unwanted),
 			}
 		}
 
@@ -440,7 +441,7 @@ func namedToOrdinal(nodes sqlp.Nodes, namedArgs map[string]interface{}) ([]inter
 			return Err{
 				Code:  ErrCodeUnexpectedParameter,
 				While: `converting named parameters to ordinal parameters`,
-				Cause: fmt.Errorf(`unexpected ordinal parameter $%d`, unwanted),
+				Cause: fmt.Errorf(`unexpected ordinal parameter $%d; expected only named parameters`, unwanted),
 			}
 		}
 
