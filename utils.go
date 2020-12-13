@@ -9,17 +9,15 @@ import (
 	"unsafe"
 
 	"github.com/mitranim/refut"
-	"github.com/mitranim/sqlp"
 )
 
-func copyIfaceSlice(src []interface{}) []interface{} {
-	if src == nil {
-		return nil
-	}
-	out := make([]interface{}, len(src), cap(src))
-	copy(out, src)
-	return out
-}
+const bitsetSize = int(unsafe.Sizeof(bitset(0)) * 8)
+
+type bitset uint64
+
+func (self bitset) has(index int) bool { return self&(1<<index) != 0 }
+func (self *bitset) set(index int)     { *self |= (1 << index) }
+func (self *bitset) unset(index int)   { *self ^= (1 << index) }
 
 func appendDelimited(buf []byte, prefix, infix, suffix string) []byte {
 	buf = append(buf, prefix...)
@@ -46,12 +44,6 @@ func sfieldColumnName(sfield reflect.StructField) string {
 	return refut.TagIdent(sfield.Tag.Get("db"))
 }
 
-func must(err error) {
-	if err != nil {
-		panic(err)
-	}
-}
-
 func isWhitespaceChar(char rune) bool {
 	switch char {
 	case ' ', '\n', '\r', '\t', '\v':
@@ -59,60 +51,6 @@ func isWhitespaceChar(char rune) bool {
 	default:
 		return false
 	}
-}
-
-func ordToIndex(ord sqlp.NodeOrdinalParam) (int, error) {
-	if ord > 0 {
-		return int(ord - 1), nil
-	}
-	return 0, Err{
-		Code:  ErrCodeIndexMismatch,
-		While: `converting ordinal parameter to argument index`,
-		Cause: fmt.Errorf(`can't convert ordinal %d to index: must be >= 1`, ord),
-	}
-}
-
-func indexToOrd(index int) (sqlp.NodeOrdinalParam, error) {
-	if index >= 0 {
-		return sqlp.NodeOrdinalParam(index + 1), nil
-	}
-	return 0, Err{
-		Code:  ErrCodeIndexMismatch,
-		While: `converting argument index to ordinal parameter`,
-		Cause: fmt.Errorf(`can't convert index %d to ordinal: must be >= 0`, index),
-	}
-}
-
-/*
-Similar to `append(left, right...)`, but ensures at least one whitespace
-character between them.
-*/
-func appendNodesWithSpace(left sqlp.Nodes, right sqlp.Nodes) sqlp.Nodes {
-	if len(left) > 0 && len(right) > 0 && !nodesEndWithWhitespace(left) && !nodesStartWithWhitespace(right) {
-		left = append(left, sqlp.NodeText(` `))
-	}
-	return append(left, right...)
-}
-
-func nodesStartWithWhitespace(nodes sqlp.Nodes) bool {
-	text, _ := sqlp.FirstLeaf(nodes).(sqlp.NodeText)
-	char, size := utf8.DecodeRuneInString(string(text))
-	return size > 0 && isWhitespaceChar(char)
-}
-
-func nodesEndWithWhitespace(nodes sqlp.Nodes) bool {
-	text, _ := sqlp.LastLeaf(nodes).(sqlp.NodeText)
-	char, size := utf8.DecodeLastRuneInString(string(text))
-	return size > 0 && isWhitespaceChar(char)
-}
-
-func argsHaveQueries(args []interface{}) bool {
-	for _, arg := range args {
-		if isQuery(arg) {
-			return true
-		}
-	}
-	return false
 }
 
 func isQuery(val interface{}) bool {
@@ -157,8 +95,34 @@ func traverseStructDbFields(input interface{}, fun func(string, interface{})) {
 	}
 }
 
-func queryFrom(str string, args []interface{}) Query {
-	var query Query
-	query.Append(str, args...)
-	return query
+func appendNonQueries(out *[]interface{}, more []interface{}) {
+	for _, val := range more {
+		if !isQuery(val) {
+			*out = append(*out, val)
+		}
+	}
+}
+
+func queryArgsBefore(args []interface{}, index int) int {
+	var count int
+	for i, arg := range args {
+		if i >= index {
+			break
+		}
+		if isQuery(arg) {
+			count++
+		}
+	}
+	return count
+}
+
+func appendSpaceIfNeeded(buf *[]byte) {
+	if buf != nil && len(*buf) > 0 && !endsWithWhitspace(*buf) {
+		*buf = append(*buf, ` `...)
+	}
+}
+
+func endsWithWhitspace(chunk []byte) bool {
+	char, _ := utf8.DecodeLastRune(chunk)
+	return isWhitespaceChar(char)
 }

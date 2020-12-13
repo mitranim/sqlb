@@ -14,9 +14,7 @@ allowing external code to implement its own variants, wrap `Query`, etc.
 
 WTB better name.
 */
-type IQuery interface {
-	Unwrap() (sqlp.Nodes, []interface{})
-}
+type IQuery interface{ QueryAppend(*Query) }
 
 /*
 Tool for building SQL queries. Makes it easy to append or insert arbitrary SQL
@@ -38,16 +36,21 @@ there is enough demand; you can open an issue at
 https://github.com/mitranim/sqlb/issues.
 */
 type Query struct {
-	sqlp.Nodes
+	Text []byte
 	Args []interface{}
+}
+
+// Implement `fmt.Stringer`.
+func (self *Query) String() string {
+	return bytesToMutableString(self.Text)
 }
 
 /*
 Implement `IQuery`, allowing compatibility between different implementations,
 wrappers, etc.
 */
-func (self Query) Unwrap() (sqlp.Nodes, []interface{}) {
-	return self.Nodes, self.Args
+func (self Query) QueryAppend(out *Query) {
+	out.Append(bytesToMutableString(self.Text), self.Args...)
 }
 
 /*
@@ -77,10 +80,69 @@ Panics when: the code is malformed; the code has named parameters; a parameter
 doesn't have a corresponding argument; an argument doesn't have a corresponding
 parameter.
 */
-func (self *Query) Append(code string, args ...interface{}) {
-	nodes, err := sqlp.Parse(code)
-	must(err)
-	must(self.append(nodes, args))
+func (self *Query) Append(src string, args ...interface{}) {
+	tokenizer := sqlp.Tokenizer{Source: src}
+	startOffset := len(self.Args)
+	appendNonQueries(&self.Args, args)
+
+	var used bitset
+	if len(args) > bitsetSize {
+		panic(Err{
+			Code:  ErrCodeTooManyArguments,
+			While: `appending to query`,
+			Cause: fmt.Errorf(`expected no more than %v args, got %v`, bitsetSize, len(args)),
+		})
+	}
+
+	appendSpaceIfNeeded(&self.Text)
+
+	for {
+		node := tokenizer.Next()
+		if node == nil {
+			break
+		}
+
+		switch node := node.(type) {
+		case sqlp.NodeOrdinalParam:
+			index := node.Index()
+			if index >= len(args) {
+				panic(Err{
+					Code:  ErrCodeOrdinalOutOfBounds,
+					While: `appending to query`,
+					Cause: fmt.Errorf(`ordinal parameter %v exceeds argument count %v`, node, len(args)),
+				})
+			}
+
+			used.set(index)
+			query, ok := args[index].(IQuery)
+			if ok {
+				query.QueryAppend(self)
+			} else {
+				ord := sqlp.NodeOrdinalParam(int(node) + startOffset - queryArgsBefore(args, node.Index()))
+				ord.Append(&self.Text)
+			}
+
+		case sqlp.NodeNamedParam:
+			panic(Err{
+				Code:  ErrCodeUnexpectedParameter,
+				While: `appending to query`,
+				Cause: fmt.Errorf(`expected only ordinal params, got named param %q`, node),
+			})
+
+		default:
+			node.Append(&self.Text)
+		}
+	}
+
+	for i, arg := range args {
+		if !used.has(i) {
+			panic(Err{
+				Code:  ErrCodeUnusedArgument,
+				While: `appending to query`,
+				Cause: fmt.Errorf(`unused argument %#v at index %v`, arg, i),
+			})
+		}
+	}
 }
 
 /*
@@ -98,9 +160,10 @@ appropriate.
 For example, this:
 
 	var query Query
-	query.AppendNamed(`select col where col = :value`, map[string]interface{}{
-		"value": 10,
-	})
+	query.AppendNamed(
+		`select col where col = :value`,
+		map[string]interface{}{"value": 10},
+	)
 
 	text := query.String()
 	args := query.Args
@@ -114,44 +177,86 @@ Panics when: the code is malformed; the code has ordinal parameters; a parameter
 doesn't have a corresponding argument; an argument doesn't have a corresponding
 parameter.
 */
-func (self *Query) AppendNamed(code string, namedArgs map[string]interface{}) {
-	nodes, err := sqlp.Parse(code)
-	must(err)
+func (self *Query) AppendNamed(src string, args map[string]interface{}) {
+	tokenizer := sqlp.Tokenizer{Source: src}
+	namedToOrd := make(map[sqlp.NodeNamedParam]sqlp.NodeOrdinalParam, len(args))
+	appendSpaceIfNeeded(&self.Text)
 
-	args, err := namedToOrdinal(nodes, namedArgs)
-	must(err)
+	for {
+		node := tokenizer.Next()
+		if node == nil {
+			break
+		}
 
-	must(self.append(nodes, args))
-}
+		switch node := node.(type) {
+		case sqlp.NodeOrdinalParam:
+			panic(Err{
+				Code:  ErrCodeUnexpectedParameter,
+				While: `appending to query`,
+				Cause: fmt.Errorf(`expected only named params, got ordinal param %q`, node),
+			})
 
-/*
-Appends the other query's AST and arguments to the end of this query while
-renumerating the ordinal parameters as appropriate.
-*/
-func (self *Query) AppendQuery(query IQuery) {
-	nodes, args := query.Unwrap()
-	nodes = sqlp.CopyDeep(nodes)
-	must(self.append(nodes, args))
-}
+		case sqlp.NodeNamedParam:
+			arg, found := args[string(node)]
+			if !found {
+				panic(Err{
+					Code:  ErrCodeMissingArgument,
+					While: `appending to query`,
+					Cause: fmt.Errorf(`missing named argument %q`, node),
+				})
+			}
 
-/*
-Makes a copy that doesn't share any mutable state with the original. Useful when
-you want to "fork" a query and modify both versions.
-*/
-func (self Query) Copy() Query {
-	return Query{
-		Nodes: sqlp.CopyDeep(self.Nodes),
-		Args:  copyIfaceSlice(self.Args),
+			query, ok := arg.(IQuery)
+			if ok {
+				// Value doesn't matter. This allows detection of unused arguments.
+				namedToOrd[node] = 0
+				query.QueryAppend(self)
+				continue
+			}
+
+			ord, ok := namedToOrd[node]
+			if !ok {
+				self.Args = append(self.Args, arg)
+				ord = sqlp.NodeOrdinalParam(len(self.Args))
+				namedToOrd[node] = ord
+			}
+			ord.Append(&self.Text)
+
+		default:
+			node.Append(&self.Text)
+		}
+	}
+
+	for key := range args {
+		_, ok := namedToOrd[sqlp.NodeNamedParam(key)]
+		if !ok {
+			panic(Err{
+				Code:  ErrCodeUnusedArgument,
+				While: `appending to query`,
+				Cause: fmt.Errorf(`unused named argument %q`, key),
+			})
+		}
 	}
 }
 
 /*
-"Zeroes" the query by resetting inner data structures to `len() == 0` while
-keeping their capacity. Similar to `query = sqlb.Query{}`, but slightly clearer
-and marginally more efficient for subsequent query building.
+Convenience method, inverse of `IQuery.QueryAppend`. Appends the other query to
+this one, combining the arguments and renumerating the ordinal parameters as
+appropriate.
+*/
+func (self *Query) AppendQuery(query IQuery) {
+	if query != nil {
+		query.QueryAppend(self)
+	}
+}
+
+/*
+"Zeroes" the query, keeping any already-allocated capacity. Similar to
+`query = sqlb.Query{}`, but slightly clearer and marginally more efficient for
+subsequent query building.
 */
 func (self *Query) Clear() {
-	self.Nodes = self.Nodes[:0]
+	self.Text = self.Text[:0]
 	self.Args = self.Args[:0]
 }
 
@@ -171,11 +276,20 @@ Is equivalent to this:
 	text := `with _ as (select * from some_table) select one, two from _`
 */
 func (self *Query) WrapSelect(exprs string) {
-	self.Nodes = sqlp.Nodes{
-		sqlp.NodeText(`with _ as (`),
-		self.Nodes,
-		sqlp.NodeText(`) select ` + exprs + ` from _`),
-	}
+	const (
+		s0 = `with _ as (`
+		s1 = `) select `
+		s2 = ` from _`
+	)
+
+	buf := make([]byte, 0, len(s0)+len(self.Text)+len(s1)+len(exprs)+len(s2))
+	buf = append(buf, s0...)
+	buf = append(buf, self.Text...)
+	buf = append(buf, s1...)
+	buf = append(buf, exprs...)
+	buf = append(buf, s2...)
+
+	self.Text = buf
 }
 
 /*
@@ -197,296 +311,4 @@ Is equivalent to this:
 */
 func (self *Query) WrapSelectCols(dest interface{}) {
 	self.WrapSelect(Cols(dest))
-}
-
-/*
-Appends the provided AST and arguments.
-
-Feature: validation. The provided AST must have ordinal parameters matching the
-provided arguments. It must not have named parameters.
-
-Feature: renumeration. Ordinal parameters in the provided AST must start at $1.
-They're automatically offset by the amount of arguments this query had
-previously.
-
-Feature: subquery insertion / flattening. Detects `IQuery` instances among
-the arguments, moves them into the AST, and appends their args, renumerating
-ordinal parameters to avoid collisions.
-
-Warning: the provided AST may be immediately mutated; it's also stored inside
-this query's AST and may be mutated later. If the AST is owned by another query,
-it should be copied via `sqlp.CopyDeep()` before calling this.
-
-The provided slice of args is not mutated, and neither are any AST nodes
-returned from `IQuery.Unwrap()` on args.
-*/
-func (self *Query) append(nodes sqlp.Nodes, args []interface{}) error {
-	err := validateOrdinalParams(nodes, args)
-	if err != nil {
-		return err
-	}
-
-	args, err = flattenQueries(nodes, args)
-	if err != nil {
-		return err
-	}
-
-	err = renumerateOrdinalParams(nodes, len(self.Args))
-	if err != nil {
-		return err
-	}
-
-	self.Nodes = appendNodesWithSpace(self.Nodes, nodes)
-	self.Args = append(self.Args, args...)
-	return nil
-}
-
-/*
-"Flattens" instances of `IQuery` into the AST and into the args. For every
-instance of `IQuery`, its args are appended to the base args, and every
-occurrence of its ordinal param in the base AST is replaced with its own AST.
-All ordinal parameters are appropriately renumerated to avoid collisions.
-*/
-func flattenQueries(nodes sqlp.Nodes, args []interface{}) ([]interface{}, error) {
-	if !argsHaveQueries(args) {
-		return args, nil
-	}
-
-	var pendingArgs []interface{}
-
-	for _, arg := range args {
-		if !isQuery(arg) {
-			pendingArgs = append(pendingArgs, arg)
-		}
-	}
-
-	argOffsets := make([]int, len(args))
-	prevQueries := 0
-
-	for i, arg := range args {
-		query, ok := arg.(IQuery)
-
-		if ok {
-			_, queryArgs := query.Unwrap()
-			argOffsets[i] = len(pendingArgs)
-			pendingArgs = append(pendingArgs, queryArgs...)
-			prevQueries++
-			continue
-		}
-
-		argOffsets[i] = -prevQueries
-	}
-
-	err := sqlp.TraverseDeep(nodes, func(ptr *sqlp.Node) error {
-		ord, ok := (*ptr).(sqlp.NodeOrdinalParam)
-		if !ok {
-			return nil
-		}
-
-		index, err := ordToIndex(ord)
-		if err != nil {
-			return err
-		}
-
-		if !(index >= 0 && index < len(args)) {
-			return Err{
-				Code:  ErrCodeMissingArgument,
-				While: `flattening sub-queries`,
-				Cause: fmt.Errorf(`missing argument for ordinal parameter $%d`, ord),
-			}
-		}
-
-		offset := argOffsets[index]
-
-		query, ok := args[index].(IQuery)
-		if !ok {
-			ord, err := indexToOrd(index + offset)
-			if err != nil {
-				return err
-			}
-
-			*ptr = ord
-			return nil
-		}
-
-		queryNodes, _ := query.Unwrap()
-
-		/**
-		Note: we must duplicate this structure for every occurrence of this ordinal
-		parameter. If the AST contains multiple occurrences of it, and if we had
-		reused the same sub-AST slice for each occurrence, then future renumerations
-		of this AST would subtract from each param contained in the sub-AST multiple
-		times, which is incorrect.
-		*/
-		queryNodes = sqlp.CopyDeep(queryNodes)
-		err = renumerateOrdinalParams(queryNodes, offset)
-		if err != nil {
-			return err
-		}
-
-		*ptr = queryNodes
-		return nil
-	})
-
-	return pendingArgs, err
-}
-
-/*
-Validates the following:
-
-	* The AST doesn't have any named parameters.
-	* Parameters, if any, start at 1.
-	* Parameters, if any, don't have any gaps (from 1 to N with step +1).
-	* Each parameter has an argument.
-	* Each argument has a parameter.
-*/
-func validateOrdinalParams(nodes sqlp.Nodes, args []interface{}) error {
-	/**
-	Minor note: this could be 8 times more compact if we used a single bit for
-	every index, rather than a byte (sizeof bool). Avoiding an allocation might
-	not be practical because the size of `len(args)` might exceed 64 bits, 128
-	bits, etc.
-	*/
-	foundOrds := make([]bool, len(args))
-
-	err := sqlp.TraverseDeep(nodes, func(ptr *sqlp.Node) error {
-		unwanted, ok := (*ptr).(sqlp.NodeNamedParam)
-		if ok {
-			return Err{
-				Code:  ErrCodeUnexpectedParameter,
-				While: `validating query ordinal parameters`,
-				Cause: fmt.Errorf(`unexpected named parameter %q; expected only ordinal parameters`, unwanted),
-			}
-		}
-
-		ord, ok := (*ptr).(sqlp.NodeOrdinalParam)
-		if !ok {
-			return nil
-		}
-
-		index, err := ordToIndex(ord)
-		if err != nil {
-			return err
-		}
-
-		if !(index >= 0 && index < len(args)) {
-			return Err{
-				Code:  ErrCodeMissingArgument,
-				While: `validating query ordinal parameters`,
-				Cause: fmt.Errorf(`missing argument for ordinal parameter $%d`, ord),
-			}
-		}
-		foundOrds[index] = true
-
-		return nil
-	})
-	if err != nil {
-		return err
-	}
-
-	for i, found := range foundOrds {
-		if !found {
-			return Err{
-				Code:  ErrCodeMissingParameter,
-				While: `validating query ordinal parameters`,
-				Cause: fmt.Errorf(`missing ordinal parameter for argument with index %d, value %v`, i, args[i]),
-			}
-		}
-	}
-
-	return nil
-}
-
-/*
-Rewrites the provided AST, offsetting each ordinal parameter by the provided
-amount.
-*/
-func renumerateOrdinalParams(nodes sqlp.Nodes, offset int) error {
-	return sqlp.TraverseDeep(nodes, func(ptr *sqlp.Node) error {
-		ord, ok := (*ptr).(sqlp.NodeOrdinalParam)
-		if !ok {
-			return nil
-		}
-
-		index, err := ordToIndex(ord)
-		if err != nil {
-			return err
-		}
-
-		ord, err = indexToOrd(index + offset)
-		if err != nil {
-			return err
-		}
-
-		*ptr = ord
-		return nil
-	})
-}
-
-/*
-Rewrites the provided AST, replacing named parameters with ordinal parameters,
-and returns a slice of ordinal args. Also validates the following:
-
-	* The AST doesn't have any previously existing ordinal parameters.
-	* Every named parameter has a named argument.
-	* Every named argument has a named parameter.
-*/
-func namedToOrdinal(nodes sqlp.Nodes, namedArgs map[string]interface{}) ([]interface{}, error) {
-	namesToOrdinals := make(map[string]sqlp.NodeOrdinalParam, len(namedArgs))
-	ordinalArgs := make([]interface{}, 0, len(namedArgs))
-
-	err := sqlp.TraverseDeep(nodes, func(ptr *sqlp.Node) error {
-		unwanted, ok := (*ptr).(sqlp.NodeOrdinalParam)
-		if ok {
-			return Err{
-				Code:  ErrCodeUnexpectedParameter,
-				While: `converting named parameters to ordinal parameters`,
-				Cause: fmt.Errorf(`unexpected ordinal parameter $%d; expected only named parameters`, unwanted),
-			}
-		}
-
-		named, ok := (*ptr).(sqlp.NodeNamedParam)
-		if !ok {
-			return nil
-		}
-
-		name := string(named)
-
-		// Get or create an ordinal corresponding to this named.
-		ord, ok := namesToOrdinals[name]
-		if !ok {
-			arg, ok := namedArgs[name]
-			if !ok {
-				return Err{
-					Code:  ErrCodeMissingParameter,
-					While: `converting named parameters to ordinal parameters`,
-					Cause: fmt.Errorf(`missing named parameter %q`, name),
-				}
-			}
-
-			ord = sqlp.NodeOrdinalParam(len(ordinalArgs) + 1)
-			namesToOrdinals[name] = ord
-			ordinalArgs = append(ordinalArgs, arg)
-		}
-
-		*ptr = ord
-		return nil
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	// Ensure that every named argument is used.
-	for name := range namedArgs {
-		_, ok := namesToOrdinals[name]
-		if !ok {
-			return nil, Err{
-				Code:  ErrCodeUnusedArgument,
-				While: `converting named parameters to ordinal parameters`,
-				Cause: fmt.Errorf(`unused named argument %q`, name),
-			}
-		}
-	}
-
-	return ordinalArgs, nil
 }

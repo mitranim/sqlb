@@ -31,7 +31,7 @@ func Cols(dest interface{}) string {
 		panic(Err{
 			Code:  ErrCodeInvalidInput,
 			While: `generating struct columns for select clause`,
-			Cause: fmt.Errorf("expected struct, got %q", rtype),
+			Cause: fmt.Errorf(`expected struct, got %q`, rtype),
 		})
 	}
 

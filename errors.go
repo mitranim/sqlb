@@ -13,18 +13,18 @@ type ErrCode string
 
 const (
 	ErrCodeUnknown             ErrCode = ""
-	ErrCodeIndexMismatch       ErrCode = "IndexMismatch"
 	ErrCodeInvalidInput        ErrCode = "InvalidInput"
 	ErrCodeMissingArgument     ErrCode = "MissingArgument"
-	ErrCodeMissingParameter    ErrCode = "MissingParameter"
 	ErrCodeUnexpectedParameter ErrCode = "UnexpectedParameter"
 	ErrCodeUnusedArgument      ErrCode = "UnusedArgument"
+	ErrCodeTooManyArguments    ErrCode = "TooManyArguments"
+	ErrCodeOrdinalOutOfBounds  ErrCode = "OrdinalOutOfBounds"
 )
 
 /*
 Use blank error variables to detect error types:
 
-	if errors.Is(err, sqlb.ErrNoRows) {
+	if errors.Is(err, sqlb.ErrIndexMismatch) {
 		// Handle specific error.
 	}
 
@@ -33,12 +33,12 @@ they may include additional details about the circumstances. When compared by
 `errors.Is`, they compare `.Cause` and fall back on `.Code`.
 */
 var (
-	ErrIndexMismatch       Err = Err{Code: ErrCodeIndexMismatch, Cause: errors.New(`index mismatch`)}
 	ErrInvalidInput        Err = Err{Code: ErrCodeInvalidInput, Cause: errors.New(`invalid input`)}
 	ErrMissingArgument     Err = Err{Code: ErrCodeMissingArgument, Cause: errors.New(`missing argument`)}
-	ErrMissingParameter    Err = Err{Code: ErrCodeMissingParameter, Cause: errors.New(`missing parameter`)}
 	ErrUnexpectedParameter Err = Err{Code: ErrCodeUnexpectedParameter, Cause: errors.New(`unexpected parameter`)}
 	ErrUnusedArgument      Err = Err{Code: ErrCodeUnusedArgument, Cause: errors.New(`unused argument`)}
+	ErrTooManyArguments    Err = Err{Code: ErrCodeTooManyArguments, Cause: errors.New(`too many arguments`)}
+	ErrOrdinalOutOfBounds  Err = Err{Code: ErrCodeOrdinalOutOfBounds, Cause: errors.New(`ordinal parameter exceeds arguments`)}
 )
 
 // Type of errors returned by this package.

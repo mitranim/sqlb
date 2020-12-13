@@ -72,7 +72,7 @@ func (self NamedArgs) Names() Query {
 		buf = appendDelimited(buf, `"`, arg.Name, `"`)
 	}
 
-	return queryFrom(bytesToMutableString(buf), nil)
+	return Query{Text: buf}
 }
 
 /*
@@ -112,7 +112,7 @@ func (self NamedArgs) Values() Query {
 		args = append(args, arg.Value)
 	}
 
-	return queryFrom(bytesToMutableString(buf), args)
+	return Query{Text: buf, Args: args}
 }
 
 /*
@@ -141,7 +141,7 @@ Is equivalent to:
 */
 func (self NamedArgs) NamesAndValues() Query {
 	if len(self) == 0 {
-		return queryFrom("default values", nil)
+		return Query{Text: []byte(`default values`)}
 	}
 
 	args := make([]interface{}, 0, len(self))
@@ -170,7 +170,7 @@ func (self NamedArgs) NamesAndValues() Query {
 
 	buf = append(buf, `)`...)
 
-	return queryFrom(bytesToMutableString(buf), args)
+	return Query{Text: buf, Args: args}
 }
 
 /*
@@ -211,7 +211,7 @@ func (self NamedArgs) Assignments() Query {
 		args = append(args, arg.Value)
 	}
 
-	return queryFrom(bytesToMutableString(buf), args)
+	return Query{Text: buf, Args: args}
 }
 
 /*
@@ -240,7 +240,7 @@ Is equivalent to:
 */
 func (self NamedArgs) Conditions() Query {
 	if len(self) == 0 {
-		return queryFrom("true", nil)
+		return Query{Text: []byte(`true`)}
 	}
 
 	args := make([]interface{}, 0, len(self))
@@ -256,7 +256,7 @@ func (self NamedArgs) Conditions() Query {
 		args = append(args, arg.Value)
 	}
 
-	return queryFrom(bytesToMutableString(buf), args)
+	return Query{Text: buf, Args: args}
 }
 
 /*
