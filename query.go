@@ -41,7 +41,7 @@ type Query struct {
 }
 
 // Implement `fmt.Stringer`.
-func (self *Query) String() string {
+func (self Query) String() string {
 	return bytesToMutableString(self.Text)
 }
 
