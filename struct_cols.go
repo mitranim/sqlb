@@ -97,14 +97,14 @@ func (self sqlIdent) appendSelect(buf []byte, path []sqlIdent) []byte {
 	}
 
 	if len(buf) > 0 {
-		buf = append(buf, `, `...)
+		appendStr(&buf, `, `)
 	}
 
 	if len(path) == 0 {
 		buf = self.appendAlias(buf, nil)
 	} else {
 		buf = self.appendPath(buf, path)
-		buf = append(buf, ` as `...)
+		appendStr(&buf, ` as `)
 		buf = self.appendAlias(buf, path)
 	}
 
@@ -114,23 +114,23 @@ func (self sqlIdent) appendSelect(buf []byte, path []sqlIdent) []byte {
 func (self sqlIdent) appendPath(buf []byte, path []sqlIdent) []byte {
 	for i, ident := range path {
 		if i == 0 {
-			buf = appendDelimited(buf, `("`, ident.name, `")`)
+			appendEnclosed(&buf, `("`, ident.name, `")`)
 		} else {
-			buf = appendDelimited(buf, `"`, ident.name, `"`)
+			appendEnclosed(&buf, `"`, ident.name, `"`)
 		}
-		buf = append(buf, `.`...)
+		appendStr(&buf, `.`)
 	}
-	buf = appendDelimited(buf, `"`, self.name, `"`)
+	appendEnclosed(&buf, `"`, self.name, `"`)
 	return buf
 }
 
 func (self sqlIdent) appendAlias(buf []byte, path []sqlIdent) []byte {
-	buf = append(buf, `"`...)
+	appendStr(&buf, `"`)
 	for _, ident := range path {
-		buf = append(buf, ident.name...)
-		buf = append(buf, `.`...)
+		appendStr(&buf, ident.name)
+		appendStr(&buf, `.`)
 	}
-	buf = append(buf, self.name...)
-	buf = append(buf, `"`...)
+	appendStr(&buf, self.name)
+	appendStr(&buf, `"`)
 	return buf
 }

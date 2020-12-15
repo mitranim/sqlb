@@ -19,11 +19,14 @@ func (self bitset) has(index int) bool { return self&(1<<index) != 0 }
 func (self *bitset) set(index int)     { *self |= (1 << index) }
 func (self *bitset) unset(index int)   { *self ^= (1 << index) }
 
-func appendDelimited(buf []byte, prefix, infix, suffix string) []byte {
-	buf = append(buf, prefix...)
-	buf = append(buf, infix...)
-	buf = append(buf, suffix...)
-	return buf
+func appendStr(buf *[]byte, str string) {
+	*buf = append(*buf, str...)
+}
+
+func appendEnclosed(buf *[]byte, prefix, infix, suffix string) {
+	*buf = append(*buf, prefix...)
+	*buf = append(*buf, infix...)
+	*buf = append(*buf, suffix...)
 }
 
 /*

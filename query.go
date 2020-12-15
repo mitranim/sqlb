@@ -283,11 +283,11 @@ func (self *Query) WrapSelect(exprs string) {
 	)
 
 	buf := make([]byte, 0, len(s0)+len(self.Text)+len(s1)+len(exprs)+len(s2))
-	buf = append(buf, s0...)
+	appendStr(&buf, s0)
 	buf = append(buf, self.Text...)
-	buf = append(buf, s1...)
-	buf = append(buf, exprs...)
-	buf = append(buf, s2...)
+	appendStr(&buf, s1)
+	appendStr(&buf, exprs)
+	appendStr(&buf, s2)
 
 	self.Text = buf
 }

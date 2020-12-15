@@ -67,9 +67,9 @@ func (self NamedArgs) Names() Query {
 
 	for i, arg := range self {
 		if i > 0 {
-			buf = append(buf, `, `...)
+			appendStr(&buf, `, `)
 		}
-		buf = appendDelimited(buf, `"`, arg.Name, `"`)
+		appendEnclosed(&buf, `"`, arg.Name, `"`)
 	}
 
 	return Query{Text: buf}
@@ -105,9 +105,9 @@ func (self NamedArgs) Values() Query {
 
 	for i, arg := range self {
 		if i > 0 {
-			buf = append(buf, `, `...)
+			appendStr(&buf, `, `)
 		}
-		buf = append(buf, `$`...)
+		appendStr(&buf, `$`)
 		buf = strconv.AppendInt(buf, int64(i+1), 10)
 		args = append(args, arg.Value)
 	}
@@ -147,28 +147,28 @@ func (self NamedArgs) NamesAndValues() Query {
 	args := make([]interface{}, 0, len(self))
 	var buf []byte
 
-	buf = append(buf, `(`...)
+	appendStr(&buf, `(`)
 
 	for i, arg := range self {
 		if i > 0 {
-			buf = append(buf, `, `...)
+			appendStr(&buf, `, `)
 		}
-		buf = appendDelimited(buf, `"`, arg.Name, `"`)
+		appendEnclosed(&buf, `"`, arg.Name, `"`)
 	}
 
-	buf = append(buf, `) values (`...)
+	appendStr(&buf, `) values (`)
 
 	for i, arg := range self {
 		if i > 0 {
-			buf = append(buf, `, `...)
+			appendStr(&buf, `, `)
 		}
-		buf = append(buf, `$`...)
+		appendStr(&buf, `$`)
 		buf = strconv.AppendInt(buf, int64(i+1), 10)
 
 		args = append(args, arg.Value)
 	}
 
-	buf = append(buf, `)`...)
+	appendStr(&buf, `)`)
 
 	return Query{Text: buf, Args: args}
 }
@@ -203,10 +203,10 @@ func (self NamedArgs) Assignments() Query {
 
 	for i, arg := range self {
 		if i > 0 {
-			buf = append(buf, `, `...)
+			appendStr(&buf, `, `)
 		}
-		buf = appendDelimited(buf, `"`, arg.Name, `"`)
-		buf = append(buf, ` = $`...)
+		appendEnclosed(&buf, `"`, arg.Name, `"`)
+		appendStr(&buf, ` = $`)
 		buf = strconv.AppendInt(buf, int64(i+1), 10)
 		args = append(args, arg.Value)
 	}
@@ -248,10 +248,10 @@ func (self NamedArgs) Conditions() Query {
 
 	for i, arg := range self {
 		if i > 0 {
-			buf = append(buf, ` and `...)
+			appendStr(&buf, ` and `)
 		}
-		buf = appendDelimited(buf, `"`, arg.Name, `"`)
-		buf = append(buf, ` is not distinct from $`...)
+		appendEnclosed(&buf, `"`, arg.Name, `"`)
+		appendStr(&buf, ` is not distinct from $`)
 		buf = strconv.AppendInt(buf, int64(i+1), 10)
 		args = append(args, arg.Value)
 	}
