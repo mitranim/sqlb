@@ -7,6 +7,13 @@ import (
 )
 
 /*
+If true (default), unused query parameters cause panics in functions like
+`Query.Append`. If false, unused parameters are ok. Turning this off can be
+convenient in development, when changing queries rapidly.
+*/
+var CheckUnused = false
+
+/*
 Interface that allows compatibility between different query variants. Subquery
 insertion / flattening, supported by `Query.Append()` and `Query.AppendNamed()`,
 detects instances of this interface, rather than the concrete type `Query`,
@@ -134,13 +141,15 @@ func (self *Query) Append(src string, args ...interface{}) {
 		}
 	}
 
-	for i, arg := range args {
-		if !used.has(i) {
-			panic(Err{
-				Code:  ErrCodeUnusedArgument,
-				While: `appending to query`,
-				Cause: fmt.Errorf(`unused argument %#v at index %v`, arg, i),
-			})
+	if CheckUnused {
+		for i, arg := range args {
+			if !used.has(i) {
+				panic(Err{
+					Code:  ErrCodeUnusedArgument,
+					While: `appending to query`,
+					Cause: fmt.Errorf(`unused argument %#v at index %v`, arg, i),
+				})
+			}
 		}
 	}
 }
@@ -227,14 +236,16 @@ func (self *Query) AppendNamed(src string, args map[string]interface{}) {
 		}
 	}
 
-	for key := range args {
-		_, ok := namedToOrd[sqlp.NodeNamedParam(key)]
-		if !ok {
-			panic(Err{
-				Code:  ErrCodeUnusedArgument,
-				While: `appending to query`,
-				Cause: fmt.Errorf(`unused named argument %q`, key),
-			})
+	if CheckUnused {
+		for key := range args {
+			_, ok := namedToOrd[sqlp.NodeNamedParam(key)]
+			if !ok {
+				panic(Err{
+					Code:  ErrCodeUnusedArgument,
+					While: `appending to query`,
+					Cause: fmt.Errorf(`unused named argument %q`, key),
+				})
+			}
 		}
 	}
 }

@@ -8,6 +8,10 @@ See the sibling library https://github.com/mitranim/gos for scanning SQL rows in
 
 ## Changelog
 
+### 0.1.6
+
+Added `CheckUnused` which allows to opt out of unused parameter checks in `Query.Append` and `Query.AppendNamed`. Can be convenient for development.
+
 ### 0.1.5
 
 Minor bugfix: `Query.String` is now implemented on the non-pointer type, as intended. Also updated the `sqlp` dependency.

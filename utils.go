@@ -120,12 +120,12 @@ func queryArgsBefore(args []interface{}, index int) int {
 }
 
 func appendSpaceIfNeeded(buf *[]byte) {
-	if buf != nil && len(*buf) > 0 && !endsWithWhitspace(*buf) {
+	if buf != nil && len(*buf) > 0 && !endsWithWhitespace(*buf) {
 		*buf = append(*buf, ` `...)
 	}
 }
 
-func endsWithWhitspace(chunk []byte) bool {
+func endsWithWhitespace(chunk []byte) bool {
 	char, _ := utf8.DecodeLastRune(chunk)
 	return isWhitespaceChar(char)
 }
