@@ -11,7 +11,7 @@ If true (default), unused query parameters cause panics in functions like
 `Query.Append`. If false, unused parameters are ok. Turning this off can be
 convenient in development, when changing queries rapidly.
 */
-var CheckUnused = false
+var CheckUnused = true
 
 /*
 Interface that allows compatibility between different query variants. Subquery
