@@ -8,6 +8,10 @@ See the sibling library https://github.com/mitranim/gos for scanning SQL rows in
 
 ## Changelog
 
+### 0.1.8
+
+Added `StrQuery`.
+
 ### 0.1.7
 
 Corrected `CheckUnused` to be `true` by default, which was always intended.

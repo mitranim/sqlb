@@ -308,7 +308,7 @@ Wraps the query to select the fields derived by calling `Cols(dest)`.
 
 For example, this:
 
-	var query SqlQuery
+	var query Query
 	query.Append(`select * from some_table`)
 
 	var out struct{Id int64 `db:"id"`}
@@ -322,4 +322,26 @@ Is equivalent to this:
 */
 func (self *Query) WrapSelectCols(dest interface{}) {
 	self.WrapSelect(Cols(dest))
+}
+
+/*
+Shortcut for interpolating strings into queries.
+
+Because this implements `IQuery`, when used as an ordinal or named parameter
+($1 or :named), this will be directly interpolated into the query string and
+removed from the argument list.
+
+Usage:
+
+	var query Query
+	query.AppendNamed(
+		`select col where :col = :value`,
+		map[string]interface{}{"col": StrQuery("rel_id"), "value": 10},
+	)
+*/
+type StrQuery string
+
+// Implement `IQuery`.
+func (self StrQuery) QueryAppend(out *Query) {
+	out.Append(string(self))
 }

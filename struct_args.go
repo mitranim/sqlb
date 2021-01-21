@@ -262,7 +262,7 @@ func (self NamedArgs) Conditions() Query {
 /*
 Returns true if at least one argument satisfies the predicate function. Example:
 
-  ok := args.Some(NamedArg.IsNil)
+	ok := args.Some(NamedArg.IsNil)
 */
 func (self NamedArgs) Some(fun func(NamedArg) bool) bool {
 	for _, arg := range self {
@@ -276,7 +276,7 @@ func (self NamedArgs) Some(fun func(NamedArg) bool) bool {
 /*
 Returns true if every argument satisfies the predicate function. Example:
 
-  ok := args.Every(NamedArg.IsNil)
+	ok := args.Every(NamedArg.IsNil)
 */
 func (self NamedArgs) Every(fun func(NamedArg) bool) bool {
 	for _, arg := range self {
