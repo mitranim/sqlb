@@ -8,6 +8,10 @@ See the sibling library https://github.com/mitranim/gos for scanning SQL rows in
 
 ## Changelog
 
+### 0.1.9
+
+Added `Ords` and `Ord`: structured representation of `order by`, able to decode from external input such as JSON, but also flexible enough to store arbitrary sub-queries. Ported from `github.com/mitranim/jel`, while also adding the ability to store sub-queries rather than only identifiers.
+
 ### 0.1.8
 
 Added `StrQuery`.
