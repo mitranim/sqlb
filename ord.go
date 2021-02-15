@@ -99,7 +99,7 @@ func (self *Ords) ParseSlice(vals []string) error {
 func (self Ords) parseOrd(str string, ord *Ord) error {
 	match := ordReg.FindStringSubmatch(str)
 	if match == nil {
-		return fmt.Errorf(`[sqlb] %q is not a valid ordering string; expected format: "<ident> asc|desc"`, str)
+		return fmt.Errorf(`[sqlb] %q is not a valid ordering string; expected format: "<ident> (asc|desc)? (nulls last)?"`, str)
 	}
 
 	_, path, err := structFieldByJsonPath(self.Type, match[1])
@@ -108,13 +108,14 @@ func (self Ords) parseOrd(str string, ord *Ord) error {
 	}
 
 	ord.Path = path
-	ord.IsDesc = strings.EqualFold(match[2], `desc`)
+	ord.Desc = strings.EqualFold(match[2], `desc`)
+	ord.NullsLast = match[3] != ""
 	return nil
 }
 
 /*
 Implement `IQuery`, allowing this to be used as a sub-query for `Query`. When
-used as an argument for `Query.Append()` or `Query.AppendNamed()`, this will be
+used as an argument for `Query.Append` or `Query.AppendNamed`, this will be
 automatically interpolated.
 */
 func (self Ords) QueryAppend(out *Query) {
@@ -129,11 +130,37 @@ func (self Ords) QueryAppend(out *Query) {
 			out.Append(`order by `)
 			first = false
 		} else {
-			appendStr(&out.Text, ", ")
+			appendStr(&out.Text, `, `)
 		}
 
 		val.QueryAppend(out)
 	}
+}
+
+/*
+Returns a query for the Postgres window function `row_number`:
+
+	OrdsFrom().RowNumber()
+	-> `0`
+
+	OrdsFrom(OrdAsc(`col`)).RowNumber()
+	-> `row_number() over (order by "col" asc nulls last)`
+
+As shown above, an empty `Ords` generates a constant `0`. The Postgres query
+planner should optimize away any ordering by this constant column.
+*/
+func (self Ords) RowNumber() Query {
+	var query Query
+
+	if self.IsEmpty() {
+		query.Append(`0`)
+	} else {
+		query.Append(`row_number() over (`)
+		self.QueryAppend(&query)
+		query.Append(`)`)
+	}
+
+	return query
 }
 
 // Returns true if there are no non-nil items.
@@ -164,16 +191,30 @@ func (self *Ords) Or(items ...IQuery) {
 /*
 Shortcut:
 
-	OrdAsc(`one`, `two) ≡ Ord{Path: []string{`one`, `two`}, IsDesc: false}
+	OrdAsc(`one`, `two) ≡ Ord{Path: []string{`one`, `two`}}
 */
-func OrdAsc(path ...string) Ord { return Ord{Path: path, IsDesc: false} }
+func OrdAsc(path ...string) Ord { return Ord{Path: path} }
 
 /*
 Shortcut:
 
-	OrdDesc(`one`, `two) ≡ Ord{Path: []string{`one`, `two`}, IsDesc: true}
+	OrdDesc(`one`, `two) ≡ Ord{Path: []string{`one`, `two`}, Desc: true}
 */
-func OrdDesc(path ...string) Ord { return Ord{Path: path, IsDesc: true} }
+func OrdDesc(path ...string) Ord { return Ord{Path: path, Desc: true} }
+
+/*
+Shortcut:
+
+	OrdAscNl(`one`, `two) ≡ Ord{Path: []string{`one`, `two`}, NullsLast: true}
+*/
+func OrdAscNl(path ...string) Ord { return Ord{Path: path, NullsLast: true} }
+
+/*
+Shortcut:
+
+	OrdDescNl(`one`, `two) ≡ Ord{Path: []string{`one`, `two`}, Desc: true, NullsLast: true}
+*/
+func OrdDescNl(path ...string) Ord { return Ord{Path: path, Desc: true, NullsLast: true} }
 
 /*
 Short for "ordering". Describes an SQL ordering like:
@@ -183,17 +224,19 @@ Short for "ordering". Describes an SQL ordering like:
 	`("nested")."other_col" desc`
 
 but in a structured format. When encoding for SQL, identifiers are quoted for
-safety. Identifier case is preserved. Parsing of "asc" and "desc" is
-case-insensitive and doesn't preserve case.
+safety. Identifier case is preserved. Parsing of keyword such
+as "asc", "desc", "nulls last" is case-insensitive and non-case-preserving
+since they're converted to bools.
 
-Note on `IsDesc`: the default value `false` corresponds to "ascending", which is
+Note on `Desc`: the default value `false` corresponds to "ascending", which is
 the default in SQL.
 
 Also see `Ords`.
 */
 type Ord struct {
-	Path   []string
-	IsDesc bool
+	Path      []string
+	Desc      bool
+	NullsLast bool
 }
 
 /*
@@ -212,11 +255,15 @@ func (self Ord) String() string {
 // Appends an SQL string to the buffer. See `.String()`.
 func (self Ord) AppendBytes(buf *[]byte) {
 	appendSqlPath(buf, self.Path)
-	appendStr(buf, " ")
-	if self.IsDesc {
-		appendStr(buf, "desc nulls last")
+
+	if self.Desc {
+		appendStr(buf, " desc")
 	} else {
-		appendStr(buf, "asc nulls last")
+		appendStr(buf, " asc")
+	}
+
+	if self.NullsLast {
+		appendStr(buf, " nulls last")
 	}
 }
 

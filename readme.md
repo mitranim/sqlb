@@ -2,11 +2,33 @@
 
 **SQL** **B**uilder: simple SQL query builder. Oriented towards text and **writing plain SQL**, simplifying parameters, arguments, query interpolation, query composition, and so on. Also provides tools for converting structs into SQL expressions and arguments.
 
-See the full documentation at https://godoc.org/github.com/mitranim/sqlb.
+See the full documentation at https://go.pkg.dev/github.com/mitranim/sqlb.
 
 See the sibling library https://github.com/mitranim/gos for scanning SQL rows into structs.
 
 ## Changelog
+
+### `0.1.10`
+
+Breaking changes in the name of efficiency:
+
+* `NamedArgs.Conditions` now uses `=` and `is null`, as appropriate, instead of previous `is not distinct from`. At the time of writing, Postgres (version <= 12) is unable to use indexes for `is not distinct from`, which may result in much slower queries. The new approach avoids this gotcha.
+
+* In `Ord`, `nulls last` is now opt-in rather than default. In addition, `asc/desc` in input strings is now optional. This more precisely reflects SQL semantics and allows finer-grained control. More importantly, it avoids a potential performance gotcha. At the time of writing, Postgres (version <= 12) is unable to use normal indexes for `nulls last` ordering. Instead it requires specialized indexes where `nulls last` is set explicitly. Making it opt-in reduces the chance of accidental slowness.
+
+  * Added `OrdAscNl` and `OrdDescNl` for convenient construction.
+
+  * Minor breaking change: `Ord.IsDesc` is now `Ord.Desc`.
+
+* Minor breaking change: removed `Ord.IsValid`.
+
+Non-breaking additions:
+
+* `Ords.RowNumber()`: generates a Postgres window function expression `row_number() over (order by ...)`, falling back on a constant value when the ordering is empty.
+
+* `QueryOrd()`: shortcut for making a `Query` with a single `.Append()` invocation.
+
+* `QueryNamed()`: shortcut for making a `Query` with a single `.AppendNamed()` invocation.
 
 ### 0.1.9
 

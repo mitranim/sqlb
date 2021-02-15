@@ -2,8 +2,6 @@ package sqlb
 
 import (
 	"encoding/json"
-	"reflect"
-	"testing"
 	"time"
 )
 
@@ -16,36 +14,56 @@ type External struct {
 	Internal     Internal `json:"internal"     db:"internal"`
 }
 
-func TestOrdAsc(t *testing.T) {
+func TestOrdAsc(t *T) {
 	eq(t,
-		Ord{Path: []string{`one`, `two`}, IsDesc: false},
+		Ord{Path: []string{`one`, `two`}, Desc: false, NullsLast: false},
 		OrdAsc(`one`, `two`),
 	)
 }
 
-func TestOrdDesc(t *testing.T) {
+func TestOrdDesc(t *T) {
 	eq(t,
-		Ord{Path: []string{`one`, `two`}, IsDesc: true},
+		Ord{Path: []string{`one`, `two`}, Desc: true, NullsLast: false},
 		OrdDesc(`one`, `two`),
 	)
 }
 
-func TestOrdString(t *testing.T) {
-	t.Run(`singular`, func(t *testing.T) {
-		eq(t, `"one" asc nulls last`, OrdAsc(`one`).String())
-		eq(t, `"one" desc nulls last`, OrdDesc(`one`).String())
+func TestOrdAscNl(t *T) {
+	eq(t,
+		Ord{Path: []string{`one`, `two`}, Desc: false, NullsLast: true},
+		OrdAscNl(`one`, `two`),
+	)
+}
+
+func TestOrdDescNl(t *T) {
+	eq(t,
+		Ord{Path: []string{`one`, `two`}, Desc: true, NullsLast: true},
+		OrdDescNl(`one`, `two`),
+	)
+}
+
+func TestOrdString(t *T) {
+	t.Run(`singular`, func(t *T) {
+		eq(t, `"one" asc`, OrdAsc(`one`).String())
+		eq(t, `"one" desc`, OrdDesc(`one`).String())
+		eq(t, `"one" asc nulls last`, OrdAscNl(`one`).String())
+		eq(t, `"one" desc nulls last`, OrdDescNl(`one`).String())
 	})
-	t.Run(`binary`, func(t *testing.T) {
-		eq(t, `("one")."two" asc nulls last`, OrdAsc(`one`, `two`).String())
-		eq(t, `("one")."two" desc nulls last`, OrdDesc(`one`, `two`).String())
+	t.Run(`binary`, func(t *T) {
+		eq(t, `("one")."two" asc`, OrdAsc(`one`, `two`).String())
+		eq(t, `("one")."two" desc`, OrdDesc(`one`, `two`).String())
+		eq(t, `("one")."two" asc nulls last`, OrdAscNl(`one`, `two`).String())
+		eq(t, `("one")."two" desc nulls last`, OrdDescNl(`one`, `two`).String())
 	})
-	t.Run(`plural`, func(t *testing.T) {
-		eq(t, `("one")."two"."three" asc nulls last`, OrdAsc(`one`, `two`, `three`).String())
-		eq(t, `("one")."two"."three" desc nulls last`, OrdDesc(`one`, `two`, `three`).String())
+	t.Run(`plural`, func(t *T) {
+		eq(t, `("one")."two"."three" asc`, OrdAsc(`one`, `two`, `three`).String())
+		eq(t, `("one")."two"."three" desc`, OrdDesc(`one`, `two`, `three`).String())
+		eq(t, `("one")."two"."three" asc nulls last`, OrdAscNl(`one`, `two`, `three`).String())
+		eq(t, `("one")."two"."three" desc nulls last`, OrdDescNl(`one`, `two`, `three`).String())
 	})
 }
 
-func TestOrdsLen(t *testing.T) {
+func TestOrdsLen(t *T) {
 	eq(t, 0, Ords{}.Len())
 	eq(t, 0, OrdsFrom(nil).Len())
 	eq(t, 1, OrdsFrom(OrdAsc(`one`)).Len())
@@ -53,7 +71,7 @@ func TestOrdsLen(t *testing.T) {
 	eq(t, 2, OrdsFrom(nil, OrdAsc(`one`), nil, Query{}).Len())
 }
 
-func TestOrdsIsEmpty(t *testing.T) {
+func TestOrdsIsEmpty(t *T) {
 	eq(t, true, Ords{}.IsEmpty())
 	eq(t, true, OrdsFrom(nil).IsEmpty())
 	eq(t, false, OrdsFrom(OrdAsc(`one`)).IsEmpty())
@@ -61,7 +79,7 @@ func TestOrdsIsEmpty(t *testing.T) {
 	eq(t, false, OrdsFrom(nil, OrdAsc(`one`), nil, Query{}).IsEmpty())
 }
 
-func TestOrdsSimpleString(t *testing.T) {
+func TestOrdsSimpleString(t *T) {
 	str := func(ords Ords) string {
 		var query Query
 		ords.QueryAppend(&query)
@@ -69,63 +87,90 @@ func TestOrdsSimpleString(t *testing.T) {
 		return query.String()
 	}
 
-	t.Run(`empty`, func(t *testing.T) {
+	t.Run(`empty`, func(t *T) {
 		eq(t, ``, str(Ords{}))
 	})
-	t.Run(`singular`, func(t *testing.T) {
-		eq(t, `order by "one" asc nulls last`, str(OrdsFrom(OrdAsc(`one`))))
-		eq(t, `order by "one" desc nulls last`, str(OrdsFrom(OrdDesc(`one`))))
+	t.Run(`singular`, func(t *T) {
+		eq(t, `order by "one" asc`, str(OrdsFrom(OrdAsc(`one`))))
+		eq(t, `order by "one" desc`, str(OrdsFrom(OrdDesc(`one`))))
+		eq(t, `order by "one" asc nulls last`, str(OrdsFrom(OrdAscNl(`one`))))
+		eq(t, `order by "one" desc nulls last`, str(OrdsFrom(OrdDescNl(`one`))))
 	})
-	t.Run(`binary`, func(t *testing.T) {
-		eq(t, `order by ("one")."two" asc nulls last`, str(OrdsFrom(OrdAsc(`one`, `two`))))
-		eq(t, `order by ("one")."two" desc nulls last`, str(OrdsFrom(OrdDesc(`one`, `two`))))
+	t.Run(`binary`, func(t *T) {
+		eq(t, `order by ("one")."two" asc`, str(OrdsFrom(OrdAsc(`one`, `two`))))
+		eq(t, `order by ("one")."two" desc`, str(OrdsFrom(OrdDesc(`one`, `two`))))
+		eq(t, `order by ("one")."two" asc nulls last`, str(OrdsFrom(OrdAscNl(`one`, `two`))))
+		eq(t, `order by ("one")."two" desc nulls last`, str(OrdsFrom(OrdDescNl(`one`, `two`))))
 	})
-	t.Run(`plural`, func(t *testing.T) {
-		eq(t, `order by ("one")."two"."three" asc nulls last`, str(OrdsFrom(OrdAsc(`one`, `two`, `three`))))
-		eq(t, `order by ("one")."two"."three" desc nulls last`, str(OrdsFrom(OrdDesc(`one`, `two`, `three`))))
+	t.Run(`plural`, func(t *T) {
+		eq(t, `order by ("one")."two"."three" asc`, str(OrdsFrom(OrdAsc(`one`, `two`, `three`))))
+		eq(t, `order by ("one")."two"."three" desc`, str(OrdsFrom(OrdDesc(`one`, `two`, `three`))))
+		eq(t, `order by ("one")."two"."three" asc nulls last`, str(OrdsFrom(OrdAscNl(`one`, `two`, `three`))))
+		eq(t, `order by ("one")."two"."three" desc nulls last`, str(OrdsFrom(OrdDescNl(`one`, `two`, `three`))))
 	})
 }
 
-func TestOrdsQueryAppend(t *testing.T) {
-	t.Run(`simple_direct`, func(t *testing.T) {
+func TestOrdsQueryAppend(t *T) {
+	t.Run(`simple_direct`, func(t *T) {
 		var query Query
 		query.Append(`select from where`)
 		query.AppendQuery(OrdsFrom(OrdAsc(`one`, `two`, `three`)))
-		eq(t, `select from where order by ("one")."two"."three" asc nulls last`, query.String())
+		eq(t, `select from where order by ("one")."two"."three" asc`, query.String())
 	})
 
-	t.Run(`simple_parametrized`, func(t *testing.T) {
+	t.Run(`simple_parametrized`, func(t *T) {
 		var query Query
 		query.Append(`select from where $1`, OrdsFrom(OrdAsc(`one`, `two`, `three`)))
-		eq(t, `select from where order by ("one")."two"."three" asc nulls last`, query.String())
+		eq(t, `select from where order by ("one")."two"."three" asc`, query.String())
 	})
 
-	t.Run(`parametrized_parametrized`, func(t *testing.T) {
+	t.Run(`parametrized_by_parametrized`, func(t *T) {
 		var clause Query
 		clause.Append(`geo_point <-> $1 desc`, `(20,30)`)
 
 		var query Query
 		query.Append(`select from where $1 $2`, 10, OrdsFrom(OrdAsc(`five`), clause))
 
-		eq(t, `select from where $1 order by "five" asc nulls last, geo_point <-> $2 desc`, query.String())
+		eq(t, `select from where $1 order by "five" asc, geo_point <-> $2 desc`, query.String())
 		eq(t, []interface{}{10, `(20,30)`}, query.Args)
 	})
 }
 
-func TestOrdsDec(t *testing.T) {
-	t.Run(`decode_from_json`, func(t *testing.T) {
-		const input = `["externalName asc", "internal.internalTime desc"]`
-		ords := OrdsFor(External{})
-
-		err := json.Unmarshal([]byte(input), &ords)
+func TestOrdsDec(t *T) {
+	dec := func(t *T, out *Ords, input string) {
+		err := json.Unmarshal([]byte(input), out)
 		if err != nil {
 			t.Fatalf("failed to decode ord from JSON: %+v", err)
 		}
+	}
 
-		eq(t, ords.Items, OrdsFrom(OrdAsc(`external_name`), OrdDesc(`internal`, `internal_time`)).Items)
+	t.Run(`decode_from_json`, func(t *T) {
+		t.Run(`minimal`, func(t *T) {
+			ords := OrdsFor(External{})
+			dec(t, &ords, `["externalName", "internal.internalTime"]`)
+			eq(t, ords.Items, OrdsFrom(OrdAsc(`external_name`), OrdAsc(`internal`, `internal_time`)).Items)
+		})
+
+		t.Run(`asc_desc`, func(t *T) {
+			ords := OrdsFor(External{})
+			dec(t, &ords, `["externalName asc", "internal.internalTime  DESC"]`)
+			eq(t, ords.Items, OrdsFrom(OrdAsc(`external_name`), OrdDesc(`internal`, `internal_time`)).Items)
+		})
+
+		t.Run(`nulls_last`, func(t *T) {
+			ords := OrdsFor(External{})
+			dec(t, &ords, `["externalName nulls last", "internal.internalTime  NULLS  LAST"]`)
+			eq(t, ords.Items, OrdsFrom(OrdAscNl(`external_name`), OrdAscNl(`internal`, `internal_time`)).Items)
+		})
+
+		t.Run(`asc_desc_nulls_last`, func(t *T) {
+			ords := OrdsFor(External{})
+			dec(t, &ords, `["externalName ASC nulls last", "internal.internalTime  DESC  NULLS  LAST"]`)
+			eq(t, ords.Items, OrdsFrom(OrdAscNl(`external_name`), OrdDescNl(`internal`, `internal_time`)).Items)
+		})
 	})
 
-	t.Run(`decode_from_strings`, func(t *testing.T) {
+	t.Run(`decode_from_strings`, func(t *T) {
 		input := []string{"externalName asc", "internal.internalTime desc"}
 		ords := OrdsFor(External{})
 
@@ -137,8 +182,8 @@ func TestOrdsDec(t *testing.T) {
 		eq(t, ords.Items, OrdsFrom(OrdAsc(`external_name`), OrdDesc(`internal`, `internal_time`)).Items)
 	})
 
-	t.Run(`reject_unknown_fields`, func(t *testing.T) {
-		input := []string{"external_name asc nulls last"}
+	t.Run(`reject_unknown_fields`, func(t *T) {
+		input := []string{"external_name asc"}
 		ords := OrdsFor(External{})
 
 		err := ords.ParseSlice(input)
@@ -147,8 +192,8 @@ func TestOrdsDec(t *testing.T) {
 		}
 	})
 
-	t.Run(`fail_when_type_is_not_provided`, func(t *testing.T) {
-		input := []string{"some_ident asc nulls last"}
+	t.Run(`fail_when_type_is_not_provided`, func(t *T) {
+		input := []string{"some_ident asc"}
 		ords := OrdsFor(nil)
 
 		err := ords.ParseSlice(input)
@@ -156,10 +201,4 @@ func TestOrdsDec(t *testing.T) {
 			t.Fatalf("expected decoding to fail")
 		}
 	})
-}
-
-func eq(t *testing.T, expected interface{}, actual interface{}) {
-	if !reflect.DeepEqual(expected, actual) {
-		t.Fatalf("expected:\n%#v\nactual:\n%#v", expected, actual)
-	}
 }

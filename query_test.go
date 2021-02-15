@@ -1,14 +1,9 @@
 package sqlb
 
-import (
-	"reflect"
-	"testing"
-)
-
 type Dict = map[string]interface{}
 
-func TestQueryAppend(t *testing.T) {
-	t.Run("without_nested", func(t *testing.T) {
+func TestQueryAppend(t *T) {
+	t.Run("without_nested", func(t *T) {
 		var query Query
 		query.Append(`one = $1 and two = $2`, 10, 20)
 		query.Append(`and three = $1 and four = $1`, 30)
@@ -16,18 +11,14 @@ func TestQueryAppend(t *testing.T) {
 
 		strExpected := `one = $1 and two = $2 and three = $3 and four = $3 and five = $4 and six = $5`
 		strActual := query.String()
-		if strExpected != strActual {
-			t.Fatalf("expected query:\n%q\ngot:\n%q", strExpected, strActual)
-		}
+		eq(t, strExpected, strActual)
 
 		argsExpected := []interface{}{10, 20, 30, 40, 50}
 		argsActual := query.Args
-		if !reflect.DeepEqual(argsExpected, argsActual) {
-			t.Fatalf("expected args:\n%#v\ngot:\n%#v", argsExpected, argsActual)
-		}
+		eq(t, argsExpected, argsActual)
 	})
 
-	t.Run("with_nested", func(t *testing.T) {
+	t.Run("with_nested", func(t *T) {
 		var sub0 Query
 		sub0.Append(`two = $1 and three = $2`, 20, 30)
 
@@ -39,20 +30,16 @@ func TestQueryAppend(t *testing.T) {
 
 		strExpected := `one = $1 and two = $4 and three = $5 and two = $6 and three = $7 and four = $2 and five = $8 and six = $9 and seven = $3`
 		strActual := query.String()
-		if strExpected != strActual {
-			t.Fatalf("expected query:\n%q\ngot:\n%q", strExpected, strActual)
-		}
+		eq(t, strExpected, strActual)
 
 		argsExpected := []interface{}{10, 40, 70, 20, 30, 20, 30, 50, 60}
 		argsActual := query.Args
-		if !reflect.DeepEqual(argsExpected, argsActual) {
-			t.Fatalf("expected args:\n%#v\ngot:\n%#v", argsExpected, argsActual)
-		}
+		eq(t, argsExpected, argsActual)
 	})
 }
 
-func TestQueryAppendNamed(t *testing.T) {
-	t.Run("without_nested", func(t *testing.T) {
+func TestQueryAppendNamed(t *T) {
+	t.Run("without_nested", func(t *T) {
 		var query Query
 		query.AppendNamed(`one = :one::text and two = :two`, Dict{"one": 10, "two": 20})
 		query.AppendNamed(`and three = :three and four = :three`, Dict{"three": 30})
@@ -60,18 +47,14 @@ func TestQueryAppendNamed(t *testing.T) {
 
 		strExpected := `one = $1::text and two = $2 and three = $3 and four = $3 and five = $4 and six = $5`
 		strActual := query.String()
-		if strExpected != strActual {
-			t.Fatalf("expected query:\n%q\ngot:\n%q", strExpected, strActual)
-		}
+		eq(t, strExpected, strActual)
 
 		argsExpected := []interface{}{10, 20, 30, 40, 50}
 		argsActual := query.Args
-		if !reflect.DeepEqual(argsExpected, argsActual) {
-			t.Fatalf("expected args:\n%#v\ngot:\n%#v", argsExpected, argsActual)
-		}
+		eq(t, argsExpected, argsActual)
 	})
 
-	t.Run("with_nested", func(t *testing.T) {
+	t.Run("with_nested", func(t *T) {
 		var sub0 Query
 		sub0.AppendNamed(`two = :two and three = :three`, Dict{"two": 20, "three": 30})
 
@@ -89,19 +72,15 @@ func TestQueryAppendNamed(t *testing.T) {
 
 		strExpected := `one = $1 and two = $2 and three = $3 and two = $4 and three = $5 and four = $6 and five = $7 and six = $8 and seven = $9`
 		strActual := query.String()
-		if strExpected != strActual {
-			t.Fatalf("expected query:\n%q\ngot:\n%q", strExpected, strActual)
-		}
+		eq(t, strExpected, strActual)
 
 		argsExpected := []interface{}{10, 20, 30, 20, 30, 40, 50, 60, 70}
 		argsActual := query.Args
-		if !reflect.DeepEqual(argsExpected, argsActual) {
-			t.Fatalf("expected args:\n%#v\ngot:\n%#v", argsExpected, argsActual)
-		}
+		eq(t, argsExpected, argsActual)
 	})
 }
 
-func TestQueryAppendQuery(t *testing.T) {
+func TestQueryAppendQuery(t *T) {
 	var inner Query
 	inner.Append(`$1 $2 $3`, 30, 40, 50)
 
@@ -111,13 +90,9 @@ func TestQueryAppendQuery(t *testing.T) {
 
 	strExpected := `$1 $2 $3 $4 $5`
 	strActual := outer.String()
-	if strExpected != strActual {
-		t.Fatalf("expected query:\n%q\ngot:\n%q", strExpected, strActual)
-	}
+	eq(t, strExpected, strActual)
 
 	argsExpected := []interface{}{10, 20, 30, 40, 50}
 	argsActual := outer.Args
-	if !reflect.DeepEqual(argsExpected, argsActual) {
-		t.Fatalf("expected args:\n%#v\ngot:\n%#v", argsExpected, argsActual)
-	}
+	eq(t, argsExpected, argsActual)
 }

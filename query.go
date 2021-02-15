@@ -15,13 +15,33 @@ var CheckUnused = true
 
 /*
 Interface that allows compatibility between different query variants. Subquery
-insertion / flattening, supported by `Query.Append()` and `Query.AppendNamed()`,
+insertion / flattening, supported by `Query.Append` and `Query.AppendNamed`,
 detects instances of this interface, rather than the concrete type `Query`,
 allowing external code to implement its own variants, wrap `Query`, etc.
 
 WTB better name.
 */
 type IQuery interface{ QueryAppend(*Query) }
+
+/*
+Convenience function for making a `Query` with a single `Query.Append`
+invocation.
+*/
+func QueryOrd(src string, args ...interface{}) Query {
+	var query Query
+	query.Append(src, args...)
+	return query
+}
+
+/*
+Convenience function for making a `Query` with a single `Query.AppendNamed`
+invocation.
+*/
+func QueryNamed(src string, args map[string]interface{}) Query {
+	var query Query
+	query.AppendNamed(src, args)
+	return query
+}
 
 /*
 Tool for building SQL queries. Makes it easy to append or insert arbitrary SQL
@@ -34,8 +54,8 @@ easy to avoid mis-numbering. See `.Append()`.
 Supports named parameters. See `.AppendNamed()`.
 
 Composable: both `.Append()` and `.AppendNamed()` automatically interpolate
-sub-queries found in the arguments, combining the arguments and renumerating the
-parameters as appropriate.
+sub-queries found in the arguments, combining the arguments and renumerating
+the parameters as appropriate.
 
 Currently biased towards Postgres-style ordinal parameters of the form `$N`. The
 code is always converted to this "canonical" form. This can be rectified if

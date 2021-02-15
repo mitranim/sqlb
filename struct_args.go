@@ -1,17 +1,14 @@
 package sqlb
 
 import (
-	"regexp"
-	"strconv"
-
 	"github.com/mitranim/refut"
 )
 
 /*
 Scans a struct, accumulating fields tagged with `db` into a map suitable for
-`Query.AppendNamed()`. The input must be a struct or a struct pointer. A nil
-pointer is fine and produces a nil result. Panics on other inputs. Treats
-embedded structs as part of enclosing structs.
+`Query.AppendNamed`. The input must be a struct or a struct pointer. A nil
+pointer is fine and produces an empty non-nil map. Panics on other inputs.
+Treats embedded structs as part of enclosing structs.
 */
 func StructMap(input interface{}) map[string]interface{} {
 	dict := map[string]interface{}{}
@@ -43,8 +40,8 @@ type NamedArgs []NamedArg
 
 /*
 Returns a query whose string representation is suitable for an SQL `select`
-clause. Should be included into other queries via `Query.Append()` or
-`Query.AppendNamed()`.
+clause. Should be included into other queries via `Query.Append` or
+`Query.AppendNamed`.
 
 For example, this:
 
@@ -63,22 +60,24 @@ Is equivalent to:
 	text := `"one", "two"`
 */
 func (self NamedArgs) Names() Query {
-	var buf []byte
+	var query Query
+	self.queryAppendNames(&query)
+	return query
+}
 
+func (self NamedArgs) queryAppendNames(query *Query) {
 	for i, arg := range self {
 		if i > 0 {
-			appendStr(&buf, `, `)
+			appendStr(&query.Text, `, `)
 		}
-		appendEnclosed(&buf, `"`, arg.Name, `"`)
+		arg.queryAppendName(query)
 	}
-
-	return Query{Text: buf}
 }
 
 /*
 Returns a query whose string representation is suitable for an SQL `values()`
 clause, with arguments. Should be included into other queries via
-`Query.Append()` or `Query.AppendNamed()`.
+`Query.Append` or `Query.AppendNamed`.
 
 For example, this:
 
@@ -100,25 +99,24 @@ Is equivalent to:
 	args := []interface{}{10, 20}
 */
 func (self NamedArgs) Values() Query {
-	args := make([]interface{}, 0, len(self))
-	var buf []byte
+	query := Query{Args: make([]interface{}, 0, len(self))}
+	self.queryAppendValues(&query)
+	return query
+}
 
+func (self NamedArgs) queryAppendValues(query *Query) {
 	for i, arg := range self {
 		if i > 0 {
-			appendStr(&buf, `, `)
+			appendStr(&query.Text, `, `)
 		}
-		appendStr(&buf, `$`)
-		buf = strconv.AppendInt(buf, int64(i+1), 10)
-		args = append(args, arg.Value)
+		arg.queryAppendValue(query)
 	}
-
-	return Query{Text: buf, Args: args}
 }
 
 /*
 Returns a query whose string representation is suitable for an SQL `insert`
 clause, with arguments. Should be included into other queries via
-`Query.Append()` or `Query.AppendNamed()`.
+`Query.Append` or `Query.AppendNamed`.
 
 For example, this:
 
@@ -144,39 +142,21 @@ func (self NamedArgs) NamesAndValues() Query {
 		return Query{Text: []byte(`default values`)}
 	}
 
-	args := make([]interface{}, 0, len(self))
-	var buf []byte
+	query := Query{Args: make([]interface{}, 0, len(self))}
 
-	appendStr(&buf, `(`)
+	appendStr(&query.Text, `(`)
+	self.queryAppendNames(&query)
+	appendStr(&query.Text, `) values (`)
+	self.queryAppendValues(&query)
+	appendStr(&query.Text, `)`)
 
-	for i, arg := range self {
-		if i > 0 {
-			appendStr(&buf, `, `)
-		}
-		appendEnclosed(&buf, `"`, arg.Name, `"`)
-	}
-
-	appendStr(&buf, `) values (`)
-
-	for i, arg := range self {
-		if i > 0 {
-			appendStr(&buf, `, `)
-		}
-		appendStr(&buf, `$`)
-		buf = strconv.AppendInt(buf, int64(i+1), 10)
-
-		args = append(args, arg.Value)
-	}
-
-	appendStr(&buf, `)`)
-
-	return Query{Text: buf, Args: args}
+	return query
 }
 
 /*
 Returns a query whose string representation is suitable for an SQL `update set`
 clause, with arguments. Should be included into other queries via
-`Query.Append()` or `Query.AppendNamed()`.
+`Query.Append` or `Query.AppendNamed`.
 
 For example, this:
 
@@ -196,34 +176,35 @@ Is equivalent to:
 
 	text := `"one" = $1, "two" = $2`
 	args := []interface{}{10, 20}
+
+Known issue: when empty, this generates an empty query which is invalid SQL.
+Don't use this when `NamedArgs` is empty.
 */
 func (self NamedArgs) Assignments() Query {
-	args := make([]interface{}, 0, len(self))
-	var buf []byte
+	query := Query{Args: make([]interface{}, 0, len(self))}
 
 	for i, arg := range self {
 		if i > 0 {
-			appendStr(&buf, `, `)
+			appendStr(&query.Text, `, `)
 		}
-		appendEnclosed(&buf, `"`, arg.Name, `"`)
-		appendStr(&buf, ` = $`)
-		buf = strconv.AppendInt(buf, int64(i+1), 10)
-		args = append(args, arg.Value)
+		arg.queryAppendName(&query)
+		query.Append(`= $1`, arg.Value)
 	}
 
-	return Query{Text: buf, Args: args}
+	return query
 }
 
 /*
 Returns a query whose string representation is suitable for an SQL `where` or
 `on` clause, with arguments. Should be included into other queries via
-`Query.Append()` or `Query.AppendNamed()`.
+`Query.Append` or `Query.AppendNamed`.
 
 For example, this:
 
 	val := struct {
-		One int64 `db:"one"`
-		Two int64 `db:"two"`
+		One   int64  `db:"one"`
+		Two   int64  `db:"two"`
+		Three *int64 `db:"three"`
 	}{
 		One: 10,
 		Two: 20,
@@ -235,7 +216,7 @@ For example, this:
 
 Is equivalent to:
 
-	text := `"one" is not distinct from $1 and "two" is not distinct from $2`
+	text := `"one" = $1 and "two" = $2 and "three" is null`
 	args := []interface{}{10, 20}
 */
 func (self NamedArgs) Conditions() Query {
@@ -243,20 +224,14 @@ func (self NamedArgs) Conditions() Query {
 		return Query{Text: []byte(`true`)}
 	}
 
-	args := make([]interface{}, 0, len(self))
-	var buf []byte
-
+	var query Query
 	for i, arg := range self {
 		if i > 0 {
-			appendStr(&buf, ` and `)
+			query.Append(`and`)
 		}
-		appendEnclosed(&buf, `"`, arg.Name, `"`)
-		appendStr(&buf, ` is not distinct from $`)
-		buf = strconv.AppendInt(buf, int64(i+1), 10)
-		args = append(args, arg.Value)
+		arg.queryAppendCondition(&query)
 	}
-
-	return Query{Text: buf, Args: args}
+	return query
 }
 
 /*
@@ -293,17 +268,43 @@ type NamedArg struct {
 	Value interface{}
 }
 
+// Convenience function for creating a named arg without struct field labels.
 func Named(name string, value interface{}) NamedArg {
 	return NamedArg{Name: name, Value: value}
 }
 
-func (self NamedArg) IsValid() bool {
-	return columnNameRegexp.MatchString(self.Name)
-}
+/*
+Returns true if the value would be equivalent to `null` in SQL. Caution: this is
+NOT the same as comparing the value to `nil`:
 
-// WTF is this?
-var columnNameRegexp = regexp.MustCompile(`^(?:\w+(?:\.\w+)*|"\w+(?:\.\w+)*")$`)
+	NamedArg{}.Value == nil                      // true
+	NamedArg{}.IsNil()                           // true
+	NamedArg{Value: (*string)(nil)}.Value == nil // false
+	NamedArg{Value: (*string)(nil)}.IsNil()      // true
 
+This currently does NOT support fake nullable types like `sql.NullString`,
+because the Go developers didn't see fit to generalize them over a standard
+interface, and I'm unwilling to hardcode their full list here. I don't
+recommend their use. Just use actual nilable types.
+*/
 func (self NamedArg) IsNil() bool {
 	return refut.IsNil(self.Value)
+}
+
+func (self NamedArg) queryAppendName(query *Query) {
+	appendSpaceIfNeeded(&query.Text)
+	appendEnclosed(&query.Text, `"`, self.Name, `"`)
+}
+
+func (self NamedArg) queryAppendValue(query *Query) {
+	query.Append(`$1`, self.Value)
+}
+
+func (self NamedArg) queryAppendCondition(query *Query) {
+	self.queryAppendName(query)
+	if self.IsNil() {
+		appendStr(&query.Text, ` is null`)
+	} else {
+		query.Append(` = $1`, self.Value)
+	}
 }

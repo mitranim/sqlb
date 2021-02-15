@@ -22,13 +22,13 @@ ordinals.
 • Composable: query objects used as arguments are automatically inserted,
 combining the arguments and automatically renumerating the parameters.
 
-• Supports converting structs to SQL clauses such as `select A, B, C`,
+• Supports converting structs to SQL clauses such as `select a, b, c`,
 `names (...) values (...)`, etc.
 
 • Supports converting structs to named argument maps.
 
 Examples
 
-See `Query`, `Query.Append()`, `Query.AppendNamed()` for examples.
+See `Query`, `Query.Append`, `Query.AppendNamed` for examples.
 */
 package sqlb

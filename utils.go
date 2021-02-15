@@ -16,6 +16,8 @@ import (
 
 const bitsetSize = int(unsafe.Sizeof(bitset(0)) * 8)
 
+// Represents a fixed-size set of ints, where ints can only range from 0 to the
+// amount of available bits minus one.
 type bitset uint64
 
 func (self bitset) has(index int) bool { return self&(1<<index) != 0 }
@@ -136,7 +138,7 @@ func endsWithWhitespace(chunk []byte) bool {
 const dottedPath = `(?:\w+\.)*\w+`
 
 var dottedPathReg = regexp.MustCompile(`^` + dottedPath + `$`)
-var ordReg = regexp.MustCompile(`^(` + dottedPath + `)\s+(?i)(asc|desc)$`)
+var ordReg = regexp.MustCompile(`^(` + dottedPath + `)(?i)(?:\s+(asc|desc))?(?:\s+(nulls\s+last))?$`)
 
 /*
 Takes a struct type and a dot-separated path of JSON field names
