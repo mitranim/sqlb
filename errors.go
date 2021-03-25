@@ -19,6 +19,8 @@ const (
 	ErrCodeUnusedArgument      ErrCode = "UnusedArgument"
 	ErrCodeTooManyArguments    ErrCode = "TooManyArguments"
 	ErrCodeOrdinalOutOfBounds  ErrCode = "OrdinalOutOfBounds"
+	ErrCodeUnknownField        ErrCode = "UnknownField"
+	ErrCodeInternal            ErrCode = "Internal"
 )
 
 /*
@@ -39,6 +41,8 @@ var (
 	ErrUnusedArgument      Err = Err{Code: ErrCodeUnusedArgument, Cause: errors.New(`unused argument`)}
 	ErrTooManyArguments    Err = Err{Code: ErrCodeTooManyArguments, Cause: errors.New(`too many arguments`)}
 	ErrOrdinalOutOfBounds  Err = Err{Code: ErrCodeOrdinalOutOfBounds, Cause: errors.New(`ordinal parameter exceeds arguments`)}
+	ErrUnknownField        Err = Err{Code: ErrCodeUnknownField, Cause: errors.New(`unknown field`)}
+	ErrInternal            Err = Err{Code: ErrCodeInternal, Cause: errors.New(`internal error`)}
 )
 
 // Type of errors returned by this package.
@@ -53,7 +57,7 @@ func (self Err) Error() string {
 	if self == (Err{}) {
 		return ""
 	}
-	msg := `SQL error`
+	msg := `[sqlb]`
 	if self.Code != ErrCodeUnknown {
 		msg += fmt.Sprintf(` %s`, self.Code)
 	}

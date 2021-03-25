@@ -2,11 +2,15 @@
 
 **SQL** **B**uilder: simple SQL query builder. Oriented towards text and **writing plain SQL**, simplifying parameters, arguments, query interpolation, query composition, and so on. Also provides tools for converting structs into SQL expressions and arguments.
 
-See the full documentation at https://go.pkg.dev/github.com/mitranim/sqlb.
+See the full documentation at https://pkg.go.dev/github.com/mitranim/sqlb.
 
 See the sibling library https://github.com/mitranim/gos for scanning SQL rows into structs.
 
 ## Changelog
+
+### `0.1.11`
+
+Added `Ords.Lax`: a boolean that causes `Ords` to skip unknown fields during parsing.
 
 ### `0.1.10`
 

@@ -14,12 +14,11 @@ import (
 	"github.com/mitranim/refut"
 )
 
-const bitsetSize = int(unsafe.Sizeof(bitset(0)) * 8)
-
-// Represents a fixed-size set of ints, where ints can only range from 0 to the
-// amount of available bits minus one.
+// Represents a fixed-size set of ints, where values can only range from 0 to
+// the amount of available bits minus one.
 type bitset uint64
 
+func (self bitset) cap() int           { return int(unsafe.Sizeof(self) * 8) }
 func (self bitset) has(index int) bool { return self&(1<<index) != 0 }
 func (self *bitset) set(index int)     { *self |= (1 << index) }
 func (self *bitset) unset(index int)   { *self ^= (1 << index) }
@@ -152,12 +151,16 @@ Copied from `github.com/mitranim/jel`. Should consolidate.
 */
 func structFieldByJsonPath(rtype reflect.Type, pathStr string) (sfield reflect.StructField, path []string, err error) {
 	if !dottedPathReg.MatchString(pathStr) {
-		err = fmt.Errorf(`[sqlb] expected a valid dot-separated identifier, got %q`, pathStr)
+		err = ErrInvalidInput.because(
+			fmt.Errorf(`expected a valid dot-separated identifier, got %q`, pathStr),
+		)
 		return
 	}
 
 	if rtype == nil {
-		err = fmt.Errorf(`[sqlb] can't find field by path %q: no type provided`, pathStr)
+		err = ErrInvalidInput.because(
+			fmt.Errorf(`can't find field by path %q: no type provided`, pathStr),
+		)
 		return
 	}
 
@@ -171,8 +174,10 @@ func structFieldByJsonPath(rtype reflect.Type, pathStr string) (sfield reflect.S
 
 		colName := sfieldColumnName(sfield)
 		if colName == "" {
-			err = fmt.Errorf(`[sqlb] no column name corresponding to %q in type %v for path %q`,
-				segment, rtype, pathStr)
+			err = ErrUnknownField.because(
+				fmt.Errorf(`no column name corresponding to %q in type %v for path %q`,
+					segment, rtype, pathStr),
+			)
 			return
 		}
 
@@ -192,7 +197,9 @@ Copied from `github.com/mitranim/jel`. Should consolidate.
 */
 func sfieldByJsonName(rtype reflect.Type, name string, out *reflect.StructField) error {
 	if rtype == nil {
-		return fmt.Errorf(`[sqlb] can't find field %q: no type provided`, name)
+		return ErrInvalidInput.because(
+			fmt.Errorf(`can't find field %q: no type provided`, name),
+		)
 	}
 
 	err := refut.TraverseStructRtype(rtype, func(sfield reflect.StructField, _ []int) error {
@@ -209,7 +216,9 @@ func sfieldByJsonName(rtype reflect.Type, name string, out *reflect.StructField)
 		return err
 	}
 
-	return fmt.Errorf(`[sqlb] no struct field corresponding to JSON field name %q in type %v`, name, rtype)
+	return ErrUnknownField.because(
+		fmt.Errorf(`no struct field corresponding to JSON field name %q in type %v`, name, rtype),
+	)
 }
 
 func sfieldJsonFieldName(sfield reflect.StructField) string {
@@ -222,7 +231,7 @@ func appendSqlPath(buf *[]byte, path []string) {
 		// Just a sanity check. We probably shouldn't allow to decode such
 		// identifiers in the first place.
 		if strings.Contains(str, `"`) {
-			panic(fmt.Errorf(`[sqlb] unexpected %q in SQL identifier %q`, `"`, str))
+			panic(ErrInternal.because(fmt.Errorf(`unexpected %q in SQL identifier %q`, `"`, str)))
 		}
 
 		if i == 0 {

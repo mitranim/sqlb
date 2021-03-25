@@ -2,6 +2,7 @@ package sqlb
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"reflect"
 	"strings"
@@ -26,6 +27,9 @@ field name or path must be found in the struct type, possibly in nested
 structs. The decoding process will convert every JSON field name into the
 corresponding DB column name. Identifiers without the corresponding pair of
 `json` and `db` tags cause a parse error.
+
+`.Lax` allows to ignore unknown fields. Normally, orderings not present in
+`.Type` generate errors; when `.Lax = true`, they're simply ignored.
 
 Usage for parsing:
 
@@ -52,6 +56,7 @@ Usage for SQL:
 type Ords struct {
 	Items []IQuery
 	Type  reflect.Type
+	Lax   bool
 }
 
 // Shortcut for creating `Ords` without a type.
@@ -99,10 +104,19 @@ func (self *Ords) ParseSlice(vals []string) error {
 func (self Ords) parseOrd(str string, ord *Ord) error {
 	match := ordReg.FindStringSubmatch(str)
 	if match == nil {
-		return fmt.Errorf(`[sqlb] %q is not a valid ordering string; expected format: "<ident> (asc|desc)? (nulls last)?"`, str)
+		return ErrInvalidInput.because(
+			fmt.Errorf(`%q is not a valid ordering string; expected format: "<ident> (asc|desc)? (nulls last)?"`, str),
+		)
 	}
 
 	_, path, err := structFieldByJsonPath(self.Type, match[1])
+
+	// Generating and then discarding the error value is slightly wasteful.
+	// Should reconsider.
+	if self.Lax && errors.Is(err, ErrUnknownField) {
+		return nil
+	}
+
 	if err != nil {
 		return err
 	}

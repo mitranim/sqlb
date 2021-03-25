@@ -45,11 +45,11 @@ func QueryNamed(src string, args map[string]interface{}) Query {
 
 /*
 Tool for building SQL queries. Makes it easy to append or insert arbitrary SQL
-code while avoiding common errors. Contains both query content (as parsed AST)
-and arguments.
+code while avoiding common mistakes. Contains both query content (as parsed
+AST) and arguments.
 
-Automatically renumerates ordinal placeholders when appending code, making it
-easy to avoid mis-numbering. See `.Append()`.
+Automatically renumerates ordinal parameters such as "$1" when appending code,
+making it easy to avoid mis-numbering. See `.Append()`.
 
 Supports named parameters. See `.AppendNamed()`.
 
@@ -57,7 +57,7 @@ Composable: both `.Append()` and `.AppendNamed()` automatically interpolate
 sub-queries found in the arguments, combining the arguments and renumerating
 the parameters as appropriate.
 
-Currently biased towards Postgres-style ordinal parameters of the form `$N`. The
+Currently biased towards Postgres-style ordinal parameters such as "$1". The
 code is always converted to this "canonical" form. This can be rectified if
 there is enough demand; you can open an issue at
 https://github.com/mitranim/sqlb/issues.
@@ -113,11 +113,11 @@ func (self *Query) Append(src string, args ...interface{}) {
 	appendNonQueries(&self.Args, args)
 
 	var used bitset
-	if len(args) > bitsetSize {
+	if len(args) > used.cap() {
 		panic(Err{
 			Code:  ErrCodeTooManyArguments,
 			While: `appending to query`,
-			Cause: fmt.Errorf(`expected no more than %v args, got %v`, bitsetSize, len(args)),
+			Cause: fmt.Errorf(`expected no more than %v args, got %v`, used.cap(), len(args)),
 		})
 	}
 

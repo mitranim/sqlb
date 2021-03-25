@@ -190,6 +190,15 @@ func TestOrdsDec(t *T) {
 		if err == nil {
 			t.Fatalf("expected decoding to fail")
 		}
+
+		t.Run(`unless_lax`, func(t *T) {
+			ords = Ords{Type: ords.Type, Lax: true}
+
+			err := ords.ParseSlice(input)
+			if err != nil {
+				t.Fatalf("failed to decode ord from strings: %+v", err)
+			}
+		})
 	})
 
 	t.Run(`fail_when_type_is_not_provided`, func(t *T) {
