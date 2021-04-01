@@ -15,13 +15,14 @@ import (
 )
 
 // Represents a fixed-size set of ints, where values can only range from 0 to
-// the amount of available bits minus one.
-type bitset uint64
+// the amount of available elements minus one.
+type intset []bool
 
-func (self bitset) cap() int           { return int(unsafe.Sizeof(self) * 8) }
-func (self bitset) has(index int) bool { return self&(1<<index) != 0 }
-func (self *bitset) set(index int)     { *self |= (1 << index) }
-func (self *bitset) unset(index int)   { *self ^= (1 << index) }
+func (self intset) len() int       { return len(self) }
+func (self intset) cap() int       { return cap(self) }
+func (self intset) has(i int) bool { return i >= 0 && i < len(self) && self[i] }
+func (self *intset) set(i int)     { (*self)[i] = true }
+func (self *intset) unset(i int)   { (*self)[i] = false }
 
 func appendStr(buf *[]byte, str string) {
 	*buf = append(*buf, str...)

@@ -17,7 +17,6 @@ const (
 	ErrCodeMissingArgument     ErrCode = "MissingArgument"
 	ErrCodeUnexpectedParameter ErrCode = "UnexpectedParameter"
 	ErrCodeUnusedArgument      ErrCode = "UnusedArgument"
-	ErrCodeTooManyArguments    ErrCode = "TooManyArguments"
 	ErrCodeOrdinalOutOfBounds  ErrCode = "OrdinalOutOfBounds"
 	ErrCodeUnknownField        ErrCode = "UnknownField"
 	ErrCodeInternal            ErrCode = "Internal"
@@ -39,7 +38,6 @@ var (
 	ErrMissingArgument     Err = Err{Code: ErrCodeMissingArgument, Cause: errors.New(`missing argument`)}
 	ErrUnexpectedParameter Err = Err{Code: ErrCodeUnexpectedParameter, Cause: errors.New(`unexpected parameter`)}
 	ErrUnusedArgument      Err = Err{Code: ErrCodeUnusedArgument, Cause: errors.New(`unused argument`)}
-	ErrTooManyArguments    Err = Err{Code: ErrCodeTooManyArguments, Cause: errors.New(`too many arguments`)}
 	ErrOrdinalOutOfBounds  Err = Err{Code: ErrCodeOrdinalOutOfBounds, Cause: errors.New(`ordinal parameter exceeds arguments`)}
 	ErrUnknownField        Err = Err{Code: ErrCodeUnknownField, Cause: errors.New(`unknown field`)}
 	ErrInternal            Err = Err{Code: ErrCodeInternal, Cause: errors.New(`internal error`)}

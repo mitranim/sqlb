@@ -112,15 +112,7 @@ func (self *Query) Append(src string, args ...interface{}) {
 	startOffset := len(self.Args)
 	appendNonQueries(&self.Args, args)
 
-	var used bitset
-	if len(args) > used.cap() {
-		panic(Err{
-			Code:  ErrCodeTooManyArguments,
-			While: `appending to query`,
-			Cause: fmt.Errorf(`expected no more than %v args, got %v`, used.cap(), len(args)),
-		})
-	}
-
+	used := make(intset, len(args))
 	appendSpaceIfNeeded(&self.Text)
 
 	for {
@@ -363,5 +355,8 @@ type StrQuery string
 
 // Implement `IQuery`.
 func (self StrQuery) QueryAppend(out *Query) {
-	out.Append(string(self))
+	if len(self) > 0 {
+		appendSpaceIfNeeded(&out.Text)
+		out.Text = append(out.Text, self...)
+	}
 }

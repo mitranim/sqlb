@@ -49,12 +49,14 @@ func TestOrdString(t *T) {
 		eq(t, `"one" asc nulls last`, OrdAscNl(`one`).String())
 		eq(t, `"one" desc nulls last`, OrdDescNl(`one`).String())
 	})
+
 	t.Run(`binary`, func(t *T) {
 		eq(t, `("one")."two" asc`, OrdAsc(`one`, `two`).String())
 		eq(t, `("one")."two" desc`, OrdDesc(`one`, `two`).String())
 		eq(t, `("one")."two" asc nulls last`, OrdAscNl(`one`, `two`).String())
 		eq(t, `("one")."two" desc nulls last`, OrdDescNl(`one`, `two`).String())
 	})
+
 	t.Run(`plural`, func(t *T) {
 		eq(t, `("one")."two"."three" asc`, OrdAsc(`one`, `two`, `three`).String())
 		eq(t, `("one")."two"."three" desc`, OrdDesc(`one`, `two`, `three`).String())
@@ -182,6 +184,29 @@ func TestOrdsDec(t *T) {
 		eq(t, ords.Items, OrdsFrom(OrdAsc(`external_name`), OrdDesc(`internal`, `internal_time`)).Items)
 	})
 
+	t.Run(`reject_malformed`, func(t *T) {
+		test := func(str string) {
+			ords := OrdsFor(struct {
+				Asc   string `json:"asc"`
+				Nulls string `json:"nulls"`
+			}{})
+
+			err := ords.ParseSlice([]string{str})
+			if err == nil {
+				t.Fatalf("expected decoding %q to fail; decoded into %+v", str, ords)
+			}
+		}
+
+		test("")
+		test(" ")
+		test("asc")
+		test(" asc")
+		test("nulls last")
+		test(" nulls last")
+		test("asc nulls last")
+		test(" asc nulls last")
+	})
+
 	t.Run(`reject_unknown_fields`, func(t *T) {
 		input := []string{"external_name asc"}
 		ords := OrdsFor(External{})
@@ -202,12 +227,12 @@ func TestOrdsDec(t *T) {
 	})
 
 	t.Run(`fail_when_type_is_not_provided`, func(t *T) {
-		input := []string{"some_ident asc"}
+		const str = "some_ident asc"
 		ords := OrdsFor(nil)
 
-		err := ords.ParseSlice(input)
+		err := ords.ParseSlice([]string{str})
 		if err == nil {
-			t.Fatalf("expected decoding to fail")
+			t.Fatalf("expected decoding %q to fail", str)
 		}
 	})
 }
