@@ -223,6 +223,10 @@ func TestOrdsDec(t *T) {
 			if err != nil {
 				t.Fatalf("failed to decode ord from strings: %+v", err)
 			}
+
+			if len(ords.Items) > 0 {
+				t.Fatalf("when decoding in lax mode, accidentally added an ord; items: %#v", ords.Items)
+			}
 		})
 	})
 

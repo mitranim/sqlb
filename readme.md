@@ -10,13 +10,13 @@ See the sibling library https://github.com/mitranim/gos for scanning SQL rows in
 
 ### `0.1.13`
 
-* `StrQuery` now interpolates directly, without invoking `(*Query).Append` on the provided query. This allows to interpolate `StrQuery` strings that contain named parameter placeholders. Use at your own risk.
-
-* `(*Query).Append` no longer has an argument length limit.
+Fixed the bug where the `Ords.Lax` mode was appending malformed ords, instead of skipping them entirely.
 
 ### `0.1.12`
 
-An `Ord` with an empty path now panics on serialization, instead of generating invalid SQL. We never de-serialize with an empty path.
+* `StrQuery` now interpolates directly, without invoking `(*Query).Append` on the provided query. This allows to interpolate `StrQuery` strings that contain parameter placeholders. Use at your own risk.
+
+* `(*Query).Append` no longer has an argument length limit.
 
 ### `0.1.11`
 

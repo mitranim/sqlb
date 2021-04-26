@@ -90,18 +90,16 @@ func (self *Ords) ParseSlice(vals []string) error {
 	self.Items = make([]IQuery, 0, len(vals))
 
 	for _, val := range vals {
-		var ord Ord
-		err := self.parseOrd(val, &ord)
+		err := self.parseOrd(val)
 		if err != nil {
 			return err
 		}
-		self.Items = append(self.Items, ord)
 	}
 
 	return nil
 }
 
-func (self Ords) parseOrd(str string, ord *Ord) error {
+func (self *Ords) parseOrd(str string) error {
 	match := ordReg.FindStringSubmatch(str)
 	if match == nil {
 		return ErrInvalidInput.because(
@@ -121,9 +119,11 @@ func (self Ords) parseOrd(str string, ord *Ord) error {
 		return err
 	}
 
-	ord.Path = path
-	ord.Desc = strings.EqualFold(match[2], `desc`)
-	ord.NullsLast = match[3] != ""
+	self.Items = append(self.Items, Ord{
+		Path:      path,
+		Desc:      strings.EqualFold(match[2], `desc`),
+		NullsLast: match[3] != "",
+	})
 	return nil
 }
 
