@@ -77,6 +77,10 @@ func isScannableRtype(rtype reflect.Type) bool {
 }
 
 func traverseStructDbFields(input interface{}, fun func(string, interface{})) {
+	if input == nil {
+		return
+	}
+
 	rval := reflect.ValueOf(input)
 	rtype := refut.RtypeDeref(rval.Type())
 

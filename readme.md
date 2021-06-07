@@ -8,6 +8,10 @@ See the sibling library https://github.com/mitranim/gos for scanning SQL rows in
 
 ## Changelog
 
+### `0.1.14`
+
+`StructMap` and `StructNamedArgs` now tolerate `nil` inputs. Previously, they tolerated non-nil interfaces where the underlying value was a nil struct pointer. Now they also allow nil interfaces.
+
 ### `0.1.13`
 
 Fixed the bug where the `Ords.Lax` mode was appending malformed ords, instead of skipping them entirely.
