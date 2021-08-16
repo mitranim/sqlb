@@ -196,10 +196,11 @@ func (self *Ords) Append(items ...IQuery) {
 }
 
 // If empty, replaces items with the provided fallback. Otherwise does nothing.
-func (self *Ords) Or(items ...IQuery) {
+func (self Ords) Or(items ...IQuery) Ords {
 	if self.IsEmpty() {
 		self.Items = items
 	}
+	return self
 }
 
 /*

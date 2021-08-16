@@ -8,6 +8,10 @@ See the sibling library https://github.com/mitranim/gos for scanning SQL rows in
 
 ## Changelog
 
+### `0.1.15`
+
+`Ords.Or` is now a value method that returns a modified version, rather than a pointer method that mutated the original.
+
 ### `0.1.14`
 
 `StructMap` and `StructNamedArgs` now tolerate `nil` inputs. Previously, they tolerated non-nil interfaces where the underlying value was a nil struct pointer. Now they also allow nil interfaces.
