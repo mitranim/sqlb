@@ -8,29 +8,33 @@ See the sibling library https://github.com/mitranim/gos for scanning SQL rows in
 
 ## Changelog
 
-### `0.1.15`
+### `v0.1.16`
+
+Added `NamedArg.Norm`. Improved `NamedArg.IsNil` and `NamedArgs.Conditions`. They now use the `driver.Valuer.Value` method, if present, to determine null-ness, which works for non-pointer "nullable" types.
+
+### `v0.1.15`
 
 `Ords.Or` is now a value method that returns a modified version, rather than a pointer method that mutated the original.
 
-### `0.1.14`
+### `v0.1.14`
 
 `StructMap` and `StructNamedArgs` now tolerate `nil` inputs. Previously, they tolerated non-nil interfaces where the underlying value was a nil struct pointer. Now they also allow nil interfaces.
 
-### `0.1.13`
+### `v0.1.13`
 
 Fixed the bug where the `Ords.Lax` mode was appending malformed ords, instead of skipping them entirely.
 
-### `0.1.12`
+### `v0.1.12`
 
 * `StrQuery` now interpolates directly, without invoking `(*Query).Append` on the provided query. This allows to interpolate `StrQuery` strings that contain parameter placeholders. Use at your own risk.
 
 * `(*Query).Append` no longer has an argument length limit.
 
-### `0.1.11`
+### `v0.1.11`
 
 Added `Ords.Lax`: a boolean that causes `Ords` to skip unknown fields during parsing.
 
-### `0.1.10`
+### `v0.1.10`
 
 Breaking changes in the name of efficiency:
 

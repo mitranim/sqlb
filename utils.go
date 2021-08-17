@@ -253,3 +253,16 @@ func appendSqlPath(buf *[]byte, path []string) {
 		}
 	}
 }
+
+func try(err error) {
+	if err != nil {
+		panic(err)
+	}
+}
+
+func normNil(val interface{}) interface{} {
+	if refut.IsNil(val) {
+		return nil
+	}
+	return val
+}

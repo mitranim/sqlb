@@ -1,6 +1,8 @@
 package sqlb
 
 import (
+	"database/sql/driver"
+
 	"github.com/mitranim/refut"
 )
 
@@ -262,15 +264,36 @@ func (self NamedArgs) Every(fun func(NamedArg) bool) bool {
 	return true
 }
 
+// Convenience function for creating a named arg without struct field labels.
+func Named(name string, value interface{}) NamedArg {
+	return NamedArg{Name: name, Value: value}
+}
+
 // Same as `sql.NamedArg`, with additional methods. See `NamedArgs`.
 type NamedArg struct {
 	Name  string
 	Value interface{}
 }
 
-// Convenience function for creating a named arg without struct field labels.
-func Named(name string, value interface{}) NamedArg {
-	return NamedArg{Name: name, Value: value}
+// Normalizes the inner value by attempting SQL encoding. Used internally for
+// detecting nils, which influences `NamedArgs.Conditions`.
+func (self NamedArg) Norm() (interface{}, error) {
+	val := self.Value
+
+	valuer, ok := val.(driver.Valuer)
+	var err error
+	if ok {
+		if refut.IsNil(valuer) {
+			return nil, nil
+		}
+
+		val, err = valuer.Value()
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return normNil(val), nil
 }
 
 /*
@@ -281,14 +304,10 @@ NOT the same as comparing the value to `nil`:
 	NamedArg{}.IsNil()                           // true
 	NamedArg{Value: (*string)(nil)}.Value == nil // false
 	NamedArg{Value: (*string)(nil)}.IsNil()      // true
-
-This currently does NOT support fake nullable types like `sql.NullString`,
-because the Go developers didn't see fit to generalize them over a standard
-interface, and I'm unwilling to hardcode their full list here. I don't
-recommend their use. Just use actual nilable types.
 */
 func (self NamedArg) IsNil() bool {
-	return refut.IsNil(self.Value)
+	val, _ := self.Norm()
+	return val == nil
 }
 
 func (self NamedArg) queryAppendName(query *Query) {
@@ -301,10 +320,14 @@ func (self NamedArg) queryAppendValue(query *Query) {
 }
 
 func (self NamedArg) queryAppendCondition(query *Query) {
+	val, err := self.Norm()
+	try(err)
+
 	self.queryAppendName(query)
-	if self.IsNil() {
+
+	if val == nil {
 		appendStr(&query.Text, ` is null`)
 	} else {
-		query.Append(` = $1`, self.Value)
+		query.Append(` = $1`, val)
 	}
 }
