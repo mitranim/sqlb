@@ -45,8 +45,8 @@ func QueryNamed(src string, args map[string]interface{}) Query {
 
 /*
 Tool for building SQL queries. Makes it easy to append or insert arbitrary SQL
-code while avoiding common mistakes. Contains both query content (as parsed
-AST) and arguments.
+code while avoiding common mistakes. Contains both query content and
+arguments.
 
 Automatically renumerates ordinal parameters such as "$1" when appending code,
 making it easy to avoid mis-numbering. See `.Append()`.

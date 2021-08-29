@@ -14,8 +14,8 @@ import (
 	"github.com/mitranim/refut"
 )
 
-// Represents a fixed-size set of ints, where values can only range from 0 to
-// the amount of available elements minus one.
+// Represents a fixed-size set of ints, where "values" can only range from 0 to
+// length minus one.
 //
 // Uses 8 times more memory than it needs, but is not our bottleneck.
 type intset []bool
