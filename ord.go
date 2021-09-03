@@ -67,7 +67,7 @@ Shortcut for empty `Ords` intended for parsing. The input is used only as a type
 carrier. The parsing process will consult the provided type; see
 `Ords.UnmarshalJSON`.
 */
-func OrdsFor(val interface{}) Ords { return Ords{Type: reflect.TypeOf(val)} }
+func OrdsFor(val interface{}) Ords { return Ords{}.OrType(val) }
 
 /*
 Implement decoding from JSON. Consults `.Type` to determine known field paths,
@@ -195,10 +195,26 @@ func (self *Ords) Append(items ...IQuery) {
 	self.Items = append(self.Items, items...)
 }
 
-// If empty, replaces items with the provided fallback. Otherwise does nothing.
+/*
+If empty, returns a modified version with the given items. Otherwise returns
+self as-is.
+*/
 func (self Ords) Or(items ...IQuery) Ords {
 	if self.IsEmpty() {
 		self.Items = items
+	}
+	return self
+}
+
+/*
+If `Ords.Type` is empty, returns a modified variant where type is taken from the
+provided value. Otherwise returns self as-is. The input value is used only as a
+type carrier. The type is consulted when decoding orderings from an input such
+as JSON.
+*/
+func (self Ords) OrType(val interface{}) Ords {
+	if self.Type == nil {
+		self.Type = reflect.TypeOf(val)
 	}
 	return self
 }

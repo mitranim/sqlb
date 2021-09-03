@@ -42,7 +42,7 @@ func TestOrdDescNl(t *T) {
 	)
 }
 
-func TestOrdString(t *T) {
+func TestOrd_String(t *T) {
 	t.Run(`singular`, func(t *T) {
 		eq(t, `"one" asc`, OrdAsc(`one`).String())
 		eq(t, `"one" desc`, OrdDesc(`one`).String())
@@ -65,7 +65,7 @@ func TestOrdString(t *T) {
 	})
 }
 
-func TestOrdsLen(t *T) {
+func TestOrds_Len(t *T) {
 	eq(t, 0, Ords{}.Len())
 	eq(t, 0, OrdsFrom(nil).Len())
 	eq(t, 1, OrdsFrom(OrdAsc(`one`)).Len())
@@ -73,7 +73,7 @@ func TestOrdsLen(t *T) {
 	eq(t, 2, OrdsFrom(nil, OrdAsc(`one`), nil, Query{}).Len())
 }
 
-func TestOrdsIsEmpty(t *T) {
+func TestOrds_IsEmpty(t *T) {
 	eq(t, true, Ords{}.IsEmpty())
 	eq(t, true, OrdsFrom(nil).IsEmpty())
 	eq(t, false, OrdsFrom(OrdAsc(`one`)).IsEmpty())
@@ -81,7 +81,7 @@ func TestOrdsIsEmpty(t *T) {
 	eq(t, false, OrdsFrom(nil, OrdAsc(`one`), nil, Query{}).IsEmpty())
 }
 
-func TestOrdsSimpleString(t *T) {
+func TestOrds_simple_string(t *T) {
 	str := func(ords Ords) string {
 		var query Query
 		ords.QueryAppend(&query)
@@ -112,7 +112,7 @@ func TestOrdsSimpleString(t *T) {
 	})
 }
 
-func TestOrdsQueryAppend(t *T) {
+func TestOrds_QueryAppend(t *T) {
 	t.Run(`simple_direct`, func(t *T) {
 		var query Query
 		query.Append(`select from where`)
@@ -138,7 +138,7 @@ func TestOrdsQueryAppend(t *T) {
 	})
 }
 
-func TestOrdsDec(t *T) {
+func TestOrds_decode(t *T) {
 	dec := func(t *T, out *Ords, input string) {
 		err := json.Unmarshal([]byte(input), out)
 		if err != nil {
@@ -239,4 +239,13 @@ func TestOrdsDec(t *T) {
 			t.Fatalf("expected decoding %q to fail", str)
 		}
 	})
+}
+
+func TestOrds_OrType(t *T) {
+	eq(t, Ords{}, Ords{}.OrType(nil))
+	eq(t, OrdsFor(nil), Ords{}.OrType(nil))
+	eq(t, OrdsFor(External{}), Ords{}.OrType(External{}))
+	eq(t, OrdsFor(Internal{}), OrdsFor(Internal{}).OrType(External{}))
+	eq(t, OrdsFor(External{}), OrdsFor(External{}).OrType(Internal{}))
+	eq(t, OrdsFor(External{}), OrdsFor(External{}).OrType(nil))
 }

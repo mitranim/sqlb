@@ -302,6 +302,7 @@ NOT the same as comparing the value to `nil`:
 
 	NamedArg{}.Value == nil                      // true
 	NamedArg{}.IsNil()                           // true
+
 	NamedArg{Value: (*string)(nil)}.Value == nil // false
 	NamedArg{Value: (*string)(nil)}.IsNil()      // true
 */

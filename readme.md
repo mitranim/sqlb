@@ -8,6 +8,10 @@ See the sibling library https://github.com/mitranim/gos for scanning SQL rows in
 
 ## Changelog
 
+### `v0.1.17`
+
+Added `Ords.OrType`.
+
 ### `v0.1.16`
 
 Added `NamedArg.Norm`. Improved `NamedArg.IsNil` and `NamedArgs.Conditions`. They now use the `driver.Valuer.Value` method, if present, to determine null-ness, which works for non-pointer "nullable" types.
