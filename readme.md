@@ -1,12 +1,113 @@
 ## Overview
 
-**SQL** **B**uilder: simple SQL query builder. Oriented towards text and **writing plain SQL**, simplifying parameters, arguments, query interpolation, query composition, and so on. Also provides tools for converting structs into SQL expressions and arguments.
+`sqlb`: **SQL** **B**uilder for Go. Features:
 
-See the full documentation at https://pkg.go.dev/github.com/mitranim/sqlb.
+  * Supports plain SQL queries with ordinal or named params.
+    * Supports argument lists.
+    * Supports argument maps.
+    * Supports argument structs.
+  * Supports generating SQL clauses from structs.
+    * Generate "select" clauses from structs.
+    * Generate "insert" clauses from structs.
+    * Generate "update" clauses from structs.
+    * Generate "delete" clauses from structs.
+    * Generate "and" and "or" conditional clauses from structs.
+  * Provides data structures forming an SQL DSL in Go.
+    * Arbitrarily composable and nestable structures.
+    * Uses data literals, not a builder API.
+  * Supports an optional "JSON Expression Language" (JEL) for expressing SQL expressions with nested Lisp-style calls in JSON.
+  * Decently optimized.
+  * Small and dependency-free.
+
+API docs: https://pkg.go.dev/github.com/mitranim/sqlb.
 
 See the sibling library https://github.com/mitranim/gos for scanning SQL rows into structs.
 
+## Examples
+
+All examples imply the following import:
+
+```golang
+import s "github.com/mitranim/sqlb"
+```
+
+### Query with named parameters and structs
+
+```golang
+func ExampleStrQ_structs() {
+  type Output struct {
+    Col0 string `db:"col0"`
+    Col1 string `db:"col1"`
+  }
+
+  type Filter struct {
+    Col2 int64 `db:"col2"`
+    Col3 int64 `db:"col3"`
+  }
+
+  fmt.Println(s.Reify(
+    s.StrQ{`
+      select :cols from some_table where :filter
+    `, s.Dict{
+      `cols`:   s.Cols{(*Output)(nil)},
+      `filter`: s.And{Filter{10, 20}},
+    }},
+  ))
+  // Output:
+  // select "col0", "col1" from some_table where "col2" = $1 and "col3" = $2 [10 20]
+}
+```
+
+### AST-style query building
+
+```golang
+func Example_astQueryBuilding() {
+  var Select = func(ident s.Ident, where interface{}) s.Expr {
+    return s.Exprs{
+      s.SelectStar{},
+      s.From{ident},
+      s.Where{s.And{where}},
+    }
+  }
+
+  type Filter struct {
+    Col0 int64 `db:"col0"`
+    Col1 int64 `db:"col1"`
+  }
+
+  fmt.Println(s.Reify(
+    Select(`some_table`, Filter{10, 20}),
+  ))
+  // Output:
+  // select * from "some_table" where "col0" = $1 and "col1" = $2 [10 20]
+}
+```
+
+### Composition
+
+```golang
+func Example_composition() {
+  inner := s.StrQ{
+    `select * from some_table where col0 = :val`,
+    s.Dict{`val`: 10},
+  }
+
+  outer := s.StrQ{
+    `select * from (:inner) as _ where col1 = :val`,
+    s.Dict{`inner`: inner, `val`: 20},
+  }
+
+  fmt.Println(s.Reify(outer))
+  // Output:
+  // select * from (select * from some_table where col0 = $1) as _ where col1 = $2 [10 20]
+}
+```
+
 ## Changelog
+
+### `v0.2.0`
+
+Full API revision. Added many AST/DSL-like types for common expressions. Optimized parsing and expression building. Use caching and pooling to minimize redundant work. String-based query building now uses partial parsing with caching, and should no longer be a measurable expense. Ported JEL support from `github.com/mitranim/jel`.
 
 ### `v0.1.17`
 

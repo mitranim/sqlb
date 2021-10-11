@@ -1,0 +1,855 @@
+package sqlb
+
+import (
+	"database/sql"
+	"database/sql/driver"
+	"fmt"
+	"reflect"
+	"regexp"
+	"strings"
+	"sync"
+	"time"
+	"unsafe"
+)
+
+const (
+	ordinalParamPrefix = '$'
+	namedParamPrefix   = ':'
+	doubleColonPrefix  = `::`
+	commentLinePrefix  = `--`
+	commentBlockPrefix = `/*`
+	commentBlockSuffix = `*/`
+	quoteSingle        = '\''
+	quoteDouble        = '"'
+	quoteGrave         = '`'
+	byteLen            = 1
+)
+
+type charset [256]bool
+
+func (self *charset) has(val byte) bool { return self[val] }
+
+func (self *charset) addStr(vals string) *charset {
+	for _, val := range vals {
+		self[val] = true
+	}
+	return self
+}
+
+func (self *charset) addSet(vals *charset) *charset {
+	for i, val := range vals {
+		if val {
+			self[i] = true
+		}
+	}
+	return self
+}
+
+var (
+	charsetDigitDec   = new(charset).addStr(`0123456789`)
+	charsetIdentStart = new(charset).addStr(`ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz_`)
+	charsetIdent      = new(charset).addSet(charsetIdentStart).addSet(charsetDigitDec)
+	charsetSpace      = new(charset).addStr(" \t\v")
+	charsetNewline    = new(charset).addStr("\r\n")
+	charsetWhitespace = new(charset).addSet(charsetSpace).addSet(charsetNewline)
+	charsetDelimStart = new(charset).addSet(charsetWhitespace).addStr(`([{.`)
+	charsetDelimEnd   = new(charset).addSet(charsetWhitespace).addStr(`,}])`)
+)
+
+func leadingNewlineSize(val string) int {
+	if len(val) >= 2 && val[0] == '\r' && val[1] == '\n' {
+		return 2
+	}
+	if len(val) >= 1 && (val[0] == '\r' || val[0] == '\n') {
+		return 1
+	}
+	return 0
+}
+
+/*
+Allocation-free conversion. Reinterprets a byte slice as a string. Borrowed from
+the standard library. Reasonably safe. Should not be used when the underlying
+byte array is volatile, for example when it's part of a scratch buffer during
+SQL scanning.
+*/
+func bytesToMutableString(bytes []byte) string {
+	return *(*string)(unsafe.Pointer(&bytes))
+}
+
+/*
+Allocation-free conversion. Returns a byte slice backed by the provided string.
+Mutations are reflected in the source string, unless it's backed by constant
+storage, in which case they trigger a segfault. Reslicing is ok. Should be safe
+as long as the resulting bytes are not mutated.
+*/
+func stringToBytesUnsafe(val string) []byte {
+	type sliceHeader struct {
+		_   uintptr
+		len int
+		cap int
+	}
+	slice := *(*sliceHeader)(unsafe.Pointer(&val))
+	slice.cap = slice.len
+	return *(*[]byte)(unsafe.Pointer(&slice))
+}
+
+func appenderToStr(val interface{ Append([]byte) []byte }) string {
+	return bytesToMutableString(val.Append(nil))
+}
+
+var timeRtype = reflect.TypeOf((*time.Time)(nil)).Elem()
+var sqlScannerRtype = reflect.TypeOf((*sql.Scanner)(nil)).Elem()
+
+func isScannableRtype(typ reflect.Type) bool {
+	typ = typeDeref(typ)
+	return typ != nil && (typ == timeRtype || reflect.PtrTo(typ).Implements(sqlScannerRtype))
+}
+
+// WTB more specific name.
+func isStructType(typ reflect.Type) bool {
+	return typ != nil && typ.Kind() == reflect.Struct && !isScannableRtype(typ)
+}
+
+func maybeAppendSpace(val []byte) []byte {
+	if hasDelimSuffix(bytesToMutableString(val)) {
+		return val
+	}
+	return append(val, ` `...)
+}
+
+func appendMaybeSpaced(text []byte, suffix string) []byte {
+	if !hasDelimSuffix(bytesToMutableString(text)) && !hasDelimPrefix(suffix) {
+		text = append(text, ` `...)
+	}
+	text = append(text, suffix...)
+	return text
+}
+
+func hasDelimPrefix(text string) bool {
+	return len(text) == 0 || charsetDelimEnd.has(text[0])
+}
+
+func hasDelimSuffix(text string) bool {
+	return len(text) == 0 || charsetDelimStart.has(text[len(text)-1])
+}
+
+var ordReg = regexp.MustCompile(
+	`^\s*((?:\w+\.)*\w+)(?i)(?:\s+(asc|desc))?(?:\s+nulls\s+(first|last))?\s*$`,
+)
+
+func try(err error) {
+	if err != nil {
+		panic(err)
+	}
+}
+
+// Must be deferred.
+func rec(ptr *error) {
+	val := recover()
+	if val == nil {
+		return
+	}
+
+	err, _ := val.(error)
+	if err != nil {
+		*ptr = err
+		return
+	}
+
+	panic(val)
+}
+
+func norm(val interface{}) interface{} {
+	impl, _ := val.(driver.Valuer)
+	if impl != nil {
+		val, err := impl.Value()
+		try(err)
+		return val
+	}
+	return normNil(val)
+}
+
+func normNil(val interface{}) interface{} {
+	if isNil(val) {
+		return nil
+	}
+	return val
+}
+
+func counter(val int) []struct{} { return make([]struct{}, val) }
+
+// Generics when?
+func resliceStrings(val *[]string, length int) { *val = (*val)[:length] }
+
+// Generics when?
+func resliceInts(val *[]int, length int) { *val = (*val)[:length] }
+
+// Generics when?
+func copyStrings(val []string) []string {
+	if val == nil {
+		return nil
+	}
+	out := make([]string, len(val))
+	copy(out, val)
+	return out
+}
+
+// Generics when?
+func copyInts(src []int) []int {
+	if src == nil {
+		return nil
+	}
+	out := make([]int, len(src))
+	copy(out, src)
+	return out
+}
+
+func trimPrefixByte(val string, prefix byte) (string, error) {
+	if !(len(val) >= byteLen && val[0] == prefix) {
+		return ``, fmt.Errorf(`expected %q to begin with %q`, val, rune(prefix))
+	}
+	return val[byteLen:], nil
+}
+
+func exprAppend(expr Expr, text []byte) []byte {
+	text, _ = expr.AppendExpr(text, nil)
+	return text
+}
+
+func exprString(expr Expr) string {
+	return bytesToMutableString(exprAppend(expr, nil))
+}
+
+// Copied from `github.com/mitranim/gax` and tested there.
+func growBytes(prev []byte, size int) []byte {
+	len, cap := len(prev), cap(prev)
+	if cap-len >= size {
+		return prev
+	}
+
+	next := make([]byte, len, 2*cap+size)
+	copy(next, prev)
+	return next
+}
+
+// Same as `growBytes`. WTB generics.
+func growInterfaces(prev []interface{}, size int) []interface{} {
+	len, cap := len(prev), cap(prev)
+	if cap-len >= size {
+		return prev
+	}
+
+	next := make([]interface{}, len, 2*cap+size)
+	copy(next, prev)
+	return next
+}
+
+var argTrackerPool = sync.Pool{New: newArgTracker}
+
+func newArgTracker() interface{} { return new(argTracker) }
+
+func getArgTracker() *argTracker {
+	return argTrackerPool.Get().(*argTracker)
+}
+
+/**
+Should be pooled via `sync.Pool`. All fields should be allocated lazily on
+demand, but only once. Pre-binding the methods is a one-time expense which
+allows to avoid repeated allocs that would be caused by passing any
+key-validating functions to the "ranger" interfaces. Because "range" methods
+are dynamically-dispatched, Go can't perform escape analysis, and must assume
+that any inputs will escape.
+*/
+type argTracker struct {
+	Ordinal         map[OrdinalParam]OrdinalParam
+	Named           map[NamedParam]OrdinalParam
+	ValidateOrdinal func(int)
+	ValidateNamed   func(string)
+}
+
+func (self *argTracker) GotOrdinal(key OrdinalParam) (OrdinalParam, bool) {
+	val, ok := self.Ordinal[key]
+	return val, ok
+}
+
+func (self *argTracker) GotNamed(key NamedParam) (OrdinalParam, bool) {
+	val, ok := self.Named[key]
+	return val, ok
+}
+
+func (self *argTracker) SetOrdinal(key OrdinalParam, val OrdinalParam) {
+	if self.Ordinal == nil {
+		self.Ordinal = make(map[OrdinalParam]OrdinalParam, 16)
+	}
+	self.Ordinal[key] = val
+}
+
+func (self *argTracker) SetNamed(key NamedParam, val OrdinalParam) {
+	if self.Named == nil {
+		self.Named = make(map[NamedParam]OrdinalParam, 16)
+	}
+	self.Named[key] = val
+}
+
+func (self *argTracker) validateOrdinal(key int) {
+	param := OrdinalParam(key).FromIndex()
+	_, ok := self.Ordinal[param]
+	if !ok {
+		panic(errUnusedOrdinal(param))
+	}
+}
+
+func (self *argTracker) validateNamed(key string) {
+	param := NamedParam(key)
+	_, ok := self.Named[param]
+	if !ok {
+		panic(errUnusedNamed(param))
+	}
+}
+
+func (self *argTracker) validate(dict ArgDict) {
+	impl0, _ := dict.(OrdinalRanger)
+	if impl0 != nil {
+		if self.ValidateOrdinal == nil {
+			self.ValidateOrdinal = self.validateOrdinal
+		}
+		impl0.RangeOrdinal(self.ValidateOrdinal)
+	}
+
+	impl1, _ := dict.(NamedRanger)
+	if impl1 != nil {
+		if self.ValidateNamed == nil {
+			self.ValidateNamed = self.validateNamed
+		}
+		impl1.RangeNamed(self.ValidateNamed)
+	}
+}
+
+func (self *argTracker) put() {
+	for key := range self.Ordinal {
+		delete(self.Ordinal, key)
+	}
+	for key := range self.Named {
+		delete(self.Named, key)
+	}
+	argTrackerPool.Put(self)
+}
+
+func strDir(val string) Dir {
+	if strings.EqualFold(val, `asc`) {
+		return DirAsc
+	}
+	if strings.EqualFold(val, `desc`) {
+		return DirDesc
+	}
+	return DirNone
+}
+
+func strNulls(val string) Nulls {
+	if strings.EqualFold(val, `first`) {
+		return NullsFirst
+	}
+	if strings.EqualFold(val, `last`) {
+		return NullsLast
+	}
+	return NullsNone
+}
+
+func countNonEmptyStrings(vals []string) (count int) {
+	for _, val := range vals {
+		if val != `` {
+			count++
+		}
+	}
+	return
+}
+
+func validateIdent(val string) {
+	if strings.ContainsRune(val, quoteDouble) {
+		panic(ErrInvalidInput{Err{
+			`encoding ident`,
+			fmt.Errorf(`unexpected %q in SQL identifier %q`, rune(quoteDouble), val),
+		}})
+	}
+}
+
+const expectedStructNestingDepth = 8
+
+type structDbField struct {
+	DbName string
+	Index  []int
+}
+
+type structNestedDbField struct {
+	Field  reflect.StructField
+	DbPath []string
+}
+
+type structPath struct {
+	Name        string
+	FieldIndex  []int
+	MethodIndex int
+}
+
+type typeCache struct {
+	sync.Map
+	Func func(reflect.Type) interface{}
+}
+
+// Susceptible to "thundering herd". An improvement from no caching, but still
+// not ideal.
+func (self *typeCache) Get(key reflect.Type) interface{} {
+	val, ok := self.Load(key)
+	if !ok {
+		if self.Func != nil {
+			val = self.Func(key)
+		}
+		self.Store(key, val)
+	}
+	return val
+}
+
+type stringCache struct {
+	sync.Map
+	Func func(string) interface{}
+}
+
+// Susceptible to "thundering herd". An improvement from no caching, but still
+// not ideal.
+func (self *stringCache) Get(key string) interface{} {
+	val, ok := self.Load(key)
+	if !ok {
+		if self.Func != nil {
+			val = self.Func(key)
+		}
+		self.Store(key, val)
+	}
+	return val
+}
+
+var prepCache = stringCache{Func: func(src string) interface{} {
+	prep := Prep{Source: src}
+	prep.Parse()
+	return prep
+}}
+
+var colsCache = typeCache{Func: func(typ reflect.Type) interface{} {
+	return cols(typ)
+}}
+
+var colsDeepCache = typeCache{Func: func(typ reflect.Type) interface{} {
+	return colsDeep(typ)
+}}
+
+var structDbFieldsCache = typeCache{Func: func(typ reflect.Type) interface{} {
+	return structDbFields(typ)
+}}
+
+func loadStructDbFields(typ reflect.Type) []structDbField {
+	return structDbFieldsCache.Get(typeElem(typ)).([]structDbField)
+}
+
+var structPathsCache = typeCache{Func: func(typ reflect.Type) interface{} {
+	return structPaths(typ)
+}}
+
+func loadStructPaths(typ reflect.Type) []structPath {
+	return structPathsCache.Get(typeElem(typ)).([]structPath)
+}
+
+var structPathMapCache = typeCache{Func: func(typ reflect.Type) interface{} {
+	return structPathMap(typ)
+}}
+
+func loadStructPathMap(typ reflect.Type) map[string]structPath {
+	return structPathMapCache.Get(typeElem(typ)).(map[string]structPath)
+}
+
+var structJsonPathToNestedDbFieldMapCache = typeCache{Func: func(typ reflect.Type) interface{} {
+	return structJsonPathToNestedDbFieldMap(typ)
+}}
+
+func loadStructJsonPathToNestedDbFieldMap(typ reflect.Type) map[string]structNestedDbField {
+	return structJsonPathToNestedDbFieldMapCache.Get(typeElem(typ)).(map[string]structNestedDbField)
+}
+
+var structJsonPathToDbPathReflectValueMapCache = typeCache{Func: func(typ reflect.Type) interface{} {
+	return structJsonPathToDbPathReflectValueMap(typ)
+}}
+
+func loadStructJsonPathToDbPathReflectValueMap(typ reflect.Type) map[string]reflect.Value {
+	return structJsonPathToDbPathReflectValueMapCache.Get(typeElem(typ)).(map[string]reflect.Value)
+}
+
+func structDbFields(typ reflect.Type) (out []structDbField) {
+	typ = typeElem(typ)
+	if typ == nil {
+		return
+	}
+
+	reqStructType(`scanning DB-related struct fields`, typ)
+
+	path := make([]int, 0, expectedStructNestingDepth)
+	for i := range counter(typ.NumField()) {
+		appendStructDbFields(&out, &path, typ, i)
+	}
+	return
+}
+
+func appendStructDbFields(buf *[]structDbField, path *[]int, typ reflect.Type, index int) {
+	field := typ.Field(index)
+	if !isPublic(field.PkgPath) {
+		return
+	}
+
+	defer resliceInts(path, len(*path))
+	*path = append(*path, index)
+
+	name := FieldDbName(field)
+	if name != `` {
+		*buf = append(*buf, structDbField{name, copyInts(*path)})
+		return
+	}
+
+	typ = typeDeref(field.Type)
+	if field.Anonymous && typ.Kind() == reflect.Struct {
+		for i := range counter(typ.NumField()) {
+			appendStructDbFields(buf, path, typ, i)
+		}
+	}
+}
+
+func structPaths(typ reflect.Type) (out []structPath) {
+	typ = typeElem(typ)
+	if typ == nil {
+		return
+	}
+
+	reqStructType(`scanning struct field and method paths`, typ)
+
+	path := make([]int, 0, expectedStructNestingDepth)
+	for i := range counter(typ.NumField()) {
+		appendStructFieldPaths(&out, &path, typ, i)
+	}
+
+	for i := range counter(typ.NumMethod()) {
+		meth := typ.Method(i)
+		if isPublic(meth.PkgPath) {
+			out = append(out, structPath{Name: meth.Name, MethodIndex: i})
+		}
+	}
+	return
+}
+
+func appendStructFieldPaths(buf *[]structPath, path *[]int, typ reflect.Type, index int) {
+	field := typ.Field(index)
+	if !isPublic(field.PkgPath) {
+		return
+	}
+
+	defer resliceInts(path, len(*path))
+	*path = append(*path, index)
+
+	*buf = append(*buf, structPath{Name: field.Name, FieldIndex: copyInts(*path)})
+
+	typ = typeDeref(field.Type)
+	if field.Anonymous && typ.Kind() == reflect.Struct {
+		for i := range counter(typ.NumField()) {
+			appendStructFieldPaths(buf, path, typ, i)
+		}
+	}
+}
+
+func structPathMap(typ reflect.Type) map[string]structPath {
+	paths := loadStructPaths(typ)
+	out := make(map[string]structPath, len(paths))
+	for _, val := range paths {
+		out[val.Name] = val
+	}
+	return out
+}
+
+func typeElem(typ reflect.Type) reflect.Type {
+	for typ != nil && (typ.Kind() == reflect.Ptr || typ.Kind() == reflect.Slice) {
+		typ = typ.Elem()
+	}
+	return typ
+}
+
+func deref(val reflect.Value) reflect.Value {
+	for val.Kind() == reflect.Ptr {
+		if val.IsNil() {
+			return reflect.Value{}
+		}
+		val = val.Elem()
+	}
+	return val
+}
+
+func elemTypeOf(typ interface{}) reflect.Type {
+	return typeElem(reflect.TypeOf(typ))
+}
+
+func typeOf(typ interface{}) reflect.Type {
+	return typeDeref(reflect.TypeOf(typ))
+}
+
+func elemValOf(val interface{}) reflect.Value {
+	return deref(reflect.ValueOf(val))
+}
+
+func isStructEmpty(val interface{}) bool {
+	return isStructTypeEmpty(reflect.TypeOf(val))
+}
+
+func isStructTypeEmpty(typ reflect.Type) bool {
+	typ = typeDeref(typ)
+	return typ == nil || typ.Kind() != reflect.Struct || typ.NumField() == 0
+}
+
+func reqGetter(val, method reflect.Type, name string) {
+	inputs := method.NumIn()
+	if inputs != 0 {
+		panic(ErrInternal{Err{
+			`evaluating method`,
+			fmt.Errorf(
+				`can't evaluate %q of %v: expected 0 parameters, found %v parameters`,
+				name, val, inputs,
+			),
+		}})
+	}
+
+	outputs := method.NumOut()
+	if outputs != 1 {
+		panic(ErrInternal{Err{
+			`evaluating method`,
+			fmt.Errorf(
+				`can't evaluate %q of %v: expected 1 return parameter, found %v return parameters`,
+				name, val, outputs,
+			),
+		}})
+	}
+}
+
+func reqStructType(while string, typ reflect.Type) {
+	if typ.Kind() != reflect.Struct {
+		panic(errExpectedStruct(while, typ.Name()))
+	}
+}
+
+func typeName(typ reflect.Type) string {
+	typ = typeDeref(typ)
+	if typ == nil {
+		return `nil`
+	}
+	return typ.Name()
+}
+
+func isNil(val interface{}) bool {
+	return val == nil || isValNil(reflect.ValueOf(val))
+}
+
+func isValNil(rval reflect.Value) bool {
+	return !rval.IsValid() || isNilable(rval.Kind()) && rval.IsNil()
+}
+
+func isNilable(kind reflect.Kind) bool {
+	switch kind {
+	case reflect.Chan, reflect.Func, reflect.Interface, reflect.Map, reflect.Ptr, reflect.Slice:
+		return true
+	default:
+		return false
+	}
+}
+
+func isPublic(pkgPath string) bool { return pkgPath == `` }
+
+func typeDeref(rtype reflect.Type) reflect.Type {
+	for rtype != nil && rtype.Kind() == reflect.Ptr {
+		rtype = rtype.Elem()
+	}
+	return rtype
+}
+
+/*
+TODO: consider validating that the name doesn't contain double quotes. We might
+return an error, or panic.
+*/
+func tagIdent(tag string) string {
+	index := strings.IndexRune(tag, ',')
+	if index >= 0 {
+		return tagIdent(tag[:index])
+	}
+	if tag == "-" {
+		return ""
+	}
+	return tag
+}
+
+func cols(typ reflect.Type) string {
+	typ = typeElem(typ)
+	if isStructType(typ) {
+		return structCols(typ)
+	}
+	return `*`
+}
+
+func structCols(typ reflect.Type) string {
+	reqStructType(`generating struct columns string from struct type`, typ)
+
+	var buf []byte
+	for i, field := range loadStructDbFields(typ) {
+		if i > 0 {
+			buf = append(buf, `, `...)
+		}
+		buf = Ident(field.DbName).Append(buf)
+	}
+	return bytesToMutableString(buf)
+}
+
+func colsDeep(typ reflect.Type) string {
+	typ = typeElem(typ)
+	if isStructType(typ) {
+		return structColsDeep(typ)
+	}
+	return `*`
+}
+
+func structColsDeep(typ reflect.Type) string {
+	reqStructType(`generating deep struct columns string from struct type`, typ)
+
+	var buf []byte
+	var path []string
+
+	for i := range counter(typ.NumField()) {
+		appendFieldCols(&buf, &path, typ.Field(i))
+	}
+	return bytesToMutableString(buf)
+}
+
+func appendFieldCols(buf *[]byte, path *[]string, field reflect.StructField) {
+	if !isPublic(field.PkgPath) {
+		return
+	}
+
+	dbName := FieldDbName(field)
+	typ := typeDeref(field.Type)
+
+	if dbName == `` {
+		if field.Anonymous && typ.Kind() == reflect.Struct {
+			for i := range counter(typ.NumField()) {
+				appendFieldCols(buf, path, typ.Field(i))
+			}
+		}
+		return
+	}
+
+	defer resliceStrings(path, len(*path))
+	*path = append(*path, dbName)
+
+	if isStructType(typ) {
+		for i := range counter(typ.NumField()) {
+			appendFieldCols(buf, path, typ.Field(i))
+		}
+		return
+	}
+
+	text := *buf
+
+	if len(text) > 0 {
+		text = append(text, `, `...)
+	}
+	text = AliasedPath(*path).Append(text)
+
+	*buf = text
+}
+
+func structJsonPathToNestedDbFieldMap(typ reflect.Type) map[string]structNestedDbField {
+	typ = typeElem(typ)
+	if typ == nil {
+		return nil
+	}
+
+	reqStructType(`generating JSON-DB path mapping from struct type`, typ)
+
+	buf := map[string]structNestedDbField{}
+	jsonPath := make([]string, 0, expectedStructNestingDepth)
+	dbPath := make([]string, 0, expectedStructNestingDepth)
+
+	for i := range counter(typ.NumField()) {
+		addJsonPathsToDbPaths(buf, &jsonPath, &dbPath, typ.Field(i))
+	}
+	return buf
+}
+
+func structJsonPathToDbPathReflectValueMap(typ reflect.Type) map[string]reflect.Value {
+	src := loadStructJsonPathToNestedDbFieldMap(typ)
+	out := make(map[string]reflect.Value, len(src))
+	for key, val := range src {
+		out[key] = reflect.ValueOf(val.DbPath)
+	}
+	return out
+}
+
+func addJsonPathsToDbPaths(
+	buf map[string]structNestedDbField, jsonPath *[]string, dbPath *[]string, field reflect.StructField,
+) {
+	if !isPublic(field.PkgPath) {
+		return
+	}
+
+	jsonName := FieldJsonName(field)
+	dbName := FieldDbName(field)
+	typ := typeDeref(field.Type)
+
+	if dbName == `` {
+		if field.Anonymous && typ.Kind() == reflect.Struct {
+			for i := range counter(typ.NumField()) {
+				addJsonPathsToDbPaths(buf, jsonPath, dbPath, typ.Field(i))
+			}
+		}
+		return
+	}
+	if jsonName == `` {
+		return
+	}
+
+	defer resliceStrings(jsonPath, len(*jsonPath))
+	*jsonPath = append(*jsonPath, jsonName)
+
+	defer resliceStrings(dbPath, len(*dbPath))
+	*dbPath = append(*dbPath, dbName)
+
+	buf[strings.Join(*jsonPath, `.`)] = structNestedDbField{
+		Field:  field,
+		DbPath: copyStrings(*dbPath),
+	}
+
+	if isStructType(typ) {
+		for i := range counter(typ.NumField()) {
+			addJsonPathsToDbPaths(buf, jsonPath, dbPath, typ.Field(i))
+		}
+	}
+}
+
+func trimWhitespaceAndComments(val Token) Token {
+	switch val.Type {
+	case TokenTypeWhitespace:
+		return Token{` `, TokenTypeWhitespace}
+	case TokenTypeCommentLine, TokenTypeCommentBlock:
+		return Token{}
+	default:
+		return val
+	}
+}
+
+func isJsonDict(val []byte) bool   { return headByte(val) == '{' }
+func isJsonList(val []byte) bool   { return headByte(val) == '[' }
+func isJsonString(val []byte) bool { return headByte(val) == '"' }
+
+func headByte(val []byte) byte {
+	if len(val) > 0 {
+		return val[0]
+	}
+	return 0
+}
