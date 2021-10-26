@@ -60,7 +60,7 @@ const (
 Shortcut for instantiating `Jel` with the type of the given value. The input is
 used only as a type carrier.
 */
-func JelFor(typ interface{}) Jel { return Jel{Type: elemTypeOf(typ)} }
+func JelFor(typ interface{}) Jel { return Jel{Type: typeElemOf(typ)} }
 
 /*
 Short for "JSON Expression Language". Provides support for expressing a
@@ -201,7 +201,7 @@ nop. The input is used only as a type carrier; its actual value is ignored.
 */
 func (self *Jel) OrType(typ interface{}) {
 	if self.Type == nil {
-		self.Type = elemTypeOf(typ)
+		self.Type = typeElemOf(typ)
 	}
 }
 

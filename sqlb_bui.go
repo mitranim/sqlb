@@ -32,7 +32,7 @@ func (self Bui) Get() ([]byte, []interface{}) {
 /*
 Replaces text and args with the inputs. The following idiom is equivalent to
 `bui.Expr` but more efficient if the expression type is concrete, avoiding an
-interface allocation:
+interface-induced allocation:
 
 	bui.Set(SomeExpr{}.AppendExpr(bui.Get()))
 */

@@ -64,7 +64,7 @@ func DictQ(text string, args map[string]interface{}) StrQ {
 
 // Shortcut for `StrQ{text, StructDict{reflect.ValueOf(args)}}`.
 func StructQ(text string, args interface{}) StrQ {
-	val := elemValOf(args)
+	val := valueOf(args)
 	if !val.IsValid() {
 		return StrQ{text, nil}
 	}

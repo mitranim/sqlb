@@ -16,6 +16,7 @@
     * Arbitrarily composable and nestable structures.
     * Uses data literals, not a builder API.
   * Supports an optional "JSON Expression Language" (JEL) for expressing SQL expressions with nested Lisp-style calls in JSON.
+  * Supports safely parsing "order by" clauses from JSON and text, for specific struct types, converting field names from `"json"` field tags to `"db"` field tags.
   * Decently optimized.
   * Small and dependency-free.
 

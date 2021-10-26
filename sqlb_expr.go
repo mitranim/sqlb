@@ -662,7 +662,7 @@ func (self Seq) Append(text []byte) []byte { return exprAppend(&self, text) }
 func (self Seq) String() string { return exprString(&self) }
 
 func (self *Seq) any(bui *Bui, val interface{}) {
-	rval := elemValOf(val)
+	rval := valueOf(val)
 
 	switch rval.Kind() {
 	case reflect.Invalid:
@@ -833,7 +833,7 @@ func (self Cond) Append(text []byte) []byte { return exprAppend(&self, text) }
 func (self Cond) String() string { return exprString(&self) }
 
 func (self *Cond) any(bui *Bui, val interface{}) {
-	rval := elemValOf(val)
+	rval := valueOf(val)
 
 	switch rval.Kind() {
 	case reflect.Invalid:
@@ -946,7 +946,7 @@ type StructValues [1]interface{}
 func (self StructValues) AppendExpr(text []byte, args []interface{}) ([]byte, []interface{}) {
 	bui := Bui{text, args}
 
-	val := elemValOf(self[0])
+	val := valueOf(self[0])
 	if val.IsValid() {
 		for i, field := range loadStructDbFields(val.Type()) {
 			if i > 0 {
@@ -1008,7 +1008,7 @@ type StructAssign [1]interface{}
 func (self StructAssign) AppendExpr(text []byte, args []interface{}) ([]byte, []interface{}) {
 	bui := Bui{text, args}
 
-	val := elemValOf(self[0])
+	val := valueOf(self[0])
 	if val.IsValid() {
 		for i, field := range loadStructDbFields(val.Type()) {
 			if i > 0 {

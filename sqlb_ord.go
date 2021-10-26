@@ -154,7 +154,7 @@ type is consulted when decoding orderings from an input such as JSON.
 */
 func (self *OrdsParser) OrType(typ interface{}) {
 	if self.Type == nil {
-		self.Type = elemTypeOf(typ)
+		self.Type = typeElemOf(typ)
 	}
 }
 
@@ -313,20 +313,22 @@ type Ord struct {
 
 // Implement the `Expr` interface, making this a sub-expression.
 func (self Ord) AppendExpr(text []byte, args []interface{}) ([]byte, []interface{}) {
-	if len(self.Path) > 0 {
-		text, args = self.Path.AppendExpr(text, args)
-		text = self.Dir.Append(text)
-		text = self.Nulls.Append(text)
-	}
-	return text, args
+	return self.Append(text), args
 }
 
 // Implement the `Appender` interface, sometimes allowing more efficient text
 // encoding.
-func (self Ord) Append(text []byte) []byte { return exprAppend(&self, text) }
+func (self Ord) Append(text []byte) []byte {
+	if len(self.Path) > 0 {
+		text = self.Path.Append(text)
+		text = self.Dir.Append(text)
+		text = self.Nulls.Append(text)
+	}
+	return text
+}
 
 // Implement the `fmt.Stringer` interface for debug purposes.
-func (self Ord) String() string { return exprString(&self) }
+func (self Ord) String() string { return appenderToStr(&self) }
 
 // True if the path is empty.
 func (self Ord) IsEmpty() bool { return len(self.Path) == 0 }

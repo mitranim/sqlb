@@ -104,7 +104,7 @@ func (self StructDict) GotNamed(key string) (interface{}, bool) {
 	access performance by about 3 times in our benchmarks.
 	*/
 
-	val := deref(self[0])
+	val := valueDeref(self[0])
 	if !val.IsValid() {
 		return nil, false
 	}

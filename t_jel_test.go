@@ -28,7 +28,7 @@ func Test_Jel_Transcode(t *testing.T) {
 		]
 	`
 
-	expr := Jel{elemTypeOf((*External)(nil)), src}
+	expr := Jel{typeElemOf((*External)(nil)), src}
 	text, args := Reify(expr)
 
 	eq(

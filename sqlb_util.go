@@ -576,7 +576,7 @@ func typeElem(typ reflect.Type) reflect.Type {
 	return typ
 }
 
-func deref(val reflect.Value) reflect.Value {
+func valueDeref(val reflect.Value) reflect.Value {
 	for val.Kind() == reflect.Ptr {
 		if val.IsNil() {
 			return reflect.Value{}
@@ -586,7 +586,7 @@ func deref(val reflect.Value) reflect.Value {
 	return val
 }
 
-func elemTypeOf(typ interface{}) reflect.Type {
+func typeElemOf(typ interface{}) reflect.Type {
 	return typeElem(reflect.TypeOf(typ))
 }
 
@@ -594,8 +594,8 @@ func typeOf(typ interface{}) reflect.Type {
 	return typeDeref(reflect.TypeOf(typ))
 }
 
-func elemValOf(val interface{}) reflect.Value {
-	return deref(reflect.ValueOf(val))
+func valueOf(val interface{}) reflect.Value {
+	return valueDeref(reflect.ValueOf(val))
 }
 
 func isStructEmpty(val interface{}) bool {
@@ -646,11 +646,11 @@ func typeName(typ reflect.Type) string {
 }
 
 func isNil(val interface{}) bool {
-	return val == nil || isValNil(reflect.ValueOf(val))
+	return val == nil || isValueNil(reflect.ValueOf(val))
 }
 
-func isValNil(rval reflect.Value) bool {
-	return !rval.IsValid() || isNilable(rval.Kind()) && rval.IsNil()
+func isValueNil(val reflect.Value) bool {
+	return !val.IsValid() || isNilable(val.Kind()) && val.IsNil()
 }
 
 func isNilable(kind reflect.Kind) bool {
@@ -664,11 +664,11 @@ func isNilable(kind reflect.Kind) bool {
 
 func isPublic(pkgPath string) bool { return pkgPath == `` }
 
-func typeDeref(rtype reflect.Type) reflect.Type {
-	for rtype != nil && rtype.Kind() == reflect.Ptr {
-		rtype = rtype.Elem()
+func typeDeref(typ reflect.Type) reflect.Type {
+	for typ != nil && typ.Kind() == reflect.Ptr {
+		typ = typ.Elem()
 	}
-	return rtype
+	return typ
 }
 
 /*

@@ -743,7 +743,7 @@ func Test_Cols(t *testing.T) {
 func Test_ColsDeep(t *testing.T) {
 	test := func(exp string, typ interface{}) {
 		t.Helper()
-		eq(t, exp, TypeColsDeep(elemTypeOf(typ)))
+		eq(t, exp, TypeColsDeep(typeElemOf(typ)))
 		testExpr(t, rei(exp), ColsDeep{typ})
 	}
 
