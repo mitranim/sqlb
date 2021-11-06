@@ -2,7 +2,7 @@ package sqlb_test
 
 import (
 	"fmt"
-	"reflect"
+	r "reflect"
 	"time"
 
 	"github.com/mitranim/sqlb"
@@ -32,7 +32,7 @@ func ExampleJel() {
 	`
 
 	expr := sqlb.Jel{
-		Type: reflect.TypeOf((*External)(nil)).Elem(),
+		Type: r.TypeOf((*External)(nil)).Elem(),
 		Text: src,
 	}
 

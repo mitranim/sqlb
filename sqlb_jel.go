@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"reflect"
+	r "reflect"
 )
 
 /*
@@ -145,7 +145,7 @@ The result is roughly equivalent to the following (formatted for clarity):
 	args := []interface{}{"literal string", time.Time("9999-01-01T00:00:00Z")}
 */
 type Jel struct {
-	Type reflect.Type
+	Type r.Type
 	Text string
 }
 
@@ -376,15 +376,15 @@ func (self *Jel) decodeCast(bui *Bui, name string, args []json.RawMessage) {
 	}
 
 	typ := self.Type
-	val, ok := loadStructJsonPathToNestedDbFieldMap(typ)[name]
+	field, ok := loadStructJsonPathToNestedDbFieldMap(typ)[name]
 	if !ok {
 		panic(errUnknownField(`decoding JEL op (cast)`, name, typeName(typ)))
 	}
 
-	rval := reflect.New(val.Field.Type)
-	try(json.Unmarshal(args[0], rval.Interface()))
+	val := r.New(field.Field.Type)
+	try(json.Unmarshal(args[0], val.Interface()))
 
-	bui.Param(bui.Arg(rval.Elem().Interface()))
+	bui.Param(bui.Arg(val.Elem().Interface()))
 }
 
 func (self *Jel) decodeString(bui *Bui, input []byte) {

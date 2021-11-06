@@ -104,6 +104,14 @@ func (self ErrUnexpectedEOF) Error() string {
 	return self.format(typeName(typeOf((*ErrUnexpectedEOF)(nil))))
 }
 
+// Specialized type for errors reported by some functions.
+type ErrEmptyExpr struct{ Err }
+
+// Implement the `error` interface.
+func (self ErrEmptyExpr) Error() string {
+	return self.format(typeName(typeOf((*ErrEmptyExpr)(nil))))
+}
+
 func errOrdinal(err error) error {
 	if err == nil {
 		return nil
@@ -181,3 +189,8 @@ func errUnknownField(while, jsonPath, typeName string) ErrUnknownField {
 		fmt.Errorf(`no DB path corresponding to JSON path %q in type %v`, jsonPath, typeName),
 	}}
 }
+
+var errEmptyAssign = error(ErrEmptyExpr{Err{
+	`building SQL assignment expression`,
+	fmt.Errorf(`assignment must have at least one field`),
+}})

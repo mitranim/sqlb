@@ -1,5 +1,7 @@
 package sqlb
 
+import r "reflect"
+
 /*
 Short for "expression". Defines an arbitrary SQL expression. The method appends
 arbitrary SQL text. In both the input and output, the arguments must correspond
@@ -29,9 +31,7 @@ type ParamExpr interface {
 Appends a text repesentation. Sometimes allows better efficiency than
 `fmt.Stringer`. Implemented by all `Expr` types in this package.
 */
-type Appender interface {
-	Append([]byte) []byte
-}
+type Appender interface{ Append([]byte) []byte }
 
 /*
 Dictionary of arbitrary arguments, ordinal and/or named. Used as input to
@@ -73,4 +73,29 @@ type NamedRanger interface {
 	argument.
 	*/
 	RangeNamed(func(string))
+}
+
+/*
+Used by `Partial` for filtering struct fields. See `Sparse` and `Partial` for
+explanations.
+*/
+type Haser interface{ Has(string) bool }
+
+/*
+Represents an arbitrary struct where not all fields are "present". Calling
+`.Get` returns the underlying struct value. Calling `.HasField` answers the
+question "is this field present?".
+
+Secretly supported by struct-scanning expressions such as `StructInsert`,
+`StructAssign`, `StructValues`, `Cond`, and more. These types attempt to upcast
+the inner value to `Sparse`, falling back on using the inner value as-is. This
+allows to correctly implement REST PATCH semantics by using only the fields
+that were present in a particular HTTP request, while keeping this
+functionality optional.
+
+Concrete implementation: `Partial`.
+*/
+type Sparse interface {
+	Get() interface{}
+	HasField(r.StructField) bool
 }

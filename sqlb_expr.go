@@ -2,7 +2,7 @@ package sqlb
 
 import (
 	"fmt"
-	"reflect"
+	r "reflect"
 	"strconv"
 	"strings"
 )
@@ -662,13 +662,11 @@ func (self Seq) Append(text []byte) []byte { return exprAppend(&self, text) }
 func (self Seq) String() string { return exprString(&self) }
 
 func (self *Seq) any(bui *Bui, val interface{}) {
-	rval := valueOf(val)
-
-	switch rval.Kind() {
-	case reflect.Invalid:
+	switch kindOf(val) {
+	case r.Invalid:
 		self.appendEmpty(bui)
-	case reflect.Slice:
-		self.appendSlice(bui, rval)
+	case r.Slice:
+		self.appendSlice(bui, val)
 	default:
 		panic(errExpectedSlice(`building SQL expression`, val))
 	}
@@ -678,7 +676,9 @@ func (self *Seq) appendEmpty(bui *Bui) {
 	bui.Str(self.Empty)
 }
 
-func (self Seq) appendSlice(bui *Bui, val reflect.Value) {
+func (self Seq) appendSlice(bui *Bui, src interface{}) {
+	val := valueOf(src)
+
 	if val.Len() == 0 {
 		self.appendEmpty(bui)
 		return
@@ -833,17 +833,14 @@ func (self Cond) Append(text []byte) []byte { return exprAppend(&self, text) }
 func (self Cond) String() string { return exprString(&self) }
 
 func (self *Cond) any(bui *Bui, val interface{}) {
-	rval := valueOf(val)
-
-	switch rval.Kind() {
-	case reflect.Invalid:
+	switch kindOf(val) {
+	case r.Invalid:
 		self.appendEmpty(bui)
-	case reflect.Struct:
-		self.appendStruct(bui, rval)
-	case reflect.Slice:
-		self.appendSlice(bui, rval)
+	case r.Struct:
+		self.appendStruct(bui, val)
+	case r.Slice:
+		self.appendSlice(bui, val)
 	default:
-		// panic(errExpectedStructOrSlice(`building SQL expression`, val))
 		bui.Any(val)
 	}
 }
@@ -853,20 +850,16 @@ func (self *Cond) appendEmpty(bui *Bui) {
 }
 
 // TODO consider if we should support nested non-embedded structs.
-func (self *Cond) appendStruct(bui *Bui, val reflect.Value) {
-	fields := loadStructDbFields(val.Type())
-	if len(fields) == 0 {
-		self.appendEmpty(bui)
-		return
-	}
+func (self *Cond) appendStruct(bui *Bui, src interface{}) {
+	iter := makeIter(src)
 
-	for i, field := range fields {
-		if i > 0 {
+	for iter.next() {
+		if !iter.first() {
 			bui.Str(self.Delim)
 		}
 
-		lhs := Ident(field.DbName)
-		rhs := Eq{nil, val.FieldByIndex(field.Index).Interface()}
+		lhs := Ident(FieldDbName(iter.field))
+		rhs := Eq{nil, iter.value.Interface()}
 
 		// Equivalent to using `Eq` for the full expression, but avoids an
 		// allocation caused by converting `Ident` to `Expr`. As a bonus, this also
@@ -874,9 +867,13 @@ func (self *Cond) appendStruct(bui *Bui, val reflect.Value) {
 		bui.Set(lhs.AppendExpr(bui.Get()))
 		bui.Set(rhs.AppendRhs(bui.Get()))
 	}
+
+	if iter.empty() {
+		self.appendEmpty(bui)
+	}
 }
 
-func (self *Cond) appendSlice(bui *Bui, val reflect.Value) {
+func (self *Cond) appendSlice(bui *Bui, val interface{}) {
 	(*Seq)(self).appendSlice(bui, val)
 }
 
@@ -886,6 +883,10 @@ any type, and is used as a type carrier; its actual value is ignored. If the
 inner value is a struct or struct slice, the resulting expression is a list of
 column names corresponding to its fields, using a "db" tag. Otherwise the
 expression is `*`.
+
+Unlike many other struct-scanning expressions, this doesn't support filtering
+via `Sparse`. It operates at the level of a struct type, not an individual
+struct value.
 */
 type Cols [1]interface{}
 
@@ -902,7 +903,7 @@ func (self Cols) Append(text []byte) []byte {
 
 // Implement the `fmt.Stringer` interface for debug purposes.
 func (self Cols) String() string {
-	return TypeCols(reflect.TypeOf(self[0]))
+	return TypeCols(r.TypeOf(self[0]))
 }
 
 /*
@@ -914,6 +915,10 @@ expression is `*`.
 
 Unlike `Cols`, this has special support for nested structs and nested column
 paths. See the examples.
+
+Unlike many other struct-scanning expressions, this doesn't support filtering
+via `Sparse`. It operates at the level of a struct type, not an individual
+struct value.
 */
 type ColsDeep [1]interface{}
 
@@ -930,7 +935,7 @@ func (self ColsDeep) Append(text []byte) []byte {
 
 // Implement the `fmt.Stringer` interface for debug purposes.
 func (self ColsDeep) String() string {
-	return TypeColsDeep(reflect.TypeOf(self[0]))
+	return TypeColsDeep(r.TypeOf(self[0]))
 }
 
 /*
@@ -939,21 +944,24 @@ struct. Field/column names are ignored. Values may be arbitrary sub-expressions
 or arguments. The value passed to `StructValues` may be nil, which is
 equivalent to an empty struct. It may also be an arbitrarily-nested struct
 pointer, which is automatically dereferenced.
+
+Supports filtering. If the inner value implements `Sparse`, then not all fields
+are considered to be "present", which is useful for PATCH semantics. See the
+docs on `Sparse` and `Part`.
 */
 type StructValues [1]interface{}
 
 // Implement the `Expr` interface, making this a sub-expression.
 func (self StructValues) AppendExpr(text []byte, args []interface{}) ([]byte, []interface{}) {
 	bui := Bui{text, args}
+	iter := makeIter(self[0])
 
-	val := valueOf(self[0])
-	if val.IsValid() {
-		for i, field := range loadStructDbFields(val.Type()) {
-			if i > 0 {
-				bui.Str(`,`)
-			}
-			bui.SubAny(val.FieldByIndex(field.Index).Interface())
+	// TODO consider panicking when empty.
+	for iter.next() {
+		if !iter.first() {
+			bui.Str(`,`)
 		}
+		bui.SubAny(iter.value.Interface())
 	}
 
 	return bui.Get()
@@ -971,21 +979,36 @@ Represents a names-and-values clause suitable for insertion. The inner value
 must be nil or a struct. Nil or empty struct generates a "default values"
 clause. Otherwise the resulting expression has SQL column names and values
 generated by scanning the input struct. See the examples.
+
+Supports filtering. If the inner value implements `Sparse`, then not all fields
+are considered to be "present", which is useful for PATCH semantics. See the
+docs on `Sparse` and `Part`.
 */
 type StructInsert [1]interface{}
 
 // Implement the `Expr` interface, making this a sub-expression.
 func (self StructInsert) AppendExpr(text []byte, args []interface{}) ([]byte, []interface{}) {
 	bui := Bui{text, args}
+	iter := makeIter(self[0])
 
-	if self[0] == nil || isStructEmpty(self[0]) {
-		bui.Str(`default values`)
-		return bui.Get()
+	for iter.next() {
+		if iter.first() {
+			bui.Str(`(`)
+			bui.Str(TypeCols(iter.root.Type()))
+			bui.Str(`)`)
+			bui.Str(`values (`)
+		} else {
+			bui.Str(`,`)
+		}
+		bui.SubAny(iter.value.Interface())
 	}
 
-	bui.Set(Parens{Cols(self)}.AppendExpr(bui.Get()))
-	bui.Str(`values`)
-	bui.Set(Parens{StructValues(self)}.AppendExpr(bui.Get()))
+	if iter.empty() {
+		bui.Str(`default values`)
+	} else {
+		bui.Str(`)`)
+	}
+
 	return bui.Get()
 }
 
@@ -1001,24 +1024,30 @@ Represents an SQL assignment clause suitable for "update set" operations. The
 inner value must be a struct. The resulting expression consists of
 comma-separated assignments with column names and values derived from the
 provided struct. See the example.
+
+Supports filtering. If the inner value implements `Sparse`, then not all fields
+are considered to be "present", which is useful for PATCH semantics. See the
+docs on `Sparse` and `Part`.
 */
 type StructAssign [1]interface{}
 
 // Implement the `Expr` interface, making this a sub-expression.
 func (self StructAssign) AppendExpr(text []byte, args []interface{}) ([]byte, []interface{}) {
 	bui := Bui{text, args}
+	iter := makeIter(self[0])
 
-	val := valueOf(self[0])
-	if val.IsValid() {
-		for i, field := range loadStructDbFields(val.Type()) {
-			if i > 0 {
-				bui.Str(`,`)
-			}
-			bui.Set(Assign{
-				Ident(field.DbName),
-				val.FieldByIndex(field.Index).Interface(),
-			}.AppendExpr(bui.Get()))
+	for iter.next() {
+		if !iter.first() {
+			bui.Str(`,`)
 		}
+		bui.Set(Assign{
+			Ident(FieldDbName(iter.field)),
+			iter.value.Interface(),
+		}.AppendExpr(bui.Get()))
+	}
+
+	if iter.empty() {
+		panic(errEmptyAssign)
 	}
 
 	return bui.Get()

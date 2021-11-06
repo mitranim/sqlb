@@ -1,7 +1,7 @@
 package sqlb
 
 import (
-	"reflect"
+	r "reflect"
 	"testing"
 )
 
@@ -125,13 +125,13 @@ func Test_Ord_combos(t *testing.T) {
 
 func Test_OrdsParserFor(t *testing.T) {
 	eq(t, OrdsParser{}, OrdsParserFor(nil))
-	eq(t, OrdsParser{Type: reflect.TypeOf(Outer{})}, OrdsParserFor(Outer{}))
-	eq(t, OrdsParser{Type: reflect.TypeOf(Outer{})}, OrdsParserFor(&Outer{}))
-	eq(t, OrdsParser{Type: reflect.TypeOf(Outer{})}, OrdsParserFor((*Outer)(nil)))
-	eq(t, OrdsParser{Type: reflect.TypeOf(Outer{})}, OrdsParserFor([]Outer(nil)))
-	eq(t, OrdsParser{Type: reflect.TypeOf(Outer{})}, OrdsParserFor([]*Outer(nil)))
-	eq(t, OrdsParser{Type: reflect.TypeOf(Outer{})}, OrdsParserFor((*[]Outer)(nil)))
-	eq(t, OrdsParser{Type: reflect.TypeOf(Outer{})}, OrdsParserFor((*[]*Outer)(nil)))
+	eq(t, OrdsParser{Type: r.TypeOf(Outer{})}, OrdsParserFor(Outer{}))
+	eq(t, OrdsParser{Type: r.TypeOf(Outer{})}, OrdsParserFor(&Outer{}))
+	eq(t, OrdsParser{Type: r.TypeOf(Outer{})}, OrdsParserFor((*Outer)(nil)))
+	eq(t, OrdsParser{Type: r.TypeOf(Outer{})}, OrdsParserFor([]Outer(nil)))
+	eq(t, OrdsParser{Type: r.TypeOf(Outer{})}, OrdsParserFor([]*Outer(nil)))
+	eq(t, OrdsParser{Type: r.TypeOf(Outer{})}, OrdsParserFor((*[]Outer)(nil)))
+	eq(t, OrdsParser{Type: r.TypeOf(Outer{})}, OrdsParserFor((*[]*Outer)(nil)))
 }
 
 // Delegates to `(*OrdsParser).ParseSlice` which is tested separately.

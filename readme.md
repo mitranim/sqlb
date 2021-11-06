@@ -17,6 +17,7 @@
     * Uses data literals, not a builder API.
   * Supports an optional "JSON Expression Language" (JEL) for expressing SQL expressions with nested Lisp-style calls in JSON.
   * Supports safely parsing "order by" clauses from JSON and text, for specific struct types, converting field names from `"json"` field tags to `"db"` field tags.
+  * Supports "sparse" structs, where not all fields are "present", allowing to implement HTTP PATCH semantics without sacrificing static typing.
   * Decently optimized.
   * Small and dependency-free.
 
@@ -105,6 +106,10 @@ func Example_composition() {
 ```
 
 ## Changelog
+
+### `v0.2.1`
+
+Added `Sparse` and `Partial` to support "sparse" structs, allowing to implement HTTP PATCH semantics more easily, efficiently, and correctly.
 
 ### `v0.2.0`
 

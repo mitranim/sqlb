@@ -2,7 +2,7 @@ package sqlb
 
 import (
 	"fmt"
-	"reflect"
+	r "reflect"
 	"testing"
 	"time"
 )
@@ -677,6 +677,18 @@ func Test_Cond(t *testing.T) {
 	})
 }
 
+func Test_Cond_filter(t *testing.T) {
+	test := func(exp R, val interface{}, fil Haser) {
+		t.Helper()
+		testExpr(t, exp, Cond{`empty`, `delim`, Partial{val, fil}})
+	}
+
+	test(rei(`empty`), PairStruct{10, 20}, nil)
+	test(rei(`empty`), &PairStruct{10, 20}, nil)
+	test(rei(`"one" = $1 delim "two" = $2`, 10, 20), PairStruct{10, 20}, HaserTrue{})
+	test(rei(`"one" = $1 delim "two" = $2`, 10, 20), &PairStruct{10, 20}, HaserTrue{})
+}
+
 func Test_Cols(t *testing.T) {
 	test := func(exp string, typ interface{}) {
 		t.Helper()
@@ -811,6 +823,13 @@ func Test_StructValues(t *testing.T) {
 	)
 }
 
+func Test_StructValues_filter(t *testing.T) {
+	testExpr(t, rei(``), StructValues{Partial{PairStruct{10, 20}, nil}})
+	testExpr(t, rei(``), StructValues{Partial{&PairStruct{10, 20}, nil}})
+	testExpr(t, rei(`$1, $2`, 10, 20), StructValues{Partial{PairStruct{10, 20}, HaserTrue{}}})
+	testExpr(t, rei(`$1, $2`, 10, 20), StructValues{Partial{&PairStruct{10, 20}, HaserTrue{}}})
+}
+
 func Test_StructInsert(t *testing.T) {
 	testExpr(t, rei(`default values`), StructInsert{})
 	testExpr(t, rei(`default values`), StructInsert{Void{}})
@@ -872,11 +891,25 @@ func Test_StructInsert(t *testing.T) {
 	)
 }
 
-func Test_StructAssign(t *testing.T) {
-	testExpr(t, rei(``), StructAssign{})
+func Test_StructInsert_filter(t *testing.T) {
+	testExpr(t, rei(`default values`), StructInsert{Partial{PairStruct{10, 20}, nil}})
+	testExpr(t, rei(`default values`), StructInsert{Partial{&PairStruct{10, 20}, nil}})
+	testExpr(t, rei(`("one", "two") values ($1, $2)`, 10, 20), StructInsert{Partial{PairStruct{10, 20}, HaserTrue{}}})
+	testExpr(t, rei(`("one", "two") values ($1, $2)`, 10, 20), StructInsert{Partial{&PairStruct{10, 20}, HaserTrue{}}})
+}
 
-	testExpr(t, rei(``), StructAssign{Void{}})
-	testExpr(t, rei(``), StructAssign{&Void{}})
+func Test_StructAssign(t *testing.T) {
+	panics(t, `assignment must have at least one field`, func() {
+		StructAssign{}.AppendExpr(nil, nil)
+	})
+
+	panics(t, `assignment must have at least one field`, func() {
+		StructAssign{Void{}}.AppendExpr(nil, nil)
+	})
+
+	panics(t, `assignment must have at least one field`, func() {
+		StructAssign{&Void{}}.AppendExpr(nil, nil)
+	})
 
 	testExpr(t, rei(`"one" = $1`, nil), StructAssign{UnitStruct{}})
 	testExpr(t, rei(`"one" = $1`, 10), StructAssign{UnitStruct{10}})
@@ -890,13 +923,23 @@ func Test_StructAssign(t *testing.T) {
 
 	testExprs(
 		t,
-		rei(`"one" = $1 "one" = $2 `, 10, 20),
-		StructAssign{},
+		rei(`"one" = $1 "one" = $2`, 10, 20),
 		StructAssign{UnitStruct{10}},
-		StructAssign{},
 		StructAssign{UnitStruct{20}},
-		StructAssign{},
 	)
+}
+
+func Test_StructAssign_filter(t *testing.T) {
+	testExpr(t, rei(`"one" = $1, "two" = $2`, 10, 20), StructAssign{Partial{PairStruct{10, 20}, HaserTrue{}}})
+	testExpr(t, rei(`"one" = $1, "two" = $2`, 10, 20), StructAssign{Partial{&PairStruct{10, 20}, HaserTrue{}}})
+
+	panics(t, `assignment must have at least one field`, func() {
+		testExpr(t, rei(`default values`), StructAssign{Partial{PairStruct{10, 20}, nil}})
+	})
+
+	panics(t, `assignment must have at least one field`, func() {
+		testExpr(t, rei(`default values`), StructAssign{Partial{&PairStruct{10, 20}, nil}})
+	})
 }
 
 func Test_Star(t *testing.T) {
@@ -1673,21 +1716,10 @@ func Test_column_fields(t *testing.T) {
 }
 
 func tCols() (out [][2]string) {
-	val := reflect.ValueOf(Outer{
-		Id:   `outer id`,
-		Name: `outer name`,
-		Embed: Embed{
-			Id:        `embed id`,
-			Name:      `embed name`,
-			private:   `private`,
-			Untagged0: `untagged 0`,
-			Untagged1: `untagged 1`,
-		},
-	})
-
+	val := r.ValueOf(testOuter)
 	for _, field := range loadStructDbFields(val.Type()) {
 		out = append(out, [2]string{
-			field.DbName,
+			FieldDbName(field),
 			val.FieldByIndex(field.Index).String(),
 		})
 	}
@@ -1785,7 +1817,7 @@ func Test_Dict(t *testing.T) {
 
 func Test_StructDict(t *testing.T) {
 	zero := StructDict{}
-	empty := StructDict{reflect.ValueOf(Void{})}
+	empty := StructDict{r.ValueOf(Void{})}
 	full := benchStructDict
 
 	eq(t, 0, zero.Len())
@@ -1855,4 +1887,65 @@ func testArgDictNamed(t testing.TB, zero, empty, full ArgDict) {
 	testKeyVal(`Key_dcfa83ed4be89cf05d5e3eba6f2a`, `val_b773e8ce401c8313b1400b973fa1`)
 	testKeyVal(`Key_2bc5f64447879c1152ae9b904718`, `val_e9d6438d42339e4c62db260c458b`)
 	testKeyVal(`Key_4f0e9d9b4d1ea77c510337ae6c2a`, `val_60a4b1bf406f98826c706ab153d1`)
+}
+
+func Test_Partial(t *testing.T) {
+	t.Run(`Get`, func(t *testing.T) {
+		test := func(val interface{}) {
+			eq(t, val, Partial{val, nil}.Get())
+		}
+
+		test(nil)
+		test(10)
+		test(`str`)
+		test((*Void)(nil))
+		test(Void{})
+		test(&Void{})
+		test(Outer{})
+		test(&Outer{})
+		test(Partial{})
+		test(&Partial{})
+	})
+
+	t.Run(`HasField`, func(t *testing.T) {
+		test := func(exp bool, val interface{}, fil Haser, tag r.StructTag) {
+			t.Helper()
+			eq(t, exp, Partial{val, fil}.HasField(r.StructField{Tag: tag}))
+		}
+
+		test(false, nil, nil, ``)
+		test(false, UnitStruct{}, nil, ``)
+		test(false, nil, HaserFalse{}, ``)
+		test(false, UnitStruct{}, HaserFalse{}, ``)
+		test(false, nil, HaserTrue{}, ``)
+		test(false, UnitStruct{}, HaserTrue{}, ``)
+
+		test(false, nil, nil, `json:""`)
+		test(false, UnitStruct{}, nil, `json:""`)
+		test(false, nil, HaserFalse{}, `json:""`)
+		test(false, UnitStruct{}, HaserFalse{}, `json:""`)
+		test(false, nil, HaserTrue{}, `json:""`)
+		test(false, UnitStruct{}, HaserTrue{}, `json:""`)
+
+		test(false, nil, nil, `json:"-"`)
+		test(false, UnitStruct{}, nil, `json:"-"`)
+		test(false, nil, HaserFalse{}, `json:"-"`)
+		test(false, UnitStruct{}, HaserFalse{}, `json:"-"`)
+		test(false, nil, HaserTrue{}, `json:"-"`)
+		test(false, UnitStruct{}, HaserTrue{}, `json:"-"`)
+
+		test(false, nil, nil, `db:"someName"`)
+		test(false, UnitStruct{}, nil, `db:"someName"`)
+		test(false, nil, HaserFalse{}, `db:"someName"`)
+		test(false, UnitStruct{}, HaserFalse{}, `db:"someName"`)
+		test(false, nil, HaserTrue{}, `db:"someName"`)
+		test(false, UnitStruct{}, HaserTrue{}, `db:"someName"`)
+
+		test(false, nil, nil, `json:"someName"`)
+		test(false, UnitStruct{}, nil, `json:"someName"`)
+		test(false, nil, HaserFalse{}, `json:"someName"`)
+		test(false, UnitStruct{}, HaserFalse{}, `json:"someName"`)
+		test(true, nil, HaserTrue{}, `json:"someName"`)
+		test(true, UnitStruct{}, HaserTrue{}, `json:"someName"`)
+	})
 }

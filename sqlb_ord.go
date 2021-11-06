@@ -3,7 +3,7 @@ package sqlb
 import (
 	"encoding/json"
 	"fmt"
-	"reflect"
+	r "reflect"
 )
 
 /*
@@ -26,7 +26,7 @@ See the examples for `(*OrdsParser).ParseSlice` and `(*OrdsParser).UnmarshalJSON
 */
 type OrdsParser struct {
 	Ords
-	Type reflect.Type
+	Type r.Type
 	Lax  bool
 }
 
@@ -462,13 +462,13 @@ func (self OrdDescNullsLast) Append(text []byte) []byte { return exprAppend(&sel
 func (self OrdDescNullsLast) String() string { return exprString(&self) }
 
 var (
-	typOrdAsc            = reflect.TypeOf((*OrdAsc)(nil)).Elem()
-	typOrdDesc           = reflect.TypeOf((*OrdDesc)(nil)).Elem()
-	typOrdNullsFirst     = reflect.TypeOf((*OrdNullsFirst)(nil)).Elem()
-	typOrdNullsLast      = reflect.TypeOf((*OrdNullsLast)(nil)).Elem()
-	typOrdAscNullsFirst  = reflect.TypeOf((*OrdAscNullsFirst)(nil)).Elem()
-	typOrdAscNullsLast   = reflect.TypeOf((*OrdAscNullsLast)(nil)).Elem()
-	typOrdDescNullsFirst = reflect.TypeOf((*OrdDescNullsFirst)(nil)).Elem()
-	typOrdDescNullsLast  = reflect.TypeOf((*OrdDescNullsLast)(nil)).Elem()
-	typPath              = reflect.TypeOf((*Path)(nil)).Elem()
+	typOrdAsc            = r.TypeOf((*OrdAsc)(nil)).Elem()
+	typOrdDesc           = r.TypeOf((*OrdDesc)(nil)).Elem()
+	typOrdNullsFirst     = r.TypeOf((*OrdNullsFirst)(nil)).Elem()
+	typOrdNullsLast      = r.TypeOf((*OrdNullsLast)(nil)).Elem()
+	typOrdAscNullsFirst  = r.TypeOf((*OrdAscNullsFirst)(nil)).Elem()
+	typOrdAscNullsLast   = r.TypeOf((*OrdAscNullsLast)(nil)).Elem()
+	typOrdDescNullsFirst = r.TypeOf((*OrdDescNullsFirst)(nil)).Elem()
+	typOrdDescNullsLast  = r.TypeOf((*OrdDescNullsLast)(nil)).Elem()
+	typPath              = r.TypeOf((*Path)(nil)).Elem()
 )

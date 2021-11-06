@@ -1,6 +1,6 @@
 package sqlb
 
-import "reflect"
+import r "reflect"
 
 /*
 Encodes the provided expressions and returns the resulting text and args.
@@ -23,7 +23,7 @@ input, rather than a type-carrying `interface{}`. Used internally by `Cols`.
 The result is cached and reused. Subsequent calls for the same type are nearly
 free.
 */
-func TypeCols(typ reflect.Type) string {
+func TypeCols(typ r.Type) string {
 	return colsCache.Get(typeElem(typ)).(string)
 }
 
@@ -33,14 +33,15 @@ input, rather than a type-carrying `interface{}`. Used internally by
 `ColsDeep`. The result is cached and reused. Subsequent calls for the same type
 are nearly free.
 */
-func TypeColsDeep(typ reflect.Type) string {
+func TypeColsDeep(typ r.Type) string {
 	return colsDeepCache.Get(typeElem(typ)).(string)
 }
 
 /*
 Returns a parsed `Prep` for the given source string. Panics if parsing fails.
-Caches the result, reusing it for future calls. Used internally by `StrQ`.
-User code shouldn't have to call this, but it's exported just in case.
+Caches the result for each source string, reusing it for future calls. Used
+internally by `StrQ`. User code shouldn't have to call this, but it's exported
+just in case.
 */
 func Preparse(val string) Prep {
 	return prepCache.Get(val).(Prep)
@@ -74,13 +75,13 @@ func StructQ(text string, args interface{}) StrQ {
 // Returns the field's DB column name from the "db" tag, following the JSON
 // convention of eliding anything after a comma and treating "-" as a
 // non-name.
-func FieldDbName(field reflect.StructField) string {
+func FieldDbName(field r.StructField) string {
 	return tagIdent(field.Tag.Get("db"))
 }
 
 // Returns the field's JSON column name from the "json" tag, following the same
 // conventions as the `encoding/json` package.
-func FieldJsonName(field reflect.StructField) string {
+func FieldJsonName(field r.StructField) string {
 	return tagIdent(field.Tag.Get("json"))
 }
 
@@ -162,4 +163,44 @@ func (self Nulls) GoString() string {
 	default:
 		return `sqlb.NullsNone`
 	}
+}
+
+/*
+Implements `Sparse` by filtering fields on their JSON names, using only
+explicit "json" tags. Fields without explicit "json" names are automatically
+considered missing. Fields with "json" tags must be present in the provided
+string set represented by `.Fil`.
+
+Designed for compatibility with HTTP request decoders provided
+by "github.com/mitranim/rd", which either implement `Haser` or can easily
+generate one. Example PATCH endpoint using "rd":
+
+	import "github.com/mitranim/rd"
+	import "github.com/mitranim/try"
+	import s "github.com/mitranim/sqlb"
+
+	dec := rd.TryDownload(req)
+
+	var input SomeStructType
+	try.To(dec.Decode(&input))
+
+	expr := s.Exprs{
+		s.Update{s.Ident(`some_table`)},
+		s.Set{s.StructAssign{s.Partial{input, dec.Haser()}}},
+	}
+*/
+type Partial struct {
+	Val interface{}
+	Fil Haser
+}
+
+var _ = Sparse(Partial{})
+
+// Implement `Sparse`, returning the underlying value.
+func (self Partial) Get() interface{} { return self.Val }
+
+// Implement `Sparse`, using the underlying filter.
+func (self Partial) HasField(field r.StructField) bool {
+	name := FieldJsonName(field)
+	return name != `` && self.Fil != nil && self.Fil.Has(name)
 }

@@ -2,7 +2,7 @@ package sqlb
 
 import (
 	"fmt"
-	"reflect"
+	r "reflect"
 	"runtime"
 	"strings"
 	"testing"
@@ -38,12 +38,24 @@ type Outer struct {
 	OnlyJson string `json:"onlyJson"`
 }
 
+var testOuter = Outer{
+	Id:   `outer id`,
+	Name: `outer name`,
+	Embed: Embed{
+		Id:        `embed id`,
+		Name:      `embed name`,
+		private:   `private`,
+		Untagged0: `untagged 0`,
+		Untagged1: `untagged 1`,
+	},
+}
+
 type Void struct{}
 
 func (Void) GetVal() interface{} { return `val` }
 
 type UnitStruct struct {
-	One interface{} `db:"one"`
+	One interface{} `db:"one" json:"one"`
 }
 
 func (self UnitStruct) GetOne() interface{}             { return self.One }
@@ -51,17 +63,17 @@ func (self UnitStruct) UnaryVoid(interface{})           {}
 func (self UnitStruct) NullaryPair() (_, _ interface{}) { return }
 
 type PairStruct struct {
-	One interface{} `db:"one"`
-	Two interface{} `db:"two"`
+	One interface{} `db:"one" json:"one"`
+	Two interface{} `db:"two" json:"two"`
 }
 
 func (self PairStruct) GetOne() interface{} { return self.One }
 func (self PairStruct) GetTwo() interface{} { return self.Two }
 
 type TrioStruct struct {
-	One   interface{} `db:"one"`
-	Two   interface{} `db:"two"`
-	Three interface{} `db:"three"`
+	One   interface{} `db:"one" json:"one"`
+	Two   interface{} `db:"two" json:"two"`
+	Three interface{} `db:"three" json:"three"`
 }
 
 func (self TrioStruct) GetOne() interface{}   { return self.One }
@@ -151,7 +163,7 @@ func (self R) Norm() R {
 
 func eq(t testing.TB, exp, act interface{}) {
 	t.Helper()
-	if !reflect.DeepEqual(exp, act) {
+	if !r.DeepEqual(exp, act) {
 		t.Fatalf(`
 expected (detailed):
 	%#[1]v
@@ -197,17 +209,10 @@ type iface struct {
 
 func notEq(t testing.TB, exp, act interface{}) {
 	t.Helper()
-	if reflect.DeepEqual(exp, act) {
+	if r.DeepEqual(exp, act) {
 		fatalNotEq(t, exp, act)
 	}
 }
-
-// func isNot(t testing.TB, exp, act interface{}) {
-// 	t.Helper()
-// 	if exp == act {
-// 		fatalNotEq(t, exp, act)
-// 	}
-// }
 
 func fatalNotEq(t testing.TB, exp, act interface{}) {
 	t.Helper()
@@ -218,23 +223,6 @@ unexpected equality (simple):
 	%[1]v
 `, exp, act)
 }
-
-// func notPanics(t testing.TB, fun func()) {
-// 	t.Helper()
-// 	defer recNotPanics(t, fun)
-// 	fun()
-// }
-
-// func recNotPanics(t testing.TB, fun func()) {
-// 	t.Helper()
-// 	val := recover()
-// 	if val != nil {
-// 		t.Fatalf(
-// 			`expected %v to not panic, found panic %q`,
-// 			funcName(fun), fmt.Sprint(val),
-// 		)
-// 	}
-// }
 
 func panics(t testing.TB, msg string, fun func()) {
 	t.Helper()
@@ -254,7 +242,7 @@ func panics(t testing.TB, msg string, fun func()) {
 }
 
 func funcName(val interface{}) string {
-	return runtime.FuncForPC(reflect.ValueOf(val).Pointer()).Name()
+	return runtime.FuncForPC(r.ValueOf(val).Pointer()).Name()
 }
 
 func catchAny(fun func()) (val interface{}) {
@@ -361,3 +349,11 @@ var hugeQueryArgs = Dict{
 	`arg_fifteen`:  nil,
 	`arg_sixteen`:  nil,
 }
+
+type HaserTrue struct{}
+
+func (HaserTrue) Has(string) bool { return true }
+
+type HaserFalse struct{}
+
+func (HaserFalse) Has(string) bool { return false }

@@ -2,7 +2,7 @@ package sqlb
 
 import (
 	"fmt"
-	"reflect"
+	r "reflect"
 	"testing"
 )
 
@@ -106,7 +106,7 @@ func Benchmark_TypeColsDeep(b *testing.B) {
 	}
 }
 
-var outerType = reflect.TypeOf((*Outer)(nil)).Elem()
+var outerType = r.TypeOf((*Outer)(nil)).Elem()
 
 //go:noinline
 func benchLoadCols() { TypeColsDeep(outerType) }
@@ -226,7 +226,7 @@ func Benchmark_make_struct_dict(b *testing.B) {
 
 //go:noinline
 func benchMakeStructDict() ArgDict {
-	return StructDict{reflect.ValueOf(BenchStructDict{
+	return StructDict{r.ValueOf(BenchStructDict{
 		Key_c603c58746a69833a1528050c33d: `val_e1436c61440383a80ebdc245b930`,
 		Key_abfbb9e94e4093a47683e8ef606b: `val_a6108ccd40789cecf4da1052c5ae`,
 		Key_907b548d45948a206907ed9c9097: `val_9271789147789ecb2beb11c97a78`,
@@ -569,7 +569,7 @@ func benchParseOrds() {
 
 var benchOrdsParser = OrdsParser{
 	Ords: make(Ords, 0, len(benchOrderingStrings)),
-	Type: reflect.TypeOf((*External)(nil)).Elem(),
+	Type: r.TypeOf((*External)(nil)).Elem(),
 }
 
 var benchOrderingStrings = []string{
@@ -577,4 +577,22 @@ var benchOrderingStrings = []string{
 	`externalName desc`,
 	`externalInternal.internalId nulls last`,
 	`externalInternal.internalName desc nulls first`,
+}
+
+func Benchmark_StructInsert_AppendExpr(b *testing.B) {
+	expr := StructInsert{testOuter}
+	b.ResetTimer()
+
+	for range counter(b.N) {
+		expr.AppendExpr(hugeBui.Get())
+	}
+}
+
+func Benchmark_StructValues_AppendExpr(b *testing.B) {
+	expr := StructValues{testOuter}
+	b.ResetTimer()
+
+	for range counter(b.N) {
+		expr.AppendExpr(hugeBui.Get())
+	}
 }

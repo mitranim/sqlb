@@ -4,7 +4,7 @@ import (
 	"database/sql"
 	"database/sql/driver"
 	"fmt"
-	"reflect"
+	r "reflect"
 	"regexp"
 	"strings"
 	"sync"
@@ -22,7 +22,23 @@ const (
 	quoteSingle        = '\''
 	quoteDouble        = '"'
 	quoteGrave         = '`'
-	byteLen            = 1
+
+	byteLen                    = 1
+	expectedStructNestingDepth = 8
+)
+
+var (
+	timeRtype       = r.TypeOf((*time.Time)(nil)).Elem()
+	sqlScannerRtype = r.TypeOf((*sql.Scanner)(nil)).Elem()
+
+	charsetDigitDec   = new(charset).addStr(`0123456789`)
+	charsetIdentStart = new(charset).addStr(`ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz_`)
+	charsetIdent      = new(charset).addSet(charsetIdentStart).addSet(charsetDigitDec)
+	charsetSpace      = new(charset).addStr(" \t\v")
+	charsetNewline    = new(charset).addStr("\r\n")
+	charsetWhitespace = new(charset).addSet(charsetSpace).addSet(charsetNewline)
+	charsetDelimStart = new(charset).addSet(charsetWhitespace).addStr(`([{.`)
+	charsetDelimEnd   = new(charset).addSet(charsetWhitespace).addStr(`,}])`)
 )
 
 type charset [256]bool
@@ -45,16 +61,52 @@ func (self *charset) addSet(vals *charset) *charset {
 	return self
 }
 
-var (
-	charsetDigitDec   = new(charset).addStr(`0123456789`)
-	charsetIdentStart = new(charset).addStr(`ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz_`)
-	charsetIdent      = new(charset).addSet(charsetIdentStart).addSet(charsetDigitDec)
-	charsetSpace      = new(charset).addStr(" \t\v")
-	charsetNewline    = new(charset).addStr("\r\n")
-	charsetWhitespace = new(charset).addSet(charsetSpace).addSet(charsetNewline)
-	charsetDelimStart = new(charset).addSet(charsetWhitespace).addStr(`([{.`)
-	charsetDelimEnd   = new(charset).addSet(charsetWhitespace).addStr(`,}])`)
-)
+type structNestedDbField struct {
+	Field  r.StructField
+	DbPath []string
+}
+
+type structPath struct {
+	Name        string
+	FieldIndex  []int
+	MethodIndex int
+}
+
+type typeCache struct {
+	sync.Map
+	Func func(r.Type) interface{}
+}
+
+// Susceptible to "thundering herd". An improvement from no caching, but still
+// not ideal.
+func (self *typeCache) Get(key r.Type) interface{} {
+	val, ok := self.Load(key)
+	if !ok {
+		if self.Func != nil {
+			val = self.Func(key)
+		}
+		self.Store(key, val)
+	}
+	return val
+}
+
+type stringCache struct {
+	sync.Map
+	Func func(string) interface{}
+}
+
+// Susceptible to "thundering herd". An improvement from no caching, but still
+// not ideal.
+func (self *stringCache) Get(key string) interface{} {
+	val, ok := self.Load(key)
+	if !ok {
+		if self.Func != nil {
+			val = self.Func(key)
+		}
+		self.Store(key, val)
+	}
+	return val
+}
 
 func leadingNewlineSize(val string) int {
 	if len(val) >= 2 && val[0] == '\r' && val[1] == '\n' {
@@ -97,17 +149,14 @@ func appenderToStr(val interface{ Append([]byte) []byte }) string {
 	return bytesToMutableString(val.Append(nil))
 }
 
-var timeRtype = reflect.TypeOf((*time.Time)(nil)).Elem()
-var sqlScannerRtype = reflect.TypeOf((*sql.Scanner)(nil)).Elem()
-
-func isScannableRtype(typ reflect.Type) bool {
+func isScannableRtype(typ r.Type) bool {
 	typ = typeDeref(typ)
-	return typ != nil && (typ == timeRtype || reflect.PtrTo(typ).Implements(sqlScannerRtype))
+	return typ != nil && (typ == timeRtype || r.PtrTo(typ).Implements(sqlScannerRtype))
 }
 
 // WTB more specific name.
-func isStructType(typ reflect.Type) bool {
-	return typ != nil && typ.Kind() == reflect.Struct && !isScannableRtype(typ)
+func isStructType(typ r.Type) bool {
+	return typ != nil && typ.Kind() == r.Struct && !isScannableRtype(typ)
 }
 
 func maybeAppendSpace(val []byte) []byte {
@@ -373,115 +422,61 @@ func validateIdent(val string) {
 	}
 }
 
-const expectedStructNestingDepth = 8
-
-type structDbField struct {
-	DbName string
-	Index  []int
-}
-
-type structNestedDbField struct {
-	Field  reflect.StructField
-	DbPath []string
-}
-
-type structPath struct {
-	Name        string
-	FieldIndex  []int
-	MethodIndex int
-}
-
-type typeCache struct {
-	sync.Map
-	Func func(reflect.Type) interface{}
-}
-
-// Susceptible to "thundering herd". An improvement from no caching, but still
-// not ideal.
-func (self *typeCache) Get(key reflect.Type) interface{} {
-	val, ok := self.Load(key)
-	if !ok {
-		if self.Func != nil {
-			val = self.Func(key)
-		}
-		self.Store(key, val)
-	}
-	return val
-}
-
-type stringCache struct {
-	sync.Map
-	Func func(string) interface{}
-}
-
-// Susceptible to "thundering herd". An improvement from no caching, but still
-// not ideal.
-func (self *stringCache) Get(key string) interface{} {
-	val, ok := self.Load(key)
-	if !ok {
-		if self.Func != nil {
-			val = self.Func(key)
-		}
-		self.Store(key, val)
-	}
-	return val
-}
-
 var prepCache = stringCache{Func: func(src string) interface{} {
 	prep := Prep{Source: src}
 	prep.Parse()
 	return prep
 }}
 
-var colsCache = typeCache{Func: func(typ reflect.Type) interface{} {
+var colsCache = typeCache{Func: func(typ r.Type) interface{} {
 	return cols(typ)
 }}
 
-var colsDeepCache = typeCache{Func: func(typ reflect.Type) interface{} {
+var colsDeepCache = typeCache{Func: func(typ r.Type) interface{} {
 	return colsDeep(typ)
 }}
 
-var structDbFieldsCache = typeCache{Func: func(typ reflect.Type) interface{} {
+var structDbFieldsCache = typeCache{Func: func(typ r.Type) interface{} {
 	return structDbFields(typ)
 }}
 
-func loadStructDbFields(typ reflect.Type) []structDbField {
-	return structDbFieldsCache.Get(typeElem(typ)).([]structDbField)
+func loadStructDbFields(typ r.Type) []r.StructField {
+	return structDbFieldsCache.Get(typeElem(typ)).([]r.StructField)
 }
 
-var structPathsCache = typeCache{Func: func(typ reflect.Type) interface{} {
+var structPathsCache = typeCache{Func: func(typ r.Type) interface{} {
 	return structPaths(typ)
 }}
 
-func loadStructPaths(typ reflect.Type) []structPath {
+func loadStructPaths(typ r.Type) []structPath {
 	return structPathsCache.Get(typeElem(typ)).([]structPath)
 }
 
-var structPathMapCache = typeCache{Func: func(typ reflect.Type) interface{} {
+var structPathMapCache = typeCache{Func: func(typ r.Type) interface{} {
 	return structPathMap(typ)
 }}
 
-func loadStructPathMap(typ reflect.Type) map[string]structPath {
+func loadStructPathMap(typ r.Type) map[string]structPath {
 	return structPathMapCache.Get(typeElem(typ)).(map[string]structPath)
 }
 
-var structJsonPathToNestedDbFieldMapCache = typeCache{Func: func(typ reflect.Type) interface{} {
+var structJsonPathToNestedDbFieldMapCache = typeCache{Func: func(typ r.Type) interface{} {
 	return structJsonPathToNestedDbFieldMap(typ)
 }}
 
-func loadStructJsonPathToNestedDbFieldMap(typ reflect.Type) map[string]structNestedDbField {
+func loadStructJsonPathToNestedDbFieldMap(typ r.Type) map[string]structNestedDbField {
 	return structJsonPathToNestedDbFieldMapCache.Get(typeElem(typ)).(map[string]structNestedDbField)
 }
 
-var structJsonPathToDbPathReflectValueMapCache = typeCache{Func: func(typ reflect.Type) interface{} {
+var structJsonPathToDbPathReflectValueMapCache = typeCache{Func: func(typ r.Type) interface{} {
 	return structJsonPathToDbPathReflectValueMap(typ)
 }}
 
-func loadStructJsonPathToDbPathReflectValueMap(typ reflect.Type) map[string]reflect.Value {
-	return structJsonPathToDbPathReflectValueMapCache.Get(typeElem(typ)).(map[string]reflect.Value)
+func loadStructJsonPathToDbPathReflectValueMap(typ r.Type) map[string]r.Value {
+	return structJsonPathToDbPathReflectValueMapCache.Get(typeElem(typ)).(map[string]r.Value)
 }
 
-func structDbFields(typ reflect.Type) (out []structDbField) {
+func structDbFields(typ r.Type) (out []r.StructField) {
 	typ = typeElem(typ)
 	if typ == nil {
 		return
@@ -496,7 +491,7 @@ func structDbFields(typ reflect.Type) (out []structDbField) {
 	return
 }
 
-func appendStructDbFields(buf *[]structDbField, path *[]int, typ reflect.Type, index int) {
+func appendStructDbFields(buf *[]r.StructField, path *[]int, typ r.Type, index int) {
 	field := typ.Field(index)
 	if !isPublic(field.PkgPath) {
 		return
@@ -505,21 +500,21 @@ func appendStructDbFields(buf *[]structDbField, path *[]int, typ reflect.Type, i
 	defer resliceInts(path, len(*path))
 	*path = append(*path, index)
 
-	name := FieldDbName(field)
-	if name != `` {
-		*buf = append(*buf, structDbField{name, copyInts(*path)})
+	if FieldDbName(field) != `` {
+		field.Index = copyInts(*path)
+		*buf = append(*buf, field)
 		return
 	}
 
 	typ = typeDeref(field.Type)
-	if field.Anonymous && typ.Kind() == reflect.Struct {
+	if field.Anonymous && typ.Kind() == r.Struct {
 		for i := range counter(typ.NumField()) {
 			appendStructDbFields(buf, path, typ, i)
 		}
 	}
 }
 
-func structPaths(typ reflect.Type) (out []structPath) {
+func structPaths(typ r.Type) (out []structPath) {
 	typ = typeElem(typ)
 	if typ == nil {
 		return
@@ -541,7 +536,7 @@ func structPaths(typ reflect.Type) (out []structPath) {
 	return
 }
 
-func appendStructFieldPaths(buf *[]structPath, path *[]int, typ reflect.Type, index int) {
+func appendStructFieldPaths(buf *[]structPath, path *[]int, typ r.Type, index int) {
 	field := typ.Field(index)
 	if !isPublic(field.PkgPath) {
 		return
@@ -553,14 +548,14 @@ func appendStructFieldPaths(buf *[]structPath, path *[]int, typ reflect.Type, in
 	*buf = append(*buf, structPath{Name: field.Name, FieldIndex: copyInts(*path)})
 
 	typ = typeDeref(field.Type)
-	if field.Anonymous && typ.Kind() == reflect.Struct {
+	if field.Anonymous && typ.Kind() == r.Struct {
 		for i := range counter(typ.NumField()) {
 			appendStructFieldPaths(buf, path, typ, i)
 		}
 	}
 }
 
-func structPathMap(typ reflect.Type) map[string]structPath {
+func structPathMap(typ r.Type) map[string]structPath {
 	paths := loadStructPaths(typ)
 	out := make(map[string]structPath, len(paths))
 	for _, val := range paths {
@@ -569,45 +564,107 @@ func structPathMap(typ reflect.Type) map[string]structPath {
 	return out
 }
 
-func typeElem(typ reflect.Type) reflect.Type {
-	for typ != nil && (typ.Kind() == reflect.Ptr || typ.Kind() == reflect.Slice) {
+func makeIter(val interface{}) (out iter) {
+	if val == nil {
+		return
+	}
+
+	sparse, _ := val.(Sparse)
+	if sparse != nil {
+		out.root = valueOf(sparse.Get())
+		out.filter = sparse
+	} else {
+		out.root = valueOf(val)
+	}
+
+	if out.root.IsValid() {
+		out.fields = loadStructDbFields(out.root.Type())
+	}
+	return
+}
+
+// Allows clearer code.
+// Seems to incur no measurable overhead.
+type iter struct {
+	field r.StructField
+	value r.Value
+	index int
+	count int
+
+	root   r.Value
+	fields []r.StructField
+	filter interface{ HasField(r.StructField) bool }
+}
+
+func (self *iter) next() bool {
+	for self.index < len(self.fields) {
+		field := self.fields[self.index]
+
+		if self.filter != nil && !self.filter.HasField(field) {
+			self.index++
+			continue
+		}
+
+		self.field = field
+		self.value = self.root.FieldByIndex(field.Index)
+		self.count++
+		self.index++
+		return true
+	}
+
+	return false
+}
+
+func (self *iter) empty() bool { return self.count == 0 }
+func (self *iter) first() bool { return self.count == 1 }
+
+func typeElem(typ r.Type) r.Type {
+	for typ != nil && (typ.Kind() == r.Ptr || typ.Kind() == r.Slice) {
 		typ = typ.Elem()
 	}
 	return typ
 }
 
-func valueDeref(val reflect.Value) reflect.Value {
-	for val.Kind() == reflect.Ptr {
+func valueDeref(val r.Value) r.Value {
+	for val.Kind() == r.Ptr {
 		if val.IsNil() {
-			return reflect.Value{}
+			return r.Value{}
 		}
 		val = val.Elem()
 	}
 	return val
 }
 
-func typeElemOf(typ interface{}) reflect.Type {
-	return typeElem(reflect.TypeOf(typ))
+func typeElemOf(typ interface{}) r.Type {
+	return typeElem(r.TypeOf(typ))
 }
 
-func typeOf(typ interface{}) reflect.Type {
-	return typeDeref(reflect.TypeOf(typ))
+func typeOf(typ interface{}) r.Type {
+	return typeDeref(r.TypeOf(typ))
 }
 
-func valueOf(val interface{}) reflect.Value {
-	return valueDeref(reflect.ValueOf(val))
+func valueOf(val interface{}) r.Value {
+	return valueDeref(r.ValueOf(val))
+}
+
+func kindOf(val interface{}) r.Kind {
+	typ := typeOf(val)
+	if typ != nil {
+		return typ.Kind()
+	}
+	return r.Invalid
 }
 
 func isStructEmpty(val interface{}) bool {
-	return isStructTypeEmpty(reflect.TypeOf(val))
+	return isStructTypeEmpty(r.TypeOf(val))
 }
 
-func isStructTypeEmpty(typ reflect.Type) bool {
+func isStructTypeEmpty(typ r.Type) bool {
 	typ = typeDeref(typ)
-	return typ == nil || typ.Kind() != reflect.Struct || typ.NumField() == 0
+	return typ == nil || typ.Kind() != r.Struct || typ.NumField() == 0
 }
 
-func reqGetter(val, method reflect.Type, name string) {
+func reqGetter(val, method r.Type, name string) {
 	inputs := method.NumIn()
 	if inputs != 0 {
 		panic(ErrInternal{Err{
@@ -631,13 +688,13 @@ func reqGetter(val, method reflect.Type, name string) {
 	}
 }
 
-func reqStructType(while string, typ reflect.Type) {
-	if typ.Kind() != reflect.Struct {
+func reqStructType(while string, typ r.Type) {
+	if typ.Kind() != r.Struct {
 		panic(errExpectedStruct(while, typ.Name()))
 	}
 }
 
-func typeName(typ reflect.Type) string {
+func typeName(typ r.Type) string {
 	typ = typeDeref(typ)
 	if typ == nil {
 		return `nil`
@@ -646,16 +703,16 @@ func typeName(typ reflect.Type) string {
 }
 
 func isNil(val interface{}) bool {
-	return val == nil || isValueNil(reflect.ValueOf(val))
+	return val == nil || isValueNil(r.ValueOf(val))
 }
 
-func isValueNil(val reflect.Value) bool {
+func isValueNil(val r.Value) bool {
 	return !val.IsValid() || isNilable(val.Kind()) && val.IsNil()
 }
 
-func isNilable(kind reflect.Kind) bool {
+func isNilable(kind r.Kind) bool {
 	switch kind {
-	case reflect.Chan, reflect.Func, reflect.Interface, reflect.Map, reflect.Ptr, reflect.Slice:
+	case r.Chan, r.Func, r.Interface, r.Map, r.Ptr, r.Slice:
 		return true
 	default:
 		return false
@@ -664,8 +721,8 @@ func isNilable(kind reflect.Kind) bool {
 
 func isPublic(pkgPath string) bool { return pkgPath == `` }
 
-func typeDeref(typ reflect.Type) reflect.Type {
-	for typ != nil && typ.Kind() == reflect.Ptr {
+func typeDeref(typ r.Type) r.Type {
+	for typ != nil && typ.Kind() == r.Ptr {
 		typ = typ.Elem()
 	}
 	return typ
@@ -686,7 +743,7 @@ func tagIdent(tag string) string {
 	return tag
 }
 
-func cols(typ reflect.Type) string {
+func cols(typ r.Type) string {
 	typ = typeElem(typ)
 	if isStructType(typ) {
 		return structCols(typ)
@@ -694,7 +751,7 @@ func cols(typ reflect.Type) string {
 	return `*`
 }
 
-func structCols(typ reflect.Type) string {
+func structCols(typ r.Type) string {
 	reqStructType(`generating struct columns string from struct type`, typ)
 
 	var buf []byte
@@ -702,12 +759,12 @@ func structCols(typ reflect.Type) string {
 		if i > 0 {
 			buf = append(buf, `, `...)
 		}
-		buf = Ident(field.DbName).Append(buf)
+		buf = Ident(FieldDbName(field)).Append(buf)
 	}
 	return bytesToMutableString(buf)
 }
 
-func colsDeep(typ reflect.Type) string {
+func colsDeep(typ r.Type) string {
 	typ = typeElem(typ)
 	if isStructType(typ) {
 		return structColsDeep(typ)
@@ -715,7 +772,7 @@ func colsDeep(typ reflect.Type) string {
 	return `*`
 }
 
-func structColsDeep(typ reflect.Type) string {
+func structColsDeep(typ r.Type) string {
 	reqStructType(`generating deep struct columns string from struct type`, typ)
 
 	var buf []byte
@@ -727,7 +784,7 @@ func structColsDeep(typ reflect.Type) string {
 	return bytesToMutableString(buf)
 }
 
-func appendFieldCols(buf *[]byte, path *[]string, field reflect.StructField) {
+func appendFieldCols(buf *[]byte, path *[]string, field r.StructField) {
 	if !isPublic(field.PkgPath) {
 		return
 	}
@@ -736,7 +793,7 @@ func appendFieldCols(buf *[]byte, path *[]string, field reflect.StructField) {
 	typ := typeDeref(field.Type)
 
 	if dbName == `` {
-		if field.Anonymous && typ.Kind() == reflect.Struct {
+		if field.Anonymous && typ.Kind() == r.Struct {
 			for i := range counter(typ.NumField()) {
 				appendFieldCols(buf, path, typ.Field(i))
 			}
@@ -764,7 +821,7 @@ func appendFieldCols(buf *[]byte, path *[]string, field reflect.StructField) {
 	*buf = text
 }
 
-func structJsonPathToNestedDbFieldMap(typ reflect.Type) map[string]structNestedDbField {
+func structJsonPathToNestedDbFieldMap(typ r.Type) map[string]structNestedDbField {
 	typ = typeElem(typ)
 	if typ == nil {
 		return nil
@@ -782,17 +839,17 @@ func structJsonPathToNestedDbFieldMap(typ reflect.Type) map[string]structNestedD
 	return buf
 }
 
-func structJsonPathToDbPathReflectValueMap(typ reflect.Type) map[string]reflect.Value {
+func structJsonPathToDbPathReflectValueMap(typ r.Type) map[string]r.Value {
 	src := loadStructJsonPathToNestedDbFieldMap(typ)
-	out := make(map[string]reflect.Value, len(src))
+	out := make(map[string]r.Value, len(src))
 	for key, val := range src {
-		out[key] = reflect.ValueOf(val.DbPath)
+		out[key] = r.ValueOf(val.DbPath)
 	}
 	return out
 }
 
 func addJsonPathsToDbPaths(
-	buf map[string]structNestedDbField, jsonPath *[]string, dbPath *[]string, field reflect.StructField,
+	buf map[string]structNestedDbField, jsonPath *[]string, dbPath *[]string, field r.StructField,
 ) {
 	if !isPublic(field.PkgPath) {
 		return
@@ -803,7 +860,7 @@ func addJsonPathsToDbPaths(
 	typ := typeDeref(field.Type)
 
 	if dbName == `` {
-		if field.Anonymous && typ.Kind() == reflect.Struct {
+		if field.Anonymous && typ.Kind() == r.Struct {
 			for i := range counter(typ.NumField()) {
 				addJsonPathsToDbPaths(buf, jsonPath, dbPath, typ.Field(i))
 			}

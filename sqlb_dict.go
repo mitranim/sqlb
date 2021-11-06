@@ -1,8 +1,6 @@
 package sqlb
 
-import (
-	"reflect"
-)
+import r "reflect"
 
 /*
 Variant of `[]interface{}` conforming to the `ArgDict` interface. Supports only
@@ -75,7 +73,7 @@ invalid or a struct. Compared to `Dict`, a struct is way faster to construct,
 but reading fields by name is way slower. Used for `StrQ`. See the `StructQ`
 shortcut.
 */
-type StructDict [1]reflect.Value
+type StructDict [1]r.Value
 
 // Implement part of the `ArgDict` interface.
 func (self StructDict) IsEmpty() bool {
