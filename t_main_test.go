@@ -106,6 +106,13 @@ func testExprs(t testing.TB, exp R, vals ...Expr) {
 	eq(t, exp, reify(vals...))
 }
 
+func exprTest(t testing.TB) func(R, Encoder) {
+	return func(exp R, val Encoder) {
+		t.Helper()
+		testExpr(t, exp, val)
+	}
+}
+
 func reify(vals ...Expr) R {
 	text, args := Reify(vals...)
 	return R{text, args}.Norm()

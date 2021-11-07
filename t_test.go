@@ -39,13 +39,6 @@ func Test_Reify(t *testing.T) {
 	})
 }
 
-func Test_Space(t *testing.T) {
-	testExpr(t, rei(``), Space{})
-	testExprs(t, rei(``), Space{}, Space{}, Space{})
-	testExprs(t, rei(` `), rei(` `), Space{}, Space{}, Space{})
-	testExprs(t, rei(`one two`), rei(`one`), Space{}, Space{}, Space{}, rei(`two`))
-}
-
 func Test_Str(t *testing.T) {
 	testExpr(t, rei(``), Str(``))
 	testExpr(t, rei(`one`), Str(`one`))
@@ -185,31 +178,6 @@ func Test_Table(t *testing.T) {
 	)
 }
 
-func Test_Pair(t *testing.T) {
-	testExpr(t, rei(``), Pair{})
-	testExpr(t, rei(`one`, 10), Pair{rei(`one`, 10), nil})
-	testExpr(t, rei(`two`, 20), Pair{nil, rei(`two`, 20)})
-	testExpr(t, rei(`one two`, 10, 20), Pair{rei(`one`, 10), rei(`two`, 20)})
-
-	testExprs(t, rei(``), Pair{}, Pair{})
-	testExprs(t, rei(`one `, 10), rei(`one`, 10), Pair{})
-	testExprs(t, rei(`one two`, 10, 20), rei(`one`, 10), Pair{rei(`two`, 20)})
-}
-
-func Test_Trio(t *testing.T) {
-	testExpr(t, rei(``), Trio{})
-
-	testExpr(
-		t,
-		rei(`one two three`, 10, 20, 30),
-		Trio{
-			rei(`one`, 10),
-			rei(`two`, 20),
-			rei(`three`, 30),
-		},
-	)
-}
-
 func Test_Exprs(t *testing.T) {
 	testExprs(t, rei(``))
 	testExprs(t, rei(``), Exprs{})
@@ -226,43 +194,6 @@ func Test_Exprs(t *testing.T) {
 			nil,
 		},
 	)
-}
-
-func Test_Parens(t *testing.T) {
-	testExpr(t, rei(`()`), Parens{})
-	testExpr(t, rei(`(one)`, 10), Parens{rei(`one`, 10)})
-
-	testExprs(
-		t,
-		rei(`one (two) three`, 10, 20, 30),
-		rei(`one`, 10),
-		Parens{rei(`two`, 20)},
-		rei(`three`, 30),
-	)
-}
-
-func Test_Null(t *testing.T) {
-	testExpr(t, rei(`null`), Null{})
-
-	testExprs(t, rei(``))
-	testExprs(t, rei(`null`), Null{})
-	testExprs(t, rei(`one null two`, 10, 20), rei(`one`, 10), Null{}, rei(`two`, 20))
-}
-
-func Test_IsNull(t *testing.T) {
-	testExpr(t, rei(`is null`), IsNull{})
-
-	testExprs(t, rei(``))
-	testExprs(t, rei(`is null`), IsNull{})
-	testExprs(t, rei(`one is null two`, 10, 20), rei(`one`, 10), IsNull{}, rei(`two`, 20))
-}
-
-func Test_IsNotNull(t *testing.T) {
-	testExpr(t, rei(`is not null`), IsNotNull{})
-
-	testExprs(t, rei(``))
-	testExprs(t, rei(`is not null`), IsNotNull{})
-	testExprs(t, rei(`one is not null two`, 10, 20), rei(`one`, 10), IsNotNull{}, rei(`two`, 20))
 }
 
 func Test_Any(t *testing.T) {
@@ -942,24 +873,6 @@ func Test_StructAssign_filter(t *testing.T) {
 	})
 }
 
-func Test_Star(t *testing.T) {
-	testExpr(t, rei(`*`), Star{})
-	testExprs(t, rei(`* *`), Star{}, Star{})
-	testExprs(t, rei(`one * two`), Str(`one`), Star{}, Str(`two`))
-}
-
-func Test_SelectStar(t *testing.T) {
-	testExpr(t, rei(`select *`), SelectStar{})
-	testExprs(t, rei(`select * select *`), SelectStar{}, SelectStar{})
-	testExprs(t, rei(`one select * two`), Str(`one`), SelectStar{}, Str(`two`))
-}
-
-func Test_ReturningStar(t *testing.T) {
-	testExpr(t, rei(`returning *`), ReturningStar{})
-	testExprs(t, rei(`returning * returning *`), ReturningStar{}, ReturningStar{})
-	testExprs(t, rei(`one returning * two`), Str(`one`), ReturningStar{}, Str(`two`))
-}
-
 func Test_SelectCols(t *testing.T) {
 	testExpr(t, rei(``), SelectCols{})
 	testExpr(t, rei(`select "one"`), SelectCols{nil, UnitStruct{}})
@@ -1008,20 +921,6 @@ func Test_SelectColsDeep(t *testing.T) {
 	)
 }
 
-func Test_SubQ(t *testing.T) {
-	testExpr(t, rei(``), SubQ{})
-	testExpr(t, rei(`() as _`), SubQ{Str(``)})
-	testExpr(t, rei(`(one) as _`), SubQ{Str(`one`)})
-	testExpr(t, rei(`(one) as _`, 10), SubQ{rei(`one`, 10)})
-
-	testExprs(
-		t,
-		rei(`(one) as _ (two) as _`, 10, 20),
-		SubQ{rei(`one`, 10)},
-		SubQ{rei(`two`, 20)},
-	)
-}
-
 func Test_Prefix(t *testing.T) {
 	testExpr(t, rei(``), Prefix{})
 	testExpr(t, rei(``), Prefix{`prefix`, nil})
@@ -1061,90 +960,6 @@ func Test_Wrap(t *testing.T) {
 	)
 }
 
-func Test_Select(t *testing.T) {
-	testExpr(t, rei(``), Select{})
-	testExpr(t, rei(`select ""`), Select{Ident(``)})
-	testExpr(t, rei(`select "one"`), Select{Ident(`one`)})
-	testExpr(t, rei(`select one`, 10), Select{rei(`one`, 10)})
-
-	testExprs(
-		t,
-		rei(`one select two`, 10, 20),
-		rei(`one`, 10),
-		Select{rei(`two`, 20)},
-	)
-}
-
-func Test_Update(t *testing.T) {
-	testExpr(t, rei(``), Update{})
-	testExpr(t, rei(`update ""`), Update{Ident(``)})
-	testExpr(t, rei(`update "one"`), Update{Ident(`one`)})
-	testExpr(t, rei(`update one`, 10), Update{rei(`one`, 10)})
-
-	testExprs(
-		t,
-		rei(`one update two`, 10, 20),
-		rei(`one`, 10),
-		Update{rei(`two`, 20)},
-	)
-}
-
-func Test_DeleteFrom(t *testing.T) {
-	testExpr(t, rei(``), DeleteFrom{})
-	testExpr(t, rei(`delete from ""`), DeleteFrom{Ident(``)})
-	testExpr(t, rei(`delete from "one"`), DeleteFrom{Ident(`one`)})
-	testExpr(t, rei(`delete from one`, 10), DeleteFrom{rei(`one`, 10)})
-
-	testExprs(
-		t,
-		rei(`one delete from two`, 10, 20),
-		rei(`one`, 10),
-		DeleteFrom{rei(`two`, 20)},
-	)
-}
-
-func Test_InsertInto(t *testing.T) {
-	testExpr(t, rei(``), InsertInto{})
-	testExpr(t, rei(`insert into ""`), InsertInto{Ident(``)})
-	testExpr(t, rei(`insert into "one"`), InsertInto{Ident(`one`)})
-	testExpr(t, rei(`insert into one`, 10), InsertInto{rei(`one`, 10)})
-
-	testExprs(
-		t,
-		rei(`one insert into two`, 10, 20),
-		rei(`one`, 10),
-		InsertInto{rei(`two`, 20)},
-	)
-}
-
-func Test_Set(t *testing.T) {
-	testExpr(t, rei(``), Set{})
-	testExpr(t, rei(`set ""`), Set{Ident(``)})
-	testExpr(t, rei(`set "one"`), Set{Ident(`one`)})
-	testExpr(t, rei(`set one`, 10), Set{rei(`one`, 10)})
-
-	testExprs(
-		t,
-		rei(`one set two`, 10, 20),
-		rei(`one`, 10),
-		Set{rei(`two`, 20)},
-	)
-}
-
-func Test_From(t *testing.T) {
-	testExpr(t, rei(``), From{})
-	testExpr(t, rei(`from ""`), From{Ident(``)})
-	testExpr(t, rei(`from "one"`), From{Ident(`one`)})
-	testExpr(t, rei(`from one`, 10), From{rei(`one`, 10)})
-
-	testExprs(
-		t,
-		rei(`one from two`, 10, 20),
-		rei(`one`, 10),
-		From{rei(`two`, 20)},
-	)
-}
-
 func Test_OrderBy(t *testing.T) {
 	testExpr(t, rei(``), OrderBy{})
 	testExpr(t, rei(`order by ""`), OrderBy{Ident(``)})
@@ -1159,29 +974,194 @@ func Test_OrderBy(t *testing.T) {
 	)
 }
 
-func Test_Where(t *testing.T) {
-	testExpr(t, rei(``), Where{})
-	testExpr(t, rei(`where one`), Where{Str(`one`)})
-	testExpr(t, rei(`where one`, 10), Where{rei(`one`, 10)})
+func Test_Select(t *testing.T) {
+	test := exprTest(t)
+
+	test(rei(`select * from ""`), Select{})
+	test(rei(`select * from "table_name"`), Select{`table_name`, nil})
+	test(rei(`select * from "" where $1`, 10), Select{``, 10})
+
+	test(
+		rei(`select * from "table_name" where (one) = $1`, 10),
+		Select{`table_name`, Eq{Str(`one`), 10}},
+	)
+
+	test(
+		rei(`select * from "table_name" where "one" = $1 and "two" = $2`, 10, 20),
+		Select{`table_name`, PairStruct{10, 20}},
+	)
+
+	test(
+		rei(`select * from "table_name" where $1 and $2`, 10, 20),
+		Select{`table_name`, []interface{}{10, 20}},
+	)
+
+	test(
+		rei(`select * from "table_name" where $1 and $2`, 10, 20),
+		Select{`table_name`, Ands{10, 20}},
+	)
+
+	test(
+		rei(`select * from "table_name" where $1 or $2`, 10, 20),
+		Select{`table_name`, Ors{10, 20}},
+	)
 
 	testExprs(
 		t,
-		rei(`one where two`, 10, 20),
-		rei(`one`, 10),
-		Where{rei(`two`, 20)},
+		rei(`select * from "one" where $1 select * from "two" where $2`, 10, 20),
+		Select{`one`, 10},
+		Select{`two`, 20},
 	)
 }
 
-func Test_Returning(t *testing.T) {
-	testExpr(t, rei(``), Returning{})
-	testExpr(t, rei(`returning one`), Returning{Str(`one`)})
-	testExpr(t, rei(`returning one`, 10), Returning{rei(`one`, 10)})
+func Test_Insert(t *testing.T) {
+	test := exprTest(t)
+
+	test(
+		rei(`insert into "" default values returning *`),
+		Insert{},
+	)
+
+	test(
+		rei(`insert into "table_name" default values returning *`),
+		Insert{`table_name`, nil},
+	)
+
+	test(
+		rei(`insert into "" ("one") values ($1) returning *`, 10),
+		Insert{``, UnitStruct{10}},
+	)
+
+	test(
+		rei(`insert into "table_name" ("one") values ($1) returning *`, 10),
+		Insert{`table_name`, UnitStruct{10}},
+	)
+
+	test(
+		rei(`insert into "" ("one", "two") values ($1, $2) returning *`, 10, 20),
+		Insert{``, PairStruct{10, 20}},
+	)
+
+	test(
+		rei(`insert into "table_name" ("one", "two") values ($1, $2) returning *`, 10, 20),
+		Insert{`table_name`, PairStruct{10, 20}},
+	)
+
+	test(
+		rei(`insert into "table_name" default values returning *`),
+		Insert{`table_name`, Partial{UnitStruct{10}, nil}},
+	)
 
 	testExprs(
 		t,
-		rei(`one returning two`, 10, 20),
-		rei(`one`, 10),
-		Returning{rei(`two`, 20)},
+		rei(
+			`insert into "table0" ("one") values ($1) returning * `+
+				`insert into "table1" ("one") values ($2) returning *`,
+			10, 20,
+		),
+		Insert{`table0`, UnitStruct{10}},
+		Insert{`table1`, UnitStruct{20}},
+	)
+}
+
+func Test_Update(t *testing.T) {
+	test := exprTest(t)
+
+	test(rei(`update "" returning *`), Update{})
+
+	test(
+		rei(`update "" set "one" = $1 returning *`, 10),
+		Update{``, nil, UnitStruct{10}},
+	)
+
+	test(
+		rei(`update "" where "one" = $1 returning *`, 10),
+		Update{``, UnitStruct{10}, nil},
+	)
+
+	test(
+		rei(`update "" set "one" = $1, "two" = $2 where "one" = $3 returning *`, 20, 30, 10),
+		Update{``, UnitStruct{10}, PairStruct{20, 30}},
+	)
+
+	test(rei(`update "some_table" returning *`), Update{`some_table`, nil, nil})
+
+	test(
+		rei(`update "some_table" set "one" = $1 returning *`, 10),
+		Update{`some_table`, nil, UnitStruct{10}},
+	)
+
+	test(
+		rei(`update "some_table" where "one" = $1 returning *`, 10),
+		Update{`some_table`, UnitStruct{10}, nil},
+	)
+
+	test(
+		rei(`update "some_table" set "one" = $1, "two" = $2 where "one" = $3 returning *`, 20, 30, 10),
+		Update{`some_table`, UnitStruct{10}, PairStruct{20, 30}},
+	)
+
+	test(
+		rei(`update "some_table" set "one" = $1 where true returning *`, 20),
+		Update{`some_table`, Partial{UnitStruct{10}, nil}, UnitStruct{20}},
+	)
+
+	testExprs(
+		t,
+		rei(
+			`update "table0" where "one" = $1 returning * `+
+				`update "table1" set "one" = $2 returning *`,
+			10, 20,
+		),
+		Update{`table0`, UnitStruct{10}, nil},
+		Update{`table1`, nil, UnitStruct{20}},
+	)
+}
+
+func Test_Delete(t *testing.T) {
+	test := exprTest(t)
+
+	test(rei(`delete from "" where null returning *`), Delete{})
+
+	test(
+		rei(`delete from "some_table" where null returning *`),
+		Delete{`some_table`, nil},
+	)
+
+	test(
+		rei(`delete from "" where "one" = $1 and "two" = $2 returning *`, 10, 20),
+		Delete{``, PairStruct{10, 20}},
+	)
+
+	test(
+		rei(`delete from "some_table" where "one" = $1 and "two" = $2 returning *`, 10, 20),
+		Delete{`some_table`, PairStruct{10, 20}},
+	)
+
+	test(
+		rei(`delete from "some_table" where "one" = $1 or "two" = $2 returning *`, 10, 20),
+		Delete{`some_table`, Or{PairStruct{10, 20}}},
+	)
+
+	test(
+		rei(`delete from "" where null returning *`),
+		Delete{``, Partial{PairStruct{10, 20}, nil}},
+	)
+
+	test(
+		rei(`delete from "some_table" where null returning *`),
+		Delete{`some_table`, Partial{PairStruct{10, 20}, nil}},
+	)
+
+	testExprs(
+		t,
+		rei(
+			`delete from "table0" where "one" = $1 returning * `+
+				`delete from "table1" where "one" = $2 returning *`,
+			10, 20,
+		),
+		Delete{`table0`, UnitStruct{10}},
+		Delete{`table1`, UnitStruct{20}},
 	)
 }
 
@@ -1283,10 +1263,7 @@ func Test_ListQ_empty_args(t *testing.T) {
 }
 
 func Test_ListQ_normal(t *testing.T) {
-	test := func(exp R, val StrQ) {
-		t.Helper()
-		testExpr(t, exp, val)
-	}
+	test := exprTest(t)
 
 	test(rei(`one = $1`, nil), ListQ(`one = $1`, nil))
 	test(rei(`one = $1`, 10), ListQ(`one = $1`, 10))
@@ -1378,10 +1355,7 @@ func Test_DictQ_empty_args(t *testing.T) {
 }
 
 func Test_DictQ_normal(t *testing.T) {
-	test := func(exp R, val StrQ) {
-		t.Helper()
-		testExpr(t, exp, val)
-	}
+	test := exprTest(t)
 
 	test(rei(`one = $1`, nil), DictQ(`one = :one`, Dict{`one`: nil}))
 	test(rei(`one = $1`, 10), DictQ(`one = :one`, Dict{`one`: 10}))
@@ -1454,10 +1428,7 @@ func Test_StructQ_empty_args(t *testing.T) {
 }
 
 func Test_StructQ_fields(t *testing.T) {
-	test := func(exp R, val StrQ) {
-		t.Helper()
-		testExpr(t, exp, val)
-	}
+	test := exprTest(t)
 
 	panics(t, `missing named argument ":one" (key "one")`, func() {
 		StructQ(`:one`, UnitStruct{10}).AppendExpr(nil, nil)
@@ -1493,10 +1464,7 @@ func Test_StructQ_fields(t *testing.T) {
 }
 
 func Test_StructQ_methods(t *testing.T) {
-	test := func(exp R, val StrQ) {
-		t.Helper()
-		testExpr(t, exp, val)
-	}
+	test := exprTest(t)
 
 	panics(t, `missing named argument ":GetVal" (key "GetVal")`, func() {
 		StructQ(`:GetVal`, UnitStruct{}).AppendExpr(nil, nil)
@@ -1690,15 +1658,6 @@ func Test_combinations(t *testing.T) {
 			`col`: Ident(`some_column`),
 			`tab`: Ident(`some_table`),
 		}},
-	)
-
-	testExpr(
-		t,
-		rei(`select "one" from (table "some_table") as _`),
-		Exprs{
-			Select{Cols{UnitStruct{}}},
-			From{SubQ{Table{`some_table`}}},
-		},
 	)
 }
 

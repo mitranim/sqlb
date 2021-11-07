@@ -8,25 +8,6 @@ import (
 )
 
 /*
-Primitive expression that inserts a space between other expressions. Unnecessary
-because other exprs automatically add spaces as necessary. Provided just in
-case.
-*/
-type Space struct{}
-
-// Implement the `Expr` interface, making this a sub-expression.
-func (self Space) AppendExpr(text []byte, args []interface{}) ([]byte, []interface{}) {
-	return self.Append(text), args
-}
-
-// Implement the `Appender` interface, sometimes allowing more efficient text
-// encoding.
-func (self Space) Append(text []byte) []byte { return maybeAppendSpace(text) }
-
-// Implement the `fmt.Stringer` interface for debug purposes.
-func (self Space) String() string { return `` }
-
-/*
 Shortcut for interpolating strings into queries. Because this implements `Expr`,
 when used as an argument in another expression, this will be directly
 interpolated into the resulting query string. See the examples.
@@ -306,36 +287,6 @@ func (self Table) Append(text []byte) []byte {
 // Implement the `fmt.Stringer` interface for debug purposes.
 func (self Table) String() string { return appenderToStr(&self) }
 
-// Same as `Exprs` but fixed-size. Can be marginally more efficient.
-type Pair [2]Expr
-
-// Implement the `Expr` interface, making this a sub-expression.
-func (self Pair) AppendExpr(text []byte, args []interface{}) ([]byte, []interface{}) {
-	return Exprs(self[:]).AppendExpr(text, args)
-}
-
-// Implement the `Appender` interface, sometimes allowing more efficient text
-// encoding.
-func (self Pair) Append(text []byte) []byte { return exprAppend(&self, text) }
-
-// Implement the `fmt.Stringer` interface for debug purposes.
-func (self Pair) String() string { return exprString(&self) }
-
-// Same as `Exprs` but fixed-size. Can be marginally more efficient.
-type Trio [3]Expr
-
-// Implement the `Expr` interface, making this a sub-expression.
-func (self Trio) AppendExpr(text []byte, args []interface{}) ([]byte, []interface{}) {
-	return Exprs(self[:]).AppendExpr(text, args)
-}
-
-// Implement the `Appender` interface, sometimes allowing more efficient text
-// encoding.
-func (self Trio) Append(text []byte) []byte { return exprAppend(&self, text) }
-
-// Implement the `fmt.Stringer` interface for debug purposes.
-func (self Trio) String() string { return exprString(&self) }
-
 /*
 Variable-sized sequence of expressions. When encoding, expressions will be
 space-separated if necessary.
@@ -357,79 +308,6 @@ func (self Exprs) Append(text []byte) []byte { return exprAppend(&self, text) }
 
 // Implement the `fmt.Stringer` interface for debug purposes.
 func (self Exprs) String() string { return exprString(&self) }
-
-/*
-Arbitrary expression wrapped in parens. If the inner expression is nil, this is
-represented as "()".
-*/
-type Parens [1]Expr
-
-// Implement the `Expr` interface, making this a sub-expression.
-func (self Parens) AppendExpr(text []byte, args []interface{}) ([]byte, []interface{}) {
-	bui := Bui{text, args}
-	bui.Str(`(`)
-	bui.Expr(self[0])
-	bui.Str(`)`)
-	return bui.Get()
-}
-
-// Implement the `Appender` interface, sometimes allowing more efficient text
-// encoding.
-func (self Parens) Append(text []byte) []byte { return exprAppend(&self, text) }
-
-// Implement the `fmt.Stringer` interface for debug purposes.
-func (self Parens) String() string { return exprString(&self) }
-
-// Equivalent to `Str("null")`, but zero-sized.
-type Null struct{}
-
-// Implement the `Expr` interface, making this a sub-expression.
-func (self Null) AppendExpr(text []byte, args []interface{}) ([]byte, []interface{}) {
-	return self.Append(text), args
-}
-
-// Implement the `Appender` interface, sometimes allowing more efficient text
-// encoding.
-func (self Null) Append(text []byte) []byte {
-	return appendMaybeSpaced(text, self.String())
-}
-
-// Implement the `fmt.Stringer` interface for debug purposes.
-func (self Null) String() string { return `null` }
-
-// Equivalent to `Str("is null")`, but zero-sized.
-type IsNull struct{}
-
-// Implement the `Expr` interface, making this a sub-expression.
-func (self IsNull) AppendExpr(text []byte, args []interface{}) ([]byte, []interface{}) {
-	return self.Append(text), args
-}
-
-// Implement the `Appender` interface, sometimes allowing more efficient text
-// encoding.
-func (self IsNull) Append(text []byte) []byte {
-	return appendMaybeSpaced(text, self.String())
-}
-
-// Implement the `fmt.Stringer` interface for debug purposes.
-func (self IsNull) String() string { return `is null` }
-
-// Equivalent to `Str("is not null")`, but zero-sized.
-type IsNotNull struct{}
-
-// Implement the `Expr` interface, making this a sub-expression.
-func (self IsNotNull) AppendExpr(text []byte, args []interface{}) ([]byte, []interface{}) {
-	return self.Append(text), args
-}
-
-// Implement the `Appender` interface, sometimes allowing more efficient text
-// encoding.
-func (self IsNotNull) Append(text []byte) []byte {
-	return appendMaybeSpaced(text, self.String())
-}
-
-// Implement the `fmt.Stringer` interface for debug purposes.
-func (self IsNotNull) String() string { return `is not null` }
 
 /*
 Represents an SQL "any()" expression. The inner value may be an instance of
@@ -730,7 +608,7 @@ type And [1]interface{}
 
 // Implement the `Expr` interface, making this a sub-expression.
 func (self And) AppendExpr(text []byte, args []interface{}) ([]byte, []interface{}) {
-	return Cond{`true`, ` and `, self[0]}.AppendExpr(text, args)
+	return Cond{`true`, `and`, self[0]}.AppendExpr(text, args)
 }
 
 // Implement the `Appender` interface, sometimes allowing more efficient text
@@ -753,7 +631,7 @@ type Or [1]interface{}
 
 // Implement the `Expr` interface, making this a sub-expression.
 func (self Or) AppendExpr(text []byte, args []interface{}) ([]byte, []interface{}) {
-	return Cond{`false`, ` or `, self[0]}.AppendExpr(text, args)
+	return Cond{`false`, `or`, self[0]}.AppendExpr(text, args)
 }
 
 // Implement the `Appender` interface, sometimes allowing more efficient text
@@ -1060,57 +938,6 @@ func (self StructAssign) Append(text []byte) []byte { return exprAppend(&self, t
 // Implement the `fmt.Stringer` interface for debug purposes.
 func (self StructAssign) String() string { return exprString(&self) }
 
-// Equivalent to `Str("*")`, but zero-sized.
-type Star struct{}
-
-// Implement the `Expr` interface, making this a sub-expression.
-func (self Star) AppendExpr(text []byte, args []interface{}) ([]byte, []interface{}) {
-	return self.Append(text), args
-}
-
-// Implement the `Appender` interface, sometimes allowing more efficient text
-// encoding.
-func (self Star) Append(text []byte) []byte {
-	return appendMaybeSpaced(text, self.String())
-}
-
-// Implement the `fmt.Stringer` interface for debug purposes.
-func (self Star) String() string { return `*` }
-
-// Equivalent to `Str("select *")`, but zero-sized.
-type SelectStar struct{}
-
-// Implement the `Expr` interface, making this a sub-expression.
-func (self SelectStar) AppendExpr(text []byte, args []interface{}) ([]byte, []interface{}) {
-	return self.Append(text), args
-}
-
-// Implement the `Appender` interface, sometimes allowing more efficient text
-// encoding.
-func (self SelectStar) Append(text []byte) []byte {
-	return appendMaybeSpaced(text, self.String())
-}
-
-// Implement the `fmt.Stringer` interface for debug purposes.
-func (self SelectStar) String() string { return `select *` }
-
-// Equivalent to `Str("returning *")`, but zero-sized.
-type ReturningStar struct{}
-
-// Implement the `Expr` interface, making this a sub-expression.
-func (self ReturningStar) AppendExpr(text []byte, args []interface{}) ([]byte, []interface{}) {
-	return self.Append(text), args
-}
-
-// Implement the `Appender` interface, sometimes allowing more efficient text
-// encoding.
-func (self ReturningStar) Append(text []byte) []byte {
-	return appendMaybeSpaced(text, self.String())
-}
-
-// Implement the `fmt.Stringer` interface for debug purposes.
-func (self ReturningStar) String() string { return `returning *` }
-
 /*
 Wraps an arbitrary sub-expression, using `Cols{.Type}` to select specific
 columns from it. If `.Type` doesn't specify a set of columns, for example
@@ -1202,30 +1029,6 @@ func (self SelectString) Append(text []byte) []byte { return exprAppend(&self, t
 func (self SelectString) String() string { return exprString(&self) }
 
 /*
-Represents sub-select wrapping such as `(<some_expr>) as _`. Mostly an internal
-tool for building other expression types.
-*/
-type SubQ [1]Expr
-
-// Implement the `Expr` interface, making this a sub-expression.
-func (self SubQ) AppendExpr(text []byte, args []interface{}) ([]byte, []interface{}) {
-	bui := Bui{text, args}
-	if self[0] != nil {
-		bui.Str(`(`)
-		bui.Expr(self[0])
-		bui.Str(`) as _`)
-	}
-	return bui.Get()
-}
-
-// Implement the `Appender` interface, sometimes allowing more efficient text
-// encoding.
-func (self SubQ) Append(text []byte) []byte { return exprAppend(&self, text) }
-
-// Implement the `fmt.Stringer` interface for debug purposes.
-func (self SubQ) String() string { return exprString(&self) }
-
-/*
 Combines an expression with a string prefix. If the expr is nil, this is a nop,
 and the prefix is ignored. Mostly an internal tool for building other
 expression types.
@@ -1280,114 +1083,6 @@ func (self Wrap) Append(text []byte) []byte { return exprAppend(&self, text) }
 func (self Wrap) String() string { return exprString(&self) }
 
 /*
-If the provided expression is not nil, prepends the keyword "select" to it.
-If the provided expression is nil, this is a nop.
-*/
-type Select [1]Expr
-
-// Implement the `Expr` interface, making this a sub-expression.
-func (self Select) AppendExpr(text []byte, args []interface{}) ([]byte, []interface{}) {
-	return Prefix{`select`, self[0]}.AppendExpr(text, args)
-}
-
-// Implement the `Appender` interface, sometimes allowing more efficient text
-// encoding.
-func (self Select) Append(text []byte) []byte { return exprAppend(&self, text) }
-
-// Implement the `fmt.Stringer` interface for debug purposes.
-func (self Select) String() string { return exprString(&self) }
-
-/*
-If the provided expression is not nil, prepends the keyword "update" to it.
-If the provided expression is nil, this is a nop.
-*/
-type Update [1]Expr
-
-// Implement the `Expr` interface, making this a sub-expression.
-func (self Update) AppendExpr(text []byte, args []interface{}) ([]byte, []interface{}) {
-	return Prefix{`update`, self[0]}.AppendExpr(text, args)
-}
-
-// Implement the `Appender` interface, sometimes allowing more efficient text
-// encoding.
-func (self Update) Append(text []byte) []byte { return exprAppend(&self, text) }
-
-// Implement the `fmt.Stringer` interface for debug purposes.
-func (self Update) String() string { return exprString(&self) }
-
-/*
-If the provided expression is not nil, prepends the keywords "delete from" to it.
-If the provided expression is nil, this is a nop.
-*/
-type DeleteFrom [1]Expr
-
-// Implement the `Expr` interface, making this a sub-expression.
-func (self DeleteFrom) AppendExpr(text []byte, args []interface{}) ([]byte, []interface{}) {
-	return Prefix{`delete from`, self[0]}.AppendExpr(text, args)
-}
-
-// Implement the `Appender` interface, sometimes allowing more efficient text
-// encoding.
-func (self DeleteFrom) Append(text []byte) []byte { return exprAppend(&self, text) }
-
-// Implement the `fmt.Stringer` interface for debug purposes.
-func (self DeleteFrom) String() string { return exprString(&self) }
-
-/*
-If the provided expression is not nil, prepends the keywords "insert into" to it.
-If the provided expression is nil, this is a nop.
-*/
-type InsertInto [1]Expr
-
-// Implement the `Expr` interface, making this a sub-expression.
-func (self InsertInto) AppendExpr(text []byte, args []interface{}) ([]byte, []interface{}) {
-	return Prefix{`insert into`, self[0]}.AppendExpr(text, args)
-}
-
-// Implement the `Appender` interface, sometimes allowing more efficient text
-// encoding.
-func (self InsertInto) Append(text []byte) []byte { return exprAppend(&self, text) }
-
-// Implement the `fmt.Stringer` interface for debug purposes.
-func (self InsertInto) String() string { return exprString(&self) }
-
-/*
-If the provided expression is not nil, prepends the keyword "set" to it.
-If the provided expression is nil, this is a nop.
-*/
-type Set [1]Expr
-
-// Implement the `Expr` interface, making this a sub-expression.
-func (self Set) AppendExpr(text []byte, args []interface{}) ([]byte, []interface{}) {
-	return Prefix{`set`, self[0]}.AppendExpr(text, args)
-}
-
-// Implement the `Appender` interface, sometimes allowing more efficient text
-// encoding.
-func (self Set) Append(text []byte) []byte { return exprAppend(&self, text) }
-
-// Implement the `fmt.Stringer` interface for debug purposes.
-func (self Set) String() string { return exprString(&self) }
-
-/*
-If the provided expression is not nil, prepends the keyword "from" to it.
-If the provided expression is nil, this is a nop.
-*/
-type From [1]Expr
-
-// Implement the `Expr` interface, making this a sub-expression.
-func (self From) AppendExpr(text []byte, args []interface{}) ([]byte, []interface{}) {
-	return Prefix{`from`, self[0]}.AppendExpr(text, args)
-}
-
-// Implement the `Appender` interface, sometimes allowing more efficient text
-// encoding.
-func (self From) Append(text []byte) []byte { return exprAppend(&self, text) }
-
-// Implement the `fmt.Stringer` interface for debug purposes.
-func (self From) String() string { return exprString(&self) }
-
-/*
 If the provided expression is not nil, prepends the keywords "order by" to it.
 If the provided expression is nil, this is a nop.
 */
@@ -1405,41 +1100,122 @@ func (self OrderBy) Append(text []byte) []byte { return exprAppend(&self, text) 
 // Implement the `fmt.Stringer` interface for debug purposes.
 func (self OrderBy) String() string { return exprString(&self) }
 
-/*
-If the provided expression is not nil, prepends the keyword "where" to it.
-If the provided expression is nil, this is a nop.
-*/
-type Where [1]Expr
+// Shortcut for simple "select * from A where B" expressions. See the examples.
+type Select struct {
+	From  Ident
+	Where interface{}
+}
 
 // Implement the `Expr` interface, making this a sub-expression.
-func (self Where) AppendExpr(text []byte, args []interface{}) ([]byte, []interface{}) {
-	return Prefix{`where`, self[0]}.AppendExpr(text, args)
+func (self Select) AppendExpr(text []byte, args []interface{}) ([]byte, []interface{}) {
+	bui := Bui{text, args}
+
+	bui.Str(`select * from`)
+	bui.Set(self.From.AppendExpr(bui.Get()))
+
+	if self.Where != nil {
+		bui.Str(`where`)
+		bui.Set(And{self.Where}.AppendExpr(bui.Get()))
+	}
+
+	return bui.Get()
 }
 
 // Implement the `Appender` interface, sometimes allowing more efficient text
 // encoding.
-func (self Where) Append(text []byte) []byte { return exprAppend(&self, text) }
+func (self Select) Append(text []byte) []byte { return exprAppend(&self, text) }
 
 // Implement the `fmt.Stringer` interface for debug purposes.
-func (self Where) String() string { return exprString(&self) }
+func (self Select) String() string { return exprString(&self) }
 
-/*
-If the provided expression is not nil, prepends the keyword "returning" to it.
-If the provided expression is nil, this is a nop.
-*/
-type Returning [1]Expr
+// Shortcut for simple "insert into A (B) values (C) returning *" expressions.
+// See the examples.
+type Insert struct {
+	Into   Ident
+	Fields interface{}
+}
 
 // Implement the `Expr` interface, making this a sub-expression.
-func (self Returning) AppendExpr(text []byte, args []interface{}) ([]byte, []interface{}) {
-	return Prefix{`returning`, self[0]}.AppendExpr(text, args)
+func (self Insert) AppendExpr(text []byte, args []interface{}) ([]byte, []interface{}) {
+	bui := Bui{text, args}
+
+	bui.Str(`insert into`)
+	bui.Set(self.Into.AppendExpr(bui.Get()))
+	bui.Set(StructInsert{self.Fields}.AppendExpr(bui.Get()))
+	bui.Str(`returning *`)
+
+	return bui.Get()
 }
 
 // Implement the `Appender` interface, sometimes allowing more efficient text
 // encoding.
-func (self Returning) Append(text []byte) []byte { return exprAppend(&self, text) }
+func (self Insert) Append(text []byte) []byte { return exprAppend(&self, text) }
 
 // Implement the `fmt.Stringer` interface for debug purposes.
-func (self Returning) String() string { return exprString(&self) }
+func (self Insert) String() string { return exprString(&self) }
+
+// Shortcut for simple "update A set B where C returning *" expressions. See the
+// examples.
+type Update struct {
+	What   Ident
+	Where  interface{}
+	Fields interface{}
+}
+
+// Implement the `Expr` interface, making this a sub-expression.
+func (self Update) AppendExpr(text []byte, args []interface{}) ([]byte, []interface{}) {
+	bui := Bui{text, args}
+
+	bui.Str(`update`)
+	bui.Set(self.What.AppendExpr(bui.Get()))
+
+	if self.Fields != nil {
+		bui.Str(`set`)
+		bui.Set(StructAssign{self.Fields}.AppendExpr(bui.Get()))
+	}
+
+	if self.Where != nil {
+		bui.Str(`where`)
+		bui.Set(And{self.Where}.AppendExpr(bui.Get()))
+	}
+
+	bui.Str(`returning *`)
+	return bui.Get()
+}
+
+// Implement the `Appender` interface, sometimes allowing more efficient text
+// encoding.
+func (self Update) Append(text []byte) []byte { return exprAppend(&self, text) }
+
+// Implement the `fmt.Stringer` interface for debug purposes.
+func (self Update) String() string { return exprString(&self) }
+
+// Shortcut for simple "delete from A where B returning *" expressions. See the examples.
+type Delete struct {
+	From  Ident
+	Where interface{}
+}
+
+// Implement the `Expr` interface, making this a sub-expression.
+func (self Delete) AppendExpr(text []byte, args []interface{}) ([]byte, []interface{}) {
+	bui := Bui{text, args}
+
+	bui.Str(`delete from`)
+	bui.Set(self.From.AppendExpr(bui.Get()))
+
+	bui.Str(`where`)
+	bui.Set(Cond{`null`, `and`, self.Where}.AppendExpr(bui.Get()))
+
+	bui.Str(`returning *`)
+	return bui.Get()
+}
+
+// Implement the `Appender` interface, sometimes allowing more efficient text
+// encoding.
+func (self Delete) Append(text []byte) []byte { return exprAppend(&self, text) }
+
+// Implement the `fmt.Stringer` interface for debug purposes.
+func (self Delete) String() string { return exprString(&self) }
 
 /*
 Represents an SQL function call expression. The text prefix is optional and
@@ -1458,7 +1234,9 @@ func (self Call) AppendExpr(text []byte, args []interface{}) ([]byte, []interfac
 
 	// TODO: when `self.Args` is a single expression, consider always additionally
 	// parenthesizing it. `Comma` doesn't do that.
-	bui.Set(Parens{Comma{self.Args}}.AppendExpr(bui.Get()))
+	bui.Str(`(`)
+	bui.Set(Comma{self.Args}.AppendExpr(bui.Get()))
+	bui.Str(`)`)
 
 	return bui.Get()
 }

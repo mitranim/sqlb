@@ -2,24 +2,26 @@
 
 `sqlb`: **SQL** **B**uilder for Go. Features:
 
-  * Supports plain SQL queries with ordinal or named params.
-    * Supports argument lists.
-    * Supports argument maps.
-    * Supports argument structs.
-  * Supports generating SQL clauses from structs.
-    * Generate "select" clauses from structs.
-    * Generate "insert" clauses from structs.
-    * Generate "update" clauses from structs.
-    * Generate "delete" clauses from structs.
-    * Generate "and" and "or" conditional clauses from structs.
-  * Provides data structures forming an SQL DSL in Go.
-    * Arbitrarily composable and nestable structures.
-    * Uses data literals, not a builder API.
-  * Supports an optional "JSON Expression Language" (JEL) for expressing SQL expressions with nested Lisp-style calls in JSON.
-  * Supports safely parsing "order by" clauses from JSON and text, for specific struct types, converting field names from `"json"` field tags to `"db"` field tags.
-  * Supports "sparse" structs, where not all fields are "present", allowing to implement HTTP PATCH semantics without sacrificing static typing.
-  * Decently optimized.
-  * Small and dependency-free.
+* Supports plain SQL queries with ordinal or named params.
+  * Supports argument lists.
+  * Supports argument maps.
+  * Supports argument structs.
+* Supports generating SQL clauses from structs.
+  * Generate "select" clauses from structs.
+  * Generate "insert" clauses from structs.
+  * Generate "update" clauses from structs.
+  * Generate "delete" clauses from structs.
+  * Generate "and" and "or" conditional clauses from structs.
+* Provides data structures forming an SQL DSL in Go.
+  * Shortcuts for common queries such as select, insert, update, delete.
+  * Arbitrarily composable and nestable.
+  * Uses data literals, not a builder API.
+* Supports an optional "JSON Expression Language" (JEL) for expressing SQL expressions with nested Lisp-style calls in JSON.
+* Supports safely parsing "order by" clauses from JSON and text, for specific struct types, converting field names from `"json"` field tags to `"db"` field tags.
+* Supports "sparse" structs, where not all fields are "present", allowing to implement HTTP PATCH semantics without sacrificing static typing.
+* Compatible with standard SQL syntax, biased towards Postgres.
+* Decently optimized.
+* Small and dependency-free.
 
 API docs: https://pkg.go.dev/github.com/mitranim/sqlb.
 
@@ -63,25 +65,16 @@ func ExampleStrQ_structs() {
 ### AST-style query building
 
 ```golang
-func Example_astQueryBuilding() {
-  var Select = func(ident s.Ident, where interface{}) s.Expr {
-    return s.Exprs{
-      s.SelectStar{},
-      s.From{ident},
-      s.Where{s.And{where}},
-    }
-  }
-
-  type Filter struct {
+func ExampleInsert_nonEmpty() {
+  type Fields struct {
     Col0 int64 `db:"col0"`
     Col1 int64 `db:"col1"`
   }
 
-  fmt.Println(s.Reify(
-    Select(`some_table`, Filter{10, 20}),
-  ))
+  fmt.Println(s.Reify(s.Insert{`some_table`, Fields{10, 20}}))
+
   // Output:
-  // select * from "some_table" where "col0" = $1 and "col1" = $2 [10 20]
+  // insert into "some_table" ("col0", "col1") values ($1, $2) returning * [10 20]
 }
 ```
 
@@ -106,6 +99,17 @@ func Example_composition() {
 ```
 
 ## Changelog
+
+### `v0.3.0`
+
+Revised AST-style expressions:
+
+* Removed uselessly low-level exprs such as `Space`, `ReturningStar`, and so on.
+* Added higher-level shortcuts for extremely common yet simple operations:
+  * `Select`
+  * `Insert`
+  * `Update`
+  * `Delete`
 
 ### `v0.2.1`
 

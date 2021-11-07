@@ -7,27 +7,6 @@ import (
 	s "github.com/mitranim/sqlb"
 )
 
-func Example_astQueryBuilding() {
-	var Select = func(ident s.Ident, where interface{}) s.Expr {
-		return s.Exprs{
-			s.SelectStar{},
-			s.From{ident},
-			s.Where{s.And{where}},
-		}
-	}
-
-	type Filter struct {
-		Col0 int64 `db:"col0"`
-		Col1 int64 `db:"col1"`
-	}
-
-	fmt.Println(s.Reify(
-		Select(`some_table`, Filter{10, 20}),
-	))
-	// Output:
-	// select * from "some_table" where "col0" = $1 and "col1" = $2 [10 20]
-}
-
 // Copy of `ExampleStrQ_nested` for package-level docs.
 func Example_composition() {
 	inner := s.StrQ{
@@ -49,9 +28,7 @@ func ExampleBui_TryExprs() {
 	bui := s.MakeBui(1024, 16)
 
 	err := bui.TryExprs(
-		s.SelectStar{},
-		s.From{s.Ident(`some_table`)},
-		s.Where{s.Ands{true, false}},
+		s.Select{`some_table`, s.Ands{true, false}},
 	)
 	if err != nil {
 		panic(err)
@@ -71,23 +48,13 @@ func ExampleStr_stringInterpolation() {
 		s.StrQ{
 			`select :col from some_table where :col <> :val`,
 			s.Dict{
-				`col`: s.Ident(`some_col`),
+				`col`: s.Str(`some_col`),
 				`val`: `some_val`,
 			},
 		},
 	))
 	// Output:
-	// select "some_col" from some_table where "some_col" <> $1 [some_val]
-}
-
-func ExampleStr_exprInterpolation() {
-	fmt.Println(s.Reify(
-		s.Select{s.Ident(`some_col`)},
-		s.From{s.Ident(`some_table`)},
-		s.Where{s.Neq{s.Ident(`some_col`), `some_val`}},
-	))
-	// Output:
-	// select "some_col" from "some_table" where ("some_col") <> $1 [some_val]
+	// select some_col from some_table where some_col <> $1 [some_val]
 }
 
 func ExampleIdent() {
@@ -158,11 +125,7 @@ func ExampleExprs() {
 	}
 
 	fmt.Println(s.Reify(
-		s.Exprs{
-			s.SelectStar{},
-			s.From{s.Ident(`some_table`)},
-			s.Where{s.And{Filter{`some_slug`}}},
-		},
+		s.Select{`some_table`, Filter{`some_slug`}},
 	))
 	// Output:
 	// select * from "some_table" where "slug" = $1 [some_slug]
@@ -170,20 +133,13 @@ func ExampleExprs() {
 
 func ExampleAny() {
 	fmt.Println(s.Reify(s.Any{}))
-
 	fmt.Println(s.Reify(s.Any{[]int{10, 20}}))
-
-	fmt.Println(s.Reify(
-		s.Any{s.Exprs{
-			s.SelectStar{},
-			s.From{s.Ident(`some_table`)},
-		}},
-	))
+	fmt.Println(s.Reify(s.Any{s.Table{`some_table`}}))
 
 	// Output:
 	// any ($1) [<nil>]
 	// any ($1) [[10 20]]
-	// any (select * from "some_table") []
+	// any (table "some_table") []
 }
 
 func ExampleAssign() {
@@ -265,16 +221,13 @@ func ExampleEqAny() {
 
 	fmt.Println(s.Reify(s.EqAny{
 		s.Ident(`some_col`),
-		s.Exprs{
-			s.SelectStar{},
-			s.From{s.Ident(`some_table`)},
-		},
+		s.Table{`some_table`},
 	}))
 
 	// Output:
 	// $1 = any ($2) [10 [20 30]]
 	// ("some_col") = any ($1) [[20 30]]
-	// ("some_col") = any (select * from "some_table") []
+	// ("some_col") = any (table "some_table") []
 }
 
 func ExampleNeqAny() {
@@ -290,16 +243,13 @@ func ExampleNeqAny() {
 
 	fmt.Println(s.Reify(s.NeqAny{
 		s.Ident(`some_col`),
-		s.Exprs{
-			s.SelectStar{},
-			s.From{s.Ident(`some_table`)},
-		},
+		s.Table{`some_table`},
 	}))
 
 	// Output:
 	// $1 <> any ($2) [10 [20 30]]
 	// ("some_col") <> any ($1) [[20 30]]
-	// ("some_col") <> any (select * from "some_table") []
+	// ("some_col") <> any (table "some_table") []
 }
 
 func ExampleNot() {
@@ -529,61 +479,76 @@ func ExampleSelectColsDeep_cols() {
 	// with _ as (table "some_table") select "outer", ("inner")."name" as "inner.name" from _
 }
 
-func ExampleSelect() {
-	type Output struct {
-		Col0 string `db:"col0"`
-		Col1 string `db:"col1"`
-	}
-
-	type Filter struct {
-		Id int64 `db:"id"`
-	}
-
-	fmt.Println(s.Reify(
-		s.Select{s.Cols{(*Output)(nil)}},
-		s.From{s.Ident(`some_table`)},
-		s.Where{s.And{Filter{10}}},
-	))
+func ExampleSelect_unfiltered() {
+	fmt.Println(s.Reify(s.Select{`some_table`, nil}))
 	// Output:
-	// select "col0", "col1" from "some_table" where "id" = $1 [10]
+	// select * from "some_table" []
 }
 
-func ExampleFrom() {
-	type Output struct {
-		Col0 string `db:"col0"`
-		Col1 string `db:"col1"`
-	}
-
+func ExampleSelect_filtered() {
 	type Filter struct {
-		Id int64 `db:"id"`
+		Col0 int64 `db:"col0"`
+		Col1 int64 `db:"col1"`
 	}
 
-	fmt.Println(s.Reify(
-		s.Select{s.Cols{(*Output)(nil)}},
-		s.From{s.Ident(`some_table`)},
-		s.Where{s.And{Filter{10}}},
-	))
+	fmt.Println(s.Reify(s.Select{`some_table`, Filter{10, 20}}))
 	// Output:
-	// select "col0", "col1" from "some_table" where "id" = $1 [10]
+	// select * from "some_table" where "col0" = $1 and "col1" = $2 [10 20]
 }
 
-func ExampleWhere() {
-	type Output struct {
-		Col0 string `db:"col0"`
-		Col1 string `db:"col1"`
+func ExampleInsert_empty() {
+	fmt.Println(s.Reify(s.Insert{`some_table`, nil}))
+	// Output:
+	// insert into "some_table" default values returning * []
+}
+
+func ExampleInsert_nonEmpty() {
+	type Fields struct {
+		Col0 int64 `db:"col0"`
+		Col1 int64 `db:"col1"`
 	}
 
+	fmt.Println(s.Reify(s.Insert{`some_table`, Fields{10, 20}}))
+
+	// Output:
+	// insert into "some_table" ("col0", "col1") values ($1, $2) returning * [10 20]
+}
+
+func ExampleUpdate() {
 	type Filter struct {
-		Id int64 `db:"id"`
+		Col0 int64 `db:"col0"`
+		Col1 int64 `db:"col1"`
+	}
+
+	type Fields struct {
+		Col2 int64 `db:"col2"`
+		Col3 int64 `db:"col3"`
 	}
 
 	fmt.Println(s.Reify(
-		s.Select{s.Cols{(*Output)(nil)}},
-		s.From{s.Ident(`some_table`)},
-		s.Where{s.And{Filter{10}}},
+		s.Update{`some_table`, Filter{10, 20}, Fields{30, 40}},
 	))
+
 	// Output:
-	// select "col0", "col1" from "some_table" where "id" = $1 [10]
+	// update "some_table" set "col2" = $1, "col3" = $2 where "col0" = $3 and "col1" = $4 returning * [30 40 10 20]
+}
+
+func ExampleDelete_unfiltered() {
+	fmt.Println(s.Reify(s.Delete{`some_table`, nil}))
+	// Output:
+	// delete from "some_table" where null returning * []
+}
+
+func ExampleDelete_filtered() {
+	type Filter struct {
+		Col0 int64 `db:"col0"`
+		Col1 int64 `db:"col1"`
+	}
+
+	fmt.Println(s.Reify(s.Delete{`some_table`, Filter{10, 20}}))
+
+	// Output:
+	// delete from "some_table" where "col0" = $1 and "col1" = $2 returning * [10 20]
 }
 
 func ExampleCall_empty() {

@@ -17,8 +17,8 @@ func benchDeleteAst() Expr {
 	return qDeleteAst(`some_table`, External{})
 }
 
-func qDeleteAst(ident Ident, where interface{}) Expr {
-	return Exprs{DeleteFrom{ident}, Where{And{where}}, ReturningStar{}}
+func qDeleteAst(from Ident, where interface{}) Expr {
+	return Delete{from, where}
 }
 
 func Benchmark_delete_ast_append(b *testing.B) {
