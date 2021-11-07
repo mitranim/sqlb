@@ -50,16 +50,6 @@ func Test_Str(t *testing.T) {
 	testExprs(t, rei(`one_two three_four`), Str(`one_two`), Str(`three_four`))
 }
 
-func Test_Int(t *testing.T) {
-	testExpr(t, rei(`0`), Int(0))
-	testExpr(t, rei(`-1`), Int(-1))
-	testExpr(t, rei(`1`), Int(1))
-	testExpr(t, rei(`-12`), Int(-12))
-	testExpr(t, rei(`12`), Int(12))
-
-	testExprs(t, rei(`0 -1 1 -12 12`), Int(0), Int(-1), Int(1), Int(-12), Int(12))
-}
-
 func Test_Ident(t *testing.T) {
 	testExpr(t, rei(`""`), Ident(``))
 	testExpr(t, rei(`" "`), Ident(` `))
@@ -1907,4 +1897,129 @@ func Test_Partial(t *testing.T) {
 		test(true, nil, HaserTrue{}, `json:"someName"`)
 		test(true, UnitStruct{}, HaserTrue{}, `json:"someName"`)
 	})
+}
+
+// Incomplete, TODO more.
+func TestTryString(t *testing.T) {
+	test := func(exp string, src interface{}) {
+		t.Helper()
+		eq(t, exp, TryString(src))
+	}
+
+	test(``, nil)
+	test(``, ``)
+	test(``, (*string)(nil))
+	test(``, (**string)(nil))
+	test(``, (*int)(nil))
+	test(``, (**int)(nil))
+	test(`one`, `one`)
+	test(`one`, []byte(`one`))
+	test(`0`, 0)
+	test(`10`, 10)
+	test(`123.456`, 123.456)
+	test(`true`, true)
+	test(`false`, false)
+	test(`0001-02-03 04:05:06.000000007 +0000 UTC`, time.Date(1, 2, 3, 4, 5, 6, 7, time.UTC))
+	test(`""`, Ident(``))
+	test(`"one"`, Ident(`one`))
+
+	panics(t, `unsupported type "[]int" of kind "slice"`, func() {
+		TryString([]int(nil))
+	})
+
+	panics(t, `unsupported type "struct {}" of kind "struct"`, func() {
+		TryString(struct{}{})
+	})
+
+	panics(t, `unsupported type "map[int]int" of kind "map"`, func() {
+		TryString((map[int]int)(nil))
+	})
+
+	panics(t, `unsupported type "func(interface {}) string" of kind "func"`, func() {
+		TryString(TryString)
+	})
+
+	panics(t, `unsupported type "chan int" of kind "chan"`, func() {
+		TryString((chan int)(nil))
+	})
+}
+
+// Incomplete, TODO more.
+func TestTryAppend(t *testing.T) {
+	test := func(exp string, src interface{}) {
+		t.Helper()
+		const prefix = `this prefix must be preserved `
+		eq(t, prefix+exp, string(TryAppend([]byte(prefix), src)))
+	}
+
+	test(``, nil)
+	test(``, ``)
+	test(``, (*string)(nil))
+	test(``, (**string)(nil))
+	test(``, (*int)(nil))
+	test(``, (**int)(nil))
+	test(`one`, `one`)
+	test(`one`, []byte(`one`))
+	test(`0`, 0)
+	test(`10`, 10)
+	test(`123.456`, 123.456)
+	test(`true`, true)
+	test(`false`, false)
+	test(`0001-02-03T04:05:06.000000007Z`, time.Date(1, 2, 3, 4, 5, 6, 7, time.UTC))
+	test(`""`, Ident(``))
+	test(`"one"`, Ident(`one`))
+
+	panics(t, `unsupported type "[]int" of kind "slice"`, func() {
+		TryAppend(nil, []int(nil))
+	})
+
+	panics(t, `unsupported type "struct {}" of kind "struct"`, func() {
+		TryAppend(nil, struct{}{})
+	})
+
+	panics(t, `unsupported type "map[int]int" of kind "map"`, func() {
+		TryAppend(nil, (map[int]int)(nil))
+	})
+
+	panics(t, `unsupported type "func([]uint8, interface {}) []uint8" of kind "func"`, func() {
+		TryAppend(nil, TryAppend)
+	})
+
+	panics(t, `unsupported type "chan int" of kind "chan"`, func() {
+		TryAppend(nil, (chan int)(nil))
+	})
+}
+
+func TestCommaAppender(t *testing.T) {
+	test := func(exp string, val Encoder) { testEncoder(t, exp, val) }
+
+	test(``, CommaAppender{})
+	test(``, CommaAppender{nil, nil, nil})
+	test(``, CommaAppender{nil, CommaAppender{}, CommaAppender{nil}, nil, Stringer{}})
+	test(``, CommaAppender{Stringer{nil}})
+	test(``, CommaAppender{nil, Stringer{}, nil, Stringer{``}})
+	test(`10`, CommaAppender{Stringer{10}})
+	test(`10`, CommaAppender{nil, Stringer{10}, nil})
+	test(`10`, CommaAppender{nil, Stringer{``}, Stringer{10}, nil, Stringer{``}})
+	test(`10,20`, CommaAppender{Stringer{10}, nil, Stringer{20}})
+	test(`10,20`, CommaAppender{nil, Stringer{10}, nil, Stringer{20}, nil, Stringer{``}})
+	test(`10,20,30`, CommaAppender{CommaAppender{Stringer{10}}, CommaAppender{Stringer{20}, Stringer{``}, Stringer{30}}})
+}
+
+func TestArrayAppender(t *testing.T) {
+	test := func(exp string, val Encoder) { testEncoder(t, exp, val) }
+
+	test(`{}`, ArrayAppender{})
+	test(`{}`, ArrayAppender{nil, nil, nil})
+	test(`{}`, ArrayAppender{nil, CommaAppender{}, CommaAppender{nil}, nil, Stringer{}})
+	test(`{{},{}}`, ArrayAppender{nil, ArrayAppender{}, ArrayAppender{nil}, nil, Stringer{}})
+	test(`{}`, ArrayAppender{Stringer{nil}})
+	test(`{}`, ArrayAppender{nil, Stringer{}, nil, Stringer{``}})
+	test(`{10}`, ArrayAppender{Stringer{10}})
+	test(`{10}`, ArrayAppender{nil, Stringer{10}, nil})
+	test(`{10}`, ArrayAppender{nil, Stringer{``}, Stringer{10}, nil, Stringer{``}})
+	test(`{10,20}`, ArrayAppender{Stringer{10}, nil, Stringer{20}})
+	test(`{10,20}`, ArrayAppender{nil, Stringer{10}, nil, Stringer{20}, nil, Stringer{``}})
+	test(`{10,20,30}`, ArrayAppender{CommaAppender{Stringer{10}}, CommaAppender{Stringer{20}, Stringer{``}, Stringer{30}}})
+	test(`{{10},{20,30}}`, ArrayAppender{ArrayAppender{Stringer{10}}, ArrayAppender{Stringer{20}, Stringer{``}, Stringer{30}}})
 }

@@ -24,10 +24,10 @@ func Example_composition() {
 	// select * from (select * from some_table where col0 = $1) as _ where col1 = $2 [10 20]
 }
 
-func ExampleBui_TryExprs() {
+func ExampleBui_CatchExprs() {
 	bui := s.MakeBui(1024, 16)
 
-	err := bui.TryExprs(
+	err := bui.CatchExprs(
 		s.Select{`some_table`, s.Ands{true, false}},
 	)
 	if err != nil {

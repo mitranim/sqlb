@@ -28,28 +28,6 @@ func (self Str) Append(text []byte) []byte {
 // Implement the `fmt.Stringer` interface for debug purposes.
 func (self Str) String() string { return string(self) }
 
-/*
-An expression that interpolates itself as text representing a literal integer,
-instead of adding an ordinal parameter and an argument.
-*/
-type Int int
-
-// Implement the `Expr` interface, making this a sub-expression.
-func (self Int) AppendExpr(text []byte, args []interface{}) ([]byte, []interface{}) {
-	return self.Append(text), args
-}
-
-// Implement the `Appender` interface, sometimes allowing more efficient text
-// encoding.
-func (self Int) Append(text []byte) []byte {
-	return strconv.AppendInt(text, int64(self), 10)
-}
-
-// Implement the `fmt.Stringer` interface for debug purposes.
-func (self Int) String() string {
-	return strconv.FormatInt(int64(self), 10)
-}
-
 // Represents an SQL identifier, always quoted.
 type Ident string
 
@@ -70,7 +48,7 @@ func (self Ident) Append(text []byte) []byte {
 }
 
 // Implement the `fmt.Stringer` interface for debug purposes.
-func (self Ident) String() string { return appenderToStr(&self) }
+func (self Ident) String() string { return AppenderString(&self) }
 
 /*
 Represents a nested SQL identifier where all elements are quoted but not
@@ -100,7 +78,7 @@ func (self Identifier) Append(text []byte) []byte {
 }
 
 // Implement the `fmt.Stringer` interface for debug purposes.
-func (self Identifier) String() string { return appenderToStr(&self) }
+func (self Identifier) String() string { return AppenderString(&self) }
 
 // Normalizes the expression, returning nil or a single `Ident` if the length
 // allows this. Otherwise returns self as-is.
@@ -151,7 +129,7 @@ func (self Path) Append(text []byte) []byte {
 }
 
 // Implement the `fmt.Stringer` interface for debug purposes.
-func (self Path) String() string { return appenderToStr(&self) }
+func (self Path) String() string { return AppenderString(&self) }
 
 // Normalizes the expression, returning nil or a single `Ident` if the length
 // allows this. Otherwise returns self as-is.
@@ -202,7 +180,7 @@ func (self PseudoPath) Append(text []byte) []byte {
 }
 
 // Implement the `fmt.Stringer` interface for debug purposes.
-func (self PseudoPath) String() string { return appenderToStr(&self) }
+func (self PseudoPath) String() string { return AppenderString(&self) }
 
 // Normalizes the expression, returning nil or a single `Ident` if the length
 // allows this. Otherwise returns self as-is.
@@ -247,7 +225,7 @@ func (self AliasedPath) Append(text []byte) []byte {
 }
 
 // Implement the `fmt.Stringer` interface for debug purposes.
-func (self AliasedPath) String() string { return appenderToStr(&self) }
+func (self AliasedPath) String() string { return AppenderString(&self) }
 
 // Normalizes the expression, returning nil or a single `Ident` if the length
 // allows this. Otherwise returns self as-is.
@@ -285,7 +263,7 @@ func (self Table) Append(text []byte) []byte {
 }
 
 // Implement the `fmt.Stringer` interface for debug purposes.
-func (self Table) String() string { return appenderToStr(&self) }
+func (self Table) String() string { return AppenderString(&self) }
 
 /*
 Variable-sized sequence of expressions. When encoding, expressions will be
@@ -1265,7 +1243,7 @@ type RowNumberOver [1]Expr
 // Implement the `Expr` interface, making this a sub-expression.
 func (self RowNumberOver) AppendExpr(text []byte, args []interface{}) ([]byte, []interface{}) {
 	if self[0] == nil {
-		return Int(0).AppendExpr(text, args)
+		return appendMaybeSpaced(text, `0`), args
 	}
 
 	bui := Bui{text, args}
@@ -1505,12 +1483,12 @@ func (self OrdinalParam) AppendExpr(text []byte, args []interface{}) ([]byte, []
 // encoding.
 func (self OrdinalParam) Append(text []byte) []byte {
 	text = append(text, ordinalParamPrefix)
-	text = Int(self).Append(text)
+	text = strconv.AppendInt(text, int64(self), 10)
 	return text
 }
 
 // Implement the `fmt.Stringer` interface for debug purposes.
-func (self OrdinalParam) String() string { return appenderToStr(&self) }
+func (self OrdinalParam) String() string { return AppenderString(&self) }
 
 // Returns the corresponding Go index (starts at zero).
 func (self OrdinalParam) Index() int { return int(self) - 1 }
@@ -1535,7 +1513,7 @@ func (self NamedParam) Append(text []byte) []byte {
 }
 
 // Implement the `fmt.Stringer` interface for debug purposes.
-func (self NamedParam) String() string { return appenderToStr(&self) }
+func (self NamedParam) String() string { return AppenderString(&self) }
 
 // Converts to the corresponding dictionary key, which is a plain string. This
 // is a free cast, used to increase code clarity.

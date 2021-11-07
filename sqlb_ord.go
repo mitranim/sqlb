@@ -328,7 +328,7 @@ func (self Ord) Append(text []byte) []byte {
 }
 
 // Implement the `fmt.Stringer` interface for debug purposes.
-func (self Ord) String() string { return appenderToStr(&self) }
+func (self Ord) String() string { return AppenderString(&self) }
 
 // True if the path is empty.
 func (self Ord) IsEmpty() bool { return len(self.Path) == 0 }

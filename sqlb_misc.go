@@ -8,7 +8,7 @@ Shortcut for using `(*Bui).Exprs` and `Bui.Reify`. Provided mostly for
 examples. Actual code may want to use `Bui`:
 
 	bui := MakeBui(4096, 64)
-	panic(bui.TryExprs(someExprs...))
+	panic(bui.CatchExprs(someExprs...))
 	text, args := bui.Reify()
 */
 func Reify(vals ...Expr) (string, []interface{}) {

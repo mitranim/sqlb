@@ -112,7 +112,7 @@ func (self *Bui) Exprs(vals ...Expr) {
 // Same as `(*Bui).Exprs` but catches panics. Since many functions in this
 // package use panics, this should be used for final reification by apps that
 // insist on errors-as-values.
-func (self *Bui) TryExprs(vals ...Expr) (err error) {
+func (self *Bui) CatchExprs(vals ...Expr) (err error) {
 	defer rec(&err)
 	self.Exprs(vals...)
 	return

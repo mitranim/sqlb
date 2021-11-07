@@ -28,7 +28,8 @@ const (
 )
 
 var (
-	timeRtype       = r.TypeOf((*time.Time)(nil)).Elem()
+	typeTime        = r.TypeOf((*time.Time)(nil)).Elem()
+	typeBytes       = r.TypeOf((*[]byte)(nil)).Elem()
 	sqlScannerRtype = r.TypeOf((*sql.Scanner)(nil)).Elem()
 
 	charsetDigitDec   = new(charset).addStr(`0123456789`)
@@ -145,13 +146,9 @@ func stringToBytesUnsafe(val string) []byte {
 	return *(*[]byte)(unsafe.Pointer(&slice))
 }
 
-func appenderToStr(val interface{ Append([]byte) []byte }) string {
-	return bytesToMutableString(val.Append(nil))
-}
-
 func isScannableRtype(typ r.Type) bool {
 	typ = typeDeref(typ)
-	return typ != nil && (typ == timeRtype || r.PtrTo(typ).Implements(sqlScannerRtype))
+	return typ != nil && (typ == typeTime || r.PtrTo(typ).Implements(sqlScannerRtype))
 }
 
 // WTB more specific name.
@@ -653,10 +650,6 @@ func kindOf(val interface{}) r.Kind {
 		return typ.Kind()
 	}
 	return r.Invalid
-}
-
-func isStructEmpty(val interface{}) bool {
-	return isStructTypeEmpty(r.TypeOf(val))
 }
 
 func isStructTypeEmpty(typ r.Type) bool {

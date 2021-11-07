@@ -85,6 +85,10 @@ type list = []interface{}
 type Encoder interface {
 	fmt.Stringer
 	Appender
+}
+
+type EncoderExpr interface {
+	Encoder
 	Expr
 }
 
@@ -92,12 +96,17 @@ func testEncoder(t testing.TB, exp string, val Encoder) {
 	t.Helper()
 	eq(t, exp, val.String())
 	eq(t, exp, string(val.Append(nil)))
+}
+
+func testEncoderExpr(t testing.TB, exp string, val EncoderExpr) {
+	t.Helper()
+	testEncoder(t, exp, val)
 	eq(t, exp, string(reify(val).Text))
 }
 
-func testExpr(t testing.TB, exp R, val Encoder) {
+func testExpr(t testing.TB, exp R, val EncoderExpr) {
 	t.Helper()
-	testEncoder(t, string(exp.Text), val)
+	testEncoderExpr(t, string(exp.Text), val)
 	testExprs(t, exp, val)
 }
 
@@ -106,8 +115,8 @@ func testExprs(t testing.TB, exp R, vals ...Expr) {
 	eq(t, exp, reify(vals...))
 }
 
-func exprTest(t testing.TB) func(R, Encoder) {
-	return func(exp R, val Encoder) {
+func exprTest(t testing.TB) func(R, EncoderExpr) {
+	return func(exp R, val EncoderExpr) {
 		t.Helper()
 		testExpr(t, exp, val)
 	}
@@ -241,10 +250,12 @@ func panics(t testing.TB, msg string, fun func()) {
 
 	str := fmt.Sprint(val)
 	if !strings.Contains(str, msg) {
-		t.Fatalf(
-			`expected %v to panic with a message containing %q, found %q`,
-			funcName(fun), msg, str,
-		)
+		t.Fatalf(`
+expected %v to panic with a message containing:
+	%v
+found the following message:
+	%v
+`, funcName(fun), msg, str)
 	}
 }
 
@@ -364,3 +375,16 @@ func (HaserTrue) Has(string) bool { return true }
 type HaserFalse struct{}
 
 func (HaserFalse) Has(string) bool { return false }
+
+type Stringer [1]interface{}
+
+func (self Stringer) String() string {
+	if self[0] == nil {
+		return ``
+	}
+	return fmt.Sprint(self[0])
+}
+
+func (self Stringer) Append(buf []byte) []byte {
+	return append(buf, self.String()...)
+}

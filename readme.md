@@ -100,7 +100,26 @@ func Example_composition() {
 
 ## Changelog
 
-### `v0.3.0`
+### v0.4.0
+
+Added low-level tools for text encoding and SQL array encoding:
+
+  * `ArrayAppender`
+  * `CommaAppender`
+  * `String`
+  * `TryString`
+  * `Append`
+  * `TryAppend`
+  * `TryAppendWith`
+  * `AppendWith`
+  * `AppenderString`
+
+Breaking changes:
+
+  * Removed useless expression type `Int`.
+  * Renamed `Bui.TryExprs` to `Bui.CatchExprs`.
+
+### v0.3.0
 
 Revised AST-style expressions:
 
@@ -111,45 +130,45 @@ Revised AST-style expressions:
   * `Update`
   * `Delete`
 
-### `v0.2.1`
+### v0.2.1
 
 Added `Sparse` and `Partial` to support "sparse" structs, allowing to implement HTTP PATCH semantics more easily, efficiently, and correctly.
 
-### `v0.2.0`
+### v0.2.0
 
 Full API revision. Added many AST/DSL-like types for common expressions. Optimized parsing and expression building. Use caching and pooling to minimize redundant work. String-based query building now uses partial parsing with caching, and should no longer be a measurable expense. Ported JEL support from `github.com/mitranim/jel`.
 
-### `v0.1.17`
+### v0.1.17
 
 Added `Ords.OrType`.
 
-### `v0.1.16`
+### v0.1.16
 
 Added `NamedArg.Norm`. Improved `NamedArg.IsNil` and `NamedArgs.Conditions`. They now use the `driver.Valuer.Value` method, if present, to determine null-ness, which works for non-pointer "nullable" types.
 
-### `v0.1.15`
+### v0.1.15
 
 `Ords.Or` is now a value method that returns a modified version, rather than a pointer method that mutated the original.
 
-### `v0.1.14`
+### v0.1.14
 
 `StructMap` and `StructNamedArgs` now tolerate `nil` inputs. Previously, they tolerated non-nil interfaces where the underlying value was a nil struct pointer. Now they also allow nil interfaces.
 
-### `v0.1.13`
+### v0.1.13
 
 Fixed the bug where the `Ords.Lax` mode was appending malformed ords, instead of skipping them entirely.
 
-### `v0.1.12`
+### v0.1.12
 
 * `StrQuery` now interpolates directly, without invoking `(*Query).Append` on the provided query. This allows to interpolate `StrQuery` strings that contain parameter placeholders. Use at your own risk.
 
 * `(*Query).Append` no longer has an argument length limit.
 
-### `v0.1.11`
+### v0.1.11
 
 Added `Ords.Lax`: a boolean that causes `Ords` to skip unknown fields during parsing.
 
-### `v0.1.10`
+### v0.1.10
 
 Breaking changes in the name of efficiency:
 

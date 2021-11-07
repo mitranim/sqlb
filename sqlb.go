@@ -9,7 +9,7 @@ to the parameters in the SQL text. Different databases support different styles
 of ordinal parameters. This package always generates Postgres-style ordinal
 parameters such as "$1", renumerating them as necessary.
 
-This method is allowed to panic. Use `(*Bui).TryExprs` to catch
+This method is allowed to panic. Use `(*Bui).CatchExprs` to catch
 expression-encoding panics and convert them to errors.
 
 All `Expr` types in this package also implement `Appender` and `fmt.Stringer`.
