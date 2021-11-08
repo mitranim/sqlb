@@ -883,7 +883,8 @@ provided struct. See the example.
 
 Supports filtering. If the inner value implements `Sparse`, then not all fields
 are considered to be "present", which is useful for PATCH semantics. See the
-docs on `Sparse` and `Part`.
+docs on `Sparse` and `Part`. If there are NO fields, panics with
+`ErrEmptyAssign`, which can be detected by user code via `errors.Is`.
 */
 type StructAssign [1]interface{}
 
@@ -903,7 +904,7 @@ func (self StructAssign) AppendExpr(text []byte, args []interface{}) ([]byte, []
 	}
 
 	if iter.empty() {
-		panic(errEmptyAssign)
+		panic(ErrEmptyAssign)
 	}
 
 	return bui.Get()

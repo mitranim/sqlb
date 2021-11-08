@@ -100,6 +100,10 @@ func Example_composition() {
 
 ## Changelog
 
+### v0.4.1
+
+Exported `ErrEmptyAssign` used by `StructAssign` and `Update` to indicate the inability to generate a valid SQL "update set" clause.
+
 ### v0.4.0
 
 Added low-level tools for text encoding and SQL array encoding:
