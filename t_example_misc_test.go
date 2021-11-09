@@ -777,3 +777,19 @@ func ExampleOrdsParser_UnmarshalJSON() {
 	//
 	// order by "dbCol0" asc, "dbCol1" desc nulls last
 }
+
+func ExampleLimitUint() {
+	fmt.Println(s.Reify(
+		s.Exprs{s.Select{`some_table`, nil}, s.LimitUint(10)},
+	))
+	// Output:
+	// select * from "some_table" limit 10 []
+}
+
+func ExampleOffsetUint() {
+	fmt.Println(s.Reify(
+		s.Exprs{s.Select{`some_table`, nil}, s.OffsetUint(10)},
+	))
+	// Output:
+	// select * from "some_table" offset 10 []
+}

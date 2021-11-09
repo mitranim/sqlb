@@ -7,7 +7,7 @@ import (
 	"time"
 )
 
-func Test_Reify(t *testing.T) {
+func TestReify(t *testing.T) {
 	t.Run(`nil`, func(t *testing.T) {
 		text, args := Reify(nil)
 		eq(t, ``, text)
@@ -39,7 +39,7 @@ func Test_Reify(t *testing.T) {
 	})
 }
 
-func Test_Str(t *testing.T) {
+func TestStr(t *testing.T) {
 	testExpr(t, rei(``), Str(``))
 	testExpr(t, rei(`one`), Str(`one`))
 
@@ -50,7 +50,7 @@ func Test_Str(t *testing.T) {
 	testExprs(t, rei(`one_two three_four`), Str(`one_two`), Str(`three_four`))
 }
 
-func Test_Ident(t *testing.T) {
+func TestIdent(t *testing.T) {
 	testExpr(t, rei(`""`), Ident(``))
 	testExpr(t, rei(`" "`), Ident(` `))
 	testExpr(t, rei(`"one.two"`), Ident(`one.two`))
@@ -64,7 +64,7 @@ func Test_Ident(t *testing.T) {
 	testExprs(t, rei(`"one" "two"`), Ident(`one`), Ident(`two`))
 }
 
-func Test_Identifier(t *testing.T) {
+func TestIdentifier(t *testing.T) {
 	testExpr(t, rei(``), Identifier(nil))
 	testExpr(t, rei(``), Identifier{})
 	testExpr(t, rei(`""`), Identifier{``})
@@ -85,7 +85,7 @@ func Test_Identifier(t *testing.T) {
 	)
 }
 
-func Test_Path(t *testing.T) {
+func TestPath(t *testing.T) {
 	testExpr(t, rei(``), Path(nil))
 	testExpr(t, rei(``), Path{})
 	testExpr(t, rei(`""`), Path{``})
@@ -106,7 +106,7 @@ func Test_Path(t *testing.T) {
 	)
 }
 
-func Test_PseudoPath(t *testing.T) {
+func TestPseudoPath(t *testing.T) {
 	testExpr(t, rei(``), PseudoPath(nil))
 	testExpr(t, rei(``), PseudoPath{})
 	testExpr(t, rei(`""`), PseudoPath{``})
@@ -126,7 +126,7 @@ func Test_PseudoPath(t *testing.T) {
 	)
 }
 
-func Test_AliasedPath(t *testing.T) {
+func TestAliasedPath(t *testing.T) {
 	testExpr(t, rei(``), AliasedPath(nil))
 	testExpr(t, rei(``), AliasedPath{})
 	testExpr(t, rei(`""`), AliasedPath{``})
@@ -145,7 +145,7 @@ func Test_AliasedPath(t *testing.T) {
 	)
 }
 
-func Test_Table(t *testing.T) {
+func TestTable(t *testing.T) {
 	testExpr(t, rei(``), Table(nil))
 	testExpr(t, rei(``), Table{})
 	testExpr(t, rei(`table ""`), Table{``})
@@ -168,7 +168,7 @@ func Test_Table(t *testing.T) {
 	)
 }
 
-func Test_Exprs(t *testing.T) {
+func TestExprs(t *testing.T) {
 	testExprs(t, rei(``))
 	testExprs(t, rei(``), Exprs{})
 	testExprs(t, rei(``), Exprs{nil})
@@ -186,7 +186,7 @@ func Test_Exprs(t *testing.T) {
 	)
 }
 
-func Test_Any(t *testing.T) {
+func TestAny(t *testing.T) {
 	testExpr(t, rei(`any ($1)`, nil), Any{})
 	testExpr(t, rei(`any ($1)`, list{10, 20, 30}), Any{list{10, 20, 30}})
 	testExpr(t, rei(`any (one)`), Any{Str(`one`)})
@@ -199,7 +199,7 @@ func Test_Any(t *testing.T) {
 	)
 }
 
-func Test_Assign(t *testing.T) {
+func TestAssign(t *testing.T) {
 	testExpr(t, rei(`"" = $1`, nil), Assign{})
 	testExpr(t, rei(`"one" = $1`, nil), Assign{`one`, nil})
 	testExpr(t, rei(`"" = $1`, 10), Assign{``, 10})
@@ -215,7 +215,7 @@ func Test_Assign(t *testing.T) {
 	)
 }
 
-func Test_Eq(t *testing.T) {
+func TestEq(t *testing.T) {
 	testExpr(t, rei(`$1 is null`, nil), Eq{nil, nil})
 	testExpr(t, rei(`$1 is null`, 10), Eq{10, nil})
 	testExpr(t, rei(`$1 = $2`, nil, 10), Eq{nil, 10})
@@ -237,7 +237,7 @@ func Test_Eq(t *testing.T) {
 	)
 }
 
-func Test_Neq(t *testing.T) {
+func TestNeq(t *testing.T) {
 	testExpr(t, rei(`$1 is not null`, nil), Neq{nil, nil})
 	testExpr(t, rei(`$1 is not null`, 10), Neq{10, nil})
 	testExpr(t, rei(`$1 <> $2`, nil, 10), Neq{nil, 10})
@@ -259,7 +259,7 @@ func Test_Neq(t *testing.T) {
 	)
 }
 
-func Test_EqAny(t *testing.T) {
+func TestEqAny(t *testing.T) {
 	testExpr(t, rei(`$1 = any ($2)`, nil, nil), EqAny{})
 	testExpr(t, rei(`$1 = any ($2)`, 10, 20), EqAny{10, 20})
 	testExpr(t, rei(`(one) = any ($1)`, 20), EqAny{Str(`one`), 20})
@@ -274,7 +274,7 @@ func Test_EqAny(t *testing.T) {
 	)
 }
 
-func Test_NeqAny(t *testing.T) {
+func TestNeqAny(t *testing.T) {
 	testExpr(t, rei(`$1 <> any ($2)`, nil, nil), NeqAny{})
 	testExpr(t, rei(`$1 <> any ($2)`, 10, 20), NeqAny{10, 20})
 	testExpr(t, rei(`(one) <> any ($1)`, 20), NeqAny{Str(`one`), 20})
@@ -289,7 +289,7 @@ func Test_NeqAny(t *testing.T) {
 	)
 }
 
-func Test_Not(t *testing.T) {
+func TestNot(t *testing.T) {
 	testExpr(t, rei(`not $1`, nil), Not{})
 	testExpr(t, rei(`not $1`, 10), Not{10})
 	testExpr(t, rei(`not ()`), Not{Str(``)})
@@ -311,7 +311,7 @@ func Test_Not(t *testing.T) {
 	)
 }
 
-func Test_Seq(t *testing.T) {
+func TestSeq(t *testing.T) {
 	testExpr(t, rei(``), Seq{})
 	testExpr(t, rei(`empty`), Seq{Empty: `empty`})
 	testExpr(t, rei(`empty`), Seq{`empty`, `delim`, list(nil)})
@@ -364,7 +364,7 @@ func Test_Seq(t *testing.T) {
 	)
 }
 
-func Test_Comma(t *testing.T) {
+func TestComma(t *testing.T) {
 	testExpr(t, rei(``), Comma{})
 	testExpr(t, rei(``), Comma{Comma{Comma{}}})
 	testExpr(t, rei(``), Comma{list{}})
@@ -378,7 +378,7 @@ func Test_Comma(t *testing.T) {
 	testExpr(t, rei(`$1, (one)`, 10), Comma{list{10, Str(`one`)}})
 }
 
-func Test_And(t *testing.T) {
+func TestAnd(t *testing.T) {
 	testExpr(t, rei(`true`), And{})
 
 	t.Run(`slice`, func(t *testing.T) {
@@ -448,7 +448,7 @@ func Test_And(t *testing.T) {
 	})
 }
 
-func Test_Or(t *testing.T) {
+func TestOr(t *testing.T) {
 	testExpr(t, rei(`false`), Or{})
 
 	t.Run(`slice`, func(t *testing.T) {
@@ -518,7 +518,7 @@ func Test_Or(t *testing.T) {
 	})
 }
 
-func Test_Ands(t *testing.T) {
+func TestAnds(t *testing.T) {
 	testExpr(t, rei(`true`), Ands{})
 	testExpr(t, rei(`$1`, 10), Ands{10})
 	testExpr(t, rei(`$1 and $2`, 10, 20), Ands{10, 20})
@@ -532,7 +532,7 @@ func Test_Ands(t *testing.T) {
 	testExpr(t, rei(`($1 and $2) and ($3 and $4)`, 10, 20, 30, 40), Ands{Ands{10, 20}, Ands{30, 40}})
 }
 
-func Test_Ors(t *testing.T) {
+func TestOrs(t *testing.T) {
 	testExpr(t, rei(`false`), Ors{})
 	testExpr(t, rei(`$1`, 10), Ors{10})
 	testExpr(t, rei(`$1 or $2`, 10, 20), Ors{10, 20})
@@ -546,7 +546,7 @@ func Test_Ors(t *testing.T) {
 	testExpr(t, rei(`($1 or $2) or ($3 or $4)`, 10, 20, 30, 40), Ors{Ors{10, 20}, Ors{30, 40}})
 }
 
-func Test_Cond(t *testing.T) {
+func TestCond(t *testing.T) {
 	testExpr(t, rei(``), Cond{})
 	testExpr(t, rei(`empty`), Cond{Empty: `empty`})
 	testExpr(t, rei(`one`), Cond{Val: Str(`one`)})
@@ -598,7 +598,7 @@ func Test_Cond(t *testing.T) {
 	})
 }
 
-func Test_Cond_filter(t *testing.T) {
+func TestCond_filter(t *testing.T) {
 	test := func(exp R, val interface{}, fil Haser) {
 		t.Helper()
 		testExpr(t, exp, Cond{`empty`, `delim`, Partial{val, fil}})
@@ -610,7 +610,7 @@ func Test_Cond_filter(t *testing.T) {
 	test(rei(`"one" = $1 delim "two" = $2`, 10, 20), &PairStruct{10, 20}, HaserTrue{})
 }
 
-func Test_Cols(t *testing.T) {
+func TestCols(t *testing.T) {
 	test := func(exp string, typ interface{}) {
 		t.Helper()
 		testExpr(t, rei(exp), Cols{typ})
@@ -673,7 +673,7 @@ func Test_Cols(t *testing.T) {
 	test(external, &[]**External{})
 }
 
-func Test_ColsDeep(t *testing.T) {
+func TestColsDeep(t *testing.T) {
 	test := func(exp string, typ interface{}) {
 		t.Helper()
 		eq(t, exp, TypeColsDeep(typeElemOf(typ)))
@@ -717,7 +717,7 @@ func Test_ColsDeep(t *testing.T) {
 	test(external, &[]**External{})
 }
 
-func Test_StructValues(t *testing.T) {
+func TestStructValues(t *testing.T) {
 	testExpr(t, rei(``), StructValues{})
 	testExpr(t, rei(``), StructValues{Void{}})
 	testExpr(t, rei(``), StructValues{&Void{}})
@@ -744,14 +744,14 @@ func Test_StructValues(t *testing.T) {
 	)
 }
 
-func Test_StructValues_filter(t *testing.T) {
+func TestStructValues_filter(t *testing.T) {
 	testExpr(t, rei(``), StructValues{Partial{PairStruct{10, 20}, nil}})
 	testExpr(t, rei(``), StructValues{Partial{&PairStruct{10, 20}, nil}})
 	testExpr(t, rei(`$1, $2`, 10, 20), StructValues{Partial{PairStruct{10, 20}, HaserTrue{}}})
 	testExpr(t, rei(`$1, $2`, 10, 20), StructValues{Partial{&PairStruct{10, 20}, HaserTrue{}}})
 }
 
-func Test_StructInsert(t *testing.T) {
+func TestStructInsert(t *testing.T) {
 	testExpr(t, rei(`default values`), StructInsert{})
 	testExpr(t, rei(`default values`), StructInsert{Void{}})
 	testExpr(t, rei(`default values`), StructInsert{&Void{}})
@@ -812,14 +812,14 @@ func Test_StructInsert(t *testing.T) {
 	)
 }
 
-func Test_StructInsert_filter(t *testing.T) {
+func TestStructInsert_filter(t *testing.T) {
 	testExpr(t, rei(`default values`), StructInsert{Partial{PairStruct{10, 20}, nil}})
 	testExpr(t, rei(`default values`), StructInsert{Partial{&PairStruct{10, 20}, nil}})
 	testExpr(t, rei(`("one", "two") values ($1, $2)`, 10, 20), StructInsert{Partial{PairStruct{10, 20}, HaserTrue{}}})
 	testExpr(t, rei(`("one", "two") values ($1, $2)`, 10, 20), StructInsert{Partial{&PairStruct{10, 20}, HaserTrue{}}})
 }
 
-func Test_StructAssign(t *testing.T) {
+func TestStructAssign(t *testing.T) {
 	panics(t, `assignment must have at least one field`, func() {
 		StructAssign{}.AppendExpr(nil, nil)
 	})
@@ -850,7 +850,7 @@ func Test_StructAssign(t *testing.T) {
 	)
 }
 
-func Test_StructAssign_filter(t *testing.T) {
+func TestStructAssign_filter(t *testing.T) {
 	testExpr(t, rei(`"one" = $1, "two" = $2`, 10, 20), StructAssign{Partial{PairStruct{10, 20}, HaserTrue{}}})
 	testExpr(t, rei(`"one" = $1, "two" = $2`, 10, 20), StructAssign{Partial{&PairStruct{10, 20}, HaserTrue{}}})
 
@@ -863,7 +863,7 @@ func Test_StructAssign_filter(t *testing.T) {
 	})
 }
 
-func Test_SelectCols(t *testing.T) {
+func TestSelectCols(t *testing.T) {
 	testExpr(t, rei(``), SelectCols{})
 	testExpr(t, rei(`select "one"`), SelectCols{nil, UnitStruct{}})
 	testExpr(t, rei(`table "some_table"`), SelectCols{Table{`some_table`}, nil})
@@ -887,7 +887,7 @@ func Test_SelectCols(t *testing.T) {
 	)
 }
 
-func Test_SelectColsDeep(t *testing.T) {
+func TestSelectColsDeep(t *testing.T) {
 	testExpr(t, rei(``), SelectColsDeep{})
 	testExpr(t, rei(`select "one"`), SelectColsDeep{nil, UnitStruct{}})
 	testExpr(t, rei(`table "some_table"`), SelectColsDeep{Table{`some_table`}, nil})
@@ -911,7 +911,7 @@ func Test_SelectColsDeep(t *testing.T) {
 	)
 }
 
-func Test_Prefix(t *testing.T) {
+func TestPrefix(t *testing.T) {
 	testExpr(t, rei(``), Prefix{})
 	testExpr(t, rei(``), Prefix{`prefix`, nil})
 	testExpr(t, rei(`prefix `), Prefix{`prefix`, Str(``)})
@@ -929,7 +929,7 @@ func Test_Prefix(t *testing.T) {
 	)
 }
 
-func Test_Wrap(t *testing.T) {
+func TestWrap(t *testing.T) {
 	testExpr(t, rei(``), Wrap{})
 	testExpr(t, rei(``), Wrap{`prefix`, nil, ``})
 	testExpr(t, rei(``), Wrap{``, nil, `suffix`})
@@ -950,7 +950,7 @@ func Test_Wrap(t *testing.T) {
 	)
 }
 
-func Test_OrderBy(t *testing.T) {
+func TestOrderBy(t *testing.T) {
 	testExpr(t, rei(``), OrderBy{})
 	testExpr(t, rei(`order by ""`), OrderBy{Ident(``)})
 	testExpr(t, rei(`order by "one"`), OrderBy{Ident(`one`)})
@@ -964,7 +964,7 @@ func Test_OrderBy(t *testing.T) {
 	)
 }
 
-func Test_Select(t *testing.T) {
+func TestSelect(t *testing.T) {
 	test := exprTest(t)
 
 	test(rei(`select * from ""`), Select{})
@@ -1004,7 +1004,7 @@ func Test_Select(t *testing.T) {
 	)
 }
 
-func Test_Insert(t *testing.T) {
+func TestInsert(t *testing.T) {
 	test := exprTest(t)
 
 	test(
@@ -1054,7 +1054,7 @@ func Test_Insert(t *testing.T) {
 	)
 }
 
-func Test_Update(t *testing.T) {
+func TestUpdate(t *testing.T) {
 	test := exprTest(t)
 
 	test(rei(`update "" returning *`), Update{})
@@ -1108,7 +1108,7 @@ func Test_Update(t *testing.T) {
 	)
 }
 
-func Test_Delete(t *testing.T) {
+func TestDelete(t *testing.T) {
 	test := exprTest(t)
 
 	test(rei(`delete from "" where null returning *`), Delete{})
@@ -1155,7 +1155,7 @@ func Test_Delete(t *testing.T) {
 	)
 }
 
-func Test_Call(t *testing.T) {
+func TestCall(t *testing.T) {
 	testExpr(t, rei(`()`), Call{})
 	testExpr(t, rei(`prefix ()`), Call{`prefix`, nil})
 	testExpr(t, rei(`()`), Call{``, Str(``)})
@@ -1190,7 +1190,7 @@ func Test_Call(t *testing.T) {
 	)
 }
 
-func Test_RowNumberOver(t *testing.T) {
+func TestRowNumberOver(t *testing.T) {
 	testExpr(t, rei(`0`), RowNumberOver{})
 	testExpr(t, rei(`row_number() over ()`), RowNumberOver{Str(``)})
 	testExpr(t, rei(`row_number() over (one)`), RowNumberOver{Str(`one`)})
@@ -1205,7 +1205,7 @@ func Test_RowNumberOver(t *testing.T) {
 	)
 }
 
-func Test_StrQ_without_args(t *testing.T) {
+func TestStrQ_without_args(t *testing.T) {
 	testExpr(t, rei(``), StrQ{})
 	testExpr(t, rei(`one`), StrQ{`one`, nil})
 	testExpr(t, rei(`one`), StrQ{`one`, Dict(nil)})
@@ -1221,7 +1221,7 @@ func Test_StrQ_without_args(t *testing.T) {
 	})
 }
 
-func Test_ListQ_invalid(t *testing.T) {
+func TestListQ_invalid(t *testing.T) {
 	panics(t, `non-parametrized expression "" expected no arguments`, func() {
 		ListQ(``, nil).AppendExpr(nil, nil)
 	})
@@ -1247,12 +1247,12 @@ func Test_ListQ_invalid(t *testing.T) {
 	})
 }
 
-func Test_ListQ_empty_args(t *testing.T) {
+func TestListQ_empty_args(t *testing.T) {
 	testExpr(t, rei(``), ListQ(``))
 	testExpr(t, rei(`one`), ListQ(`one`))
 }
 
-func Test_ListQ_normal(t *testing.T) {
+func TestListQ_normal(t *testing.T) {
 	test := exprTest(t)
 
 	test(rei(`one = $1`, nil), ListQ(`one = $1`, nil))
@@ -1290,7 +1290,7 @@ func Test_ListQ_normal(t *testing.T) {
 	)
 }
 
-func Test_DictQ_invalid(t *testing.T) {
+func TestDictQ_invalid(t *testing.T) {
 	panics(t, `non-parametrized expression "" expected no arguments`, func() {
 		DictQ(``, Dict{`one`: 10}).AppendExpr(nil, nil)
 	})
@@ -1336,7 +1336,7 @@ func Test_DictQ_invalid(t *testing.T) {
 	})
 }
 
-func Test_DictQ_empty_args(t *testing.T) {
+func TestDictQ_empty_args(t *testing.T) {
 	testExpr(t, rei(``), DictQ(``, nil))
 	testExpr(t, rei(`one`), DictQ(`one`, nil))
 	testExpr(t, rei(`one two`), DictQ(`one two`, nil))
@@ -1344,7 +1344,7 @@ func Test_DictQ_empty_args(t *testing.T) {
 	testExpr(t, rei(``), DictQ(``, Dict{}))
 }
 
-func Test_DictQ_normal(t *testing.T) {
+func TestDictQ_normal(t *testing.T) {
 	test := exprTest(t)
 
 	test(rei(`one = $1`, nil), DictQ(`one = :one`, Dict{`one`: nil}))
@@ -1386,7 +1386,7 @@ func Test_DictQ_normal(t *testing.T) {
 	)
 }
 
-func Test_StructQ_invalid(t *testing.T) {
+func TestStructQ_invalid(t *testing.T) {
 	panics(t, `non-parametrized expression "" expected no arguments`, func() {
 		StructQ(``, Void{}).AppendExpr(nil, nil)
 	})
@@ -1408,7 +1408,7 @@ func Test_StructQ_invalid(t *testing.T) {
 	})
 }
 
-func Test_StructQ_empty_args(t *testing.T) {
+func TestStructQ_empty_args(t *testing.T) {
 	testExpr(t, rei(``), StructQ(``, nil))
 	testExpr(t, rei(``), StructQ(``, nil))
 	testExpr(t, rei(`one`), StructQ(`one`, nil))
@@ -1417,7 +1417,7 @@ func Test_StructQ_empty_args(t *testing.T) {
 	testExpr(t, rei(`one`), StructQ(`one`, (*Void)(nil)))
 }
 
-func Test_StructQ_fields(t *testing.T) {
+func TestStructQ_fields(t *testing.T) {
 	test := exprTest(t)
 
 	panics(t, `missing named argument ":one" (key "one")`, func() {
@@ -1453,7 +1453,7 @@ func Test_StructQ_fields(t *testing.T) {
 	)
 }
 
-func Test_StructQ_methods(t *testing.T) {
+func TestStructQ_methods(t *testing.T) {
 	test := exprTest(t)
 
 	panics(t, `missing named argument ":GetVal" (key "GetVal")`, func() {
@@ -1499,7 +1499,7 @@ func Test_StructQ_methods(t *testing.T) {
 	)
 }
 
-func Test_Prep_Parse(t *testing.T) {
+func TestPrep_Parse(t *testing.T) {
 	testPrepParse(t, func(src string, tokens []Token, hasParams bool) {
 		t.Helper()
 		prep := Prep{Source: src}
@@ -1508,7 +1508,7 @@ func Test_Prep_Parse(t *testing.T) {
 	})
 }
 
-func Test_Preparse(t *testing.T) {
+func TestPreparse(t *testing.T) {
 	testPrepParse(t, func(src string, tokens []Token, hasParams bool) {
 		t.Helper()
 		eq(t, Prep{src, tokens, hasParams}, Preparse(src))
@@ -1553,7 +1553,7 @@ three
 	)
 }
 
-func Test_Preparse_dedup(t *testing.T) {
+func TestPreparse_dedup(t *testing.T) {
 	test := func(val string) {
 		t.Helper()
 
@@ -1583,7 +1583,7 @@ Note: parametrized expression building is verified in various tests for `StrQ`,
 which uses a `Prep` internally. This is mostly for verifying the automatic
 "unparam" mode and associated assertions.
 */
-func Test_Prep_AppendParamExpr_unparam(t *testing.T) {
+func TestPrep_AppendParamExpr_unparam(t *testing.T) {
 	test := func(exp R, vals ...string) {
 		t.Helper()
 		eq(t, exp, reiFrom(reifyUnparamPreps(vals...)))
@@ -1651,7 +1651,7 @@ func Test_combinations(t *testing.T) {
 	)
 }
 
-func Test_column_fields(t *testing.T) {
+func Testcolumn_fields(t *testing.T) {
 	eq(
 		t,
 		[][2]string{
@@ -1675,7 +1675,7 @@ func tCols() (out [][2]string) {
 	return
 }
 
-func Test_List(t *testing.T) {
+func TestList(t *testing.T) {
 	zero := List(nil)
 	empty := List{}
 	full := List{10, 20, 30, 40, 50, 60, 70, 80}
@@ -1752,7 +1752,7 @@ func Test_List(t *testing.T) {
 	testOrdFull(16, nil, false)
 }
 
-func Test_Dict(t *testing.T) {
+func TestDict(t *testing.T) {
 	zero := Dict(nil)
 	empty := Dict{}
 	full := benchDict
@@ -1764,7 +1764,7 @@ func Test_Dict(t *testing.T) {
 	testArgDictNamed(t, zero, empty, full)
 }
 
-func Test_StructDict(t *testing.T) {
+func TestStructDict(t *testing.T) {
 	zero := StructDict{}
 	empty := StructDict{r.ValueOf(Void{})}
 	full := benchStructDict
@@ -1838,7 +1838,7 @@ func testArgDictNamed(t testing.TB, zero, empty, full ArgDict) {
 	testKeyVal(`Key_4f0e9d9b4d1ea77c510337ae6c2a`, `val_60a4b1bf406f98826c706ab153d1`)
 }
 
-func Test_Partial(t *testing.T) {
+func TestPartial(t *testing.T) {
 	t.Run(`Get`, func(t *testing.T) {
 		test := func(val interface{}) {
 			eq(t, val, Partial{val, nil}.Get())
@@ -2022,4 +2022,76 @@ func TestArrayAppender(t *testing.T) {
 	test(`{10,20}`, ArrayAppender{nil, Stringer{10}, nil, Stringer{20}, nil, Stringer{``}})
 	test(`{10,20,30}`, ArrayAppender{CommaAppender{Stringer{10}}, CommaAppender{Stringer{20}, Stringer{``}, Stringer{30}}})
 	test(`{{10},{20,30}}`, ArrayAppender{ArrayAppender{Stringer{10}}, ArrayAppender{Stringer{20}, Stringer{``}, Stringer{30}}})
+}
+
+func TestLimit(t *testing.T) {
+	testExpr(t, rei(``), Limit{})
+	testExpr(t, rei(`limit $1`, 0), Limit{0})
+	testExpr(t, rei(`limit $1`, -10), Limit{-10})
+	testExpr(t, rei(`limit $1`, 10), Limit{10})
+	testExpr(t, rei(`limit $1`, ``), Limit{``})
+	testExpr(t, rei(`limit $1`, `one`), Limit{`one`})
+	testExpr(t, rei(`limit ()`), Limit{Str(``)})
+	testExpr(t, rei(`limit (one)`), Limit{Str(`one`)})
+	testExpr(t, rei(`limit ($1)`, 10), Limit{rei(`$1`, 10)})
+
+	testExprs(
+		t,
+		rei(`$1 limit $2 $3 limit ($4)`, 10, 20, 30, 40),
+		rei(`$1`, 10),
+		Limit{20},
+		rei(`$3`, 30),
+		Limit{rei(`$4`, 40)},
+	)
+}
+
+func TestOffset(t *testing.T) {
+	testExpr(t, rei(``), Offset{})
+	testExpr(t, rei(`offset $1`, 0), Offset{0})
+	testExpr(t, rei(`offset $1`, -10), Offset{-10})
+	testExpr(t, rei(`offset $1`, 10), Offset{10})
+	testExpr(t, rei(`offset $1`, ``), Offset{``})
+	testExpr(t, rei(`offset $1`, `one`), Offset{`one`})
+	testExpr(t, rei(`offset ()`), Offset{Str(``)})
+	testExpr(t, rei(`offset (one)`), Offset{Str(`one`)})
+	testExpr(t, rei(`offset ($1)`, 10), Offset{rei(`$1`, 10)})
+
+	testExprs(
+		t,
+		rei(`$1 offset $2 $3 offset ($4)`, 10, 20, 30, 40),
+		rei(`$1`, 10),
+		Offset{20},
+		rei(`$3`, 30),
+		Offset{rei(`$4`, 40)},
+	)
+}
+
+func TestLimitUint(t *testing.T) {
+	testExpr(t, rei(``), LimitUint(0))
+	testExpr(t, rei(`limit 10`), LimitUint(10))
+	testExpr(t, rei(`limit 20`), LimitUint(20))
+
+	testExprs(
+		t,
+		rei(`$1 limit 30 $2 limit 40`, 10, 20),
+		rei(`$1`, 10),
+		LimitUint(30),
+		rei(`$2`, 20),
+		LimitUint(40),
+	)
+}
+
+func TestOffsetUint(t *testing.T) {
+	testExpr(t, rei(``), OffsetUint(0))
+	testExpr(t, rei(`offset 10`), OffsetUint(10))
+	testExpr(t, rei(`offset 20`), OffsetUint(20))
+
+	testExprs(
+		t,
+		rei(`$1 offset 30 $2 offset 40`, 10, 20),
+		rei(`$1`, 10),
+		OffsetUint(30),
+		rei(`$2`, 20),
+		OffsetUint(40),
+	)
 }

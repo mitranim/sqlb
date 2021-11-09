@@ -6,6 +6,7 @@ import (
 	"fmt"
 	r "reflect"
 	"regexp"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -902,4 +903,31 @@ func headByte(val []byte) byte {
 		return val[0]
 	}
 	return 0
+}
+
+func appendIntWith(text []byte, delim string, val int64) []byte {
+	if val == 0 {
+		return text
+	}
+
+	text = maybeAppendSpace(text)
+	text = append(text, delim...)
+	text = maybeAppendSpace(text)
+	text = strconv.AppendInt(text, val, 10)
+	return text
+}
+
+func appendPrefixSub(
+	text []byte, args []interface{}, prefix string, val interface{},
+) (
+	[]byte, []interface{},
+) {
+	if val == nil {
+		return text, args
+	}
+
+	bui := Bui{text, args}
+	bui.Str(prefix)
+	bui.SubAny(val)
+	return bui.Get()
 }

@@ -1519,3 +1519,97 @@ func (self NamedParam) String() string { return AppenderString(&self) }
 // Converts to the corresponding dictionary key, which is a plain string. This
 // is a free cast, used to increase code clarity.
 func (self NamedParam) Key() string { return string(self) }
+
+/*
+Represents SQL expression "limit N" with an arbitrary argument or
+sub-expression. Implements `Expr`:
+
+  * If nil  -> append nothing.
+  * If expr -> append "limit (<sub-expression>)".
+  * If val  -> append "limit $N" with the corresponding argument.
+*/
+type Limit [1]interface{}
+
+// Implement the `Expr` interface, making this a sub-expression.
+func (self Limit) AppendExpr(text []byte, args []interface{}) ([]byte, []interface{}) {
+	return appendPrefixSub(text, args, `limit`, self[0])
+}
+
+// Implement the `Appender` interface, sometimes allowing more efficient text
+// encoding.
+func (self Limit) Append(text []byte) []byte { return exprAppend(&self, text) }
+
+// Implement the `fmt.Stringer` interface for debug purposes.
+func (self Limit) String() string { return AppenderString(&self) }
+
+/*
+Represents SQL expression "offset N" with an arbitrary sub-expression.
+Implements `Expr`:
+
+  * If nil  -> append nothing.
+  * If expr -> append "offset (<sub-expression>)".
+  * If val  -> append "offset $N" with the corresponding argument.
+*/
+type Offset [1]interface{}
+
+// Implement the `Expr` interface, making this a sub-expression.
+func (self Offset) AppendExpr(text []byte, args []interface{}) ([]byte, []interface{}) {
+	return appendPrefixSub(text, args, `offset`, self[0])
+}
+
+// Implement the `Appender` interface, sometimes allowing more efficient text
+// encoding.
+func (self Offset) Append(text []byte) []byte { return exprAppend(&self, text) }
+
+// Implement the `fmt.Stringer` interface for debug purposes.
+func (self Offset) String() string { return AppenderString(&self) }
+
+/*
+Represents SQL expression "limit N" with a number. Implements `Expr`:
+
+	* If 0      -> append nothing.
+	* Otherwise -> append literal "limit <N>" such as "limit 1".
+
+Because this is uint64, you can safely and correctly decode arbitrary user input
+into this value, for example into a struct field of this type.
+*/
+type LimitUint uint64
+
+// Implement the `Expr` interface, making this a sub-expression.
+func (self LimitUint) AppendExpr(text []byte, args []interface{}) ([]byte, []interface{}) {
+	return self.Append(text), args
+}
+
+// Implement the `Appender` interface, sometimes allowing more efficient text
+// encoding.
+func (self LimitUint) Append(text []byte) []byte {
+	return appendIntWith(text, `limit`, int64(self))
+}
+
+// Implement the `fmt.Stringer` interface for debug purposes.
+func (self LimitUint) String() string { return AppenderString(&self) }
+
+/*
+Represents SQL expression "offset N" with a number. Implements `Expr`:
+
+	* If 0      -> append nothing.
+	* Otherwise -> append literal "offset <N>" such as "offset 1".
+
+Because this is uint64, you can safely and correctly decode arbitrary user input
+into this value, for example into a struct field of this type.
+*/
+type OffsetUint uint64
+
+// Implement the `Expr` interface, making this a sub-expression.
+func (self OffsetUint) AppendExpr(text []byte, args []interface{}) ([]byte, []interface{}) {
+	return self.Append(text), args
+}
+
+// Implement the `Appender` interface, sometimes allowing more efficient text
+// encoding.
+func (self OffsetUint) Append(text []byte) []byte {
+	return appendIntWith(text, `offset`, int64(self))
+}
+
+// Implement the `fmt.Stringer` interface for debug purposes.
+func (self OffsetUint) String() string { return AppenderString(&self) }
