@@ -100,6 +100,10 @@ func Example_composition() {
 
 ## Changelog
 
+### v0.4.3
+
+Add `SelectCount`.
+
 ### v0.4.2
 
 Add `Limit`, `Offset`, `LimitUint`, `OffsetUint`.

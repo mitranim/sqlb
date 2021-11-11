@@ -1197,6 +1197,24 @@ func (self Delete) Append(text []byte) []byte { return exprAppend(&self, text) }
 func (self Delete) String() string { return exprString(&self) }
 
 /*
+Shortcut for selecting `count(*)` from an arbitrary sub-expression. Equivalent
+to `s.SelectString{expr, "count(*)"}`.
+*/
+type SelectCount [1]Expr
+
+// Implement the `Expr` interface, making this a sub-expression.
+func (self SelectCount) AppendExpr(text []byte, args []interface{}) ([]byte, []interface{}) {
+	return SelectString{self[0], `count(*)`}.AppendExpr(text, args)
+}
+
+// Implement the `Appender` interface, sometimes allowing more efficient text
+// encoding.
+func (self SelectCount) Append(text []byte) []byte { return exprAppend(&self, text) }
+
+// Implement the `fmt.Stringer` interface for debug purposes.
+func (self SelectCount) String() string { return exprString(&self) }
+
+/*
 Represents an SQL function call expression. The text prefix is optional and
 usually represents a function name. The args must be either nil, a single
 `Expr`, or a slice of arbitrary sub-expressions or arguments.

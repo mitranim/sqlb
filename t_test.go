@@ -1155,6 +1155,25 @@ func TestDelete(t *testing.T) {
 	)
 }
 
+func TestSelectCount(t *testing.T) {
+	test := exprTest(t)
+
+	test(rei(`select count(*)`), SelectCount{})
+	test(rei(`with _ as (one) select count(*) from _`), SelectCount{Str(`one`)})
+
+	test(
+		rei(`with _ as (coalesce ($1, $2)) select count(*) from _`, 10, 20),
+		SelectCount{Call{`coalesce`, []int{10, 20}}},
+	)
+
+	testExprs(
+		t,
+		rei(`coalesce ($1, $2) with _ as (coalesce ($3, $4)) select count(*) from _`, 10, 20, 30, 40),
+		Call{`coalesce`, []int{10, 20}},
+		SelectCount{Call{`coalesce`, []int{30, 40}}},
+	)
+}
+
 func TestCall(t *testing.T) {
 	testExpr(t, rei(`()`), Call{})
 	testExpr(t, rei(`prefix ()`), Call{`prefix`, nil})

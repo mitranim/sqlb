@@ -551,6 +551,14 @@ func ExampleDelete_filtered() {
 	// delete from "some_table" where "col0" = $1 and "col1" = $2 returning * [10 20]
 }
 
+func ExampleSelectCount() {
+	fmt.Println(
+		s.SelectCount{s.Table{`some_table`}},
+	)
+	// Output:
+	// with _ as (table "some_table") select count(*) from _
+}
+
 func ExampleCall_empty() {
 	fmt.Println(s.Call{`some_func`, nil})
 	// Output:
