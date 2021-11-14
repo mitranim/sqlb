@@ -100,6 +100,21 @@ func Example_composition() {
 
 ## Changelog
 
+### v0.5.0
+
+* Revised ords parsing.
+  * Split `OrdsParser` into two types:
+    * `ParserOrds` → suitable for inclusion into other types.
+    * `OrdsParser` → suitable for transient, stackframe-local use.
+  * Added `(*Ords).OrdsParser` suitable for use by types that embed `Ords` and implement custom parsing methods.
+  * Support arbitrary filters for struct fields.
+  * Added `TagFilter` for field filtering.
+* Renamed `Sparse.HasField` to `Sparse.AllowField`. `Filter` uses a method with the same signature, and the old name didn't make sense for it.
+* Misc:
+  * Renamed `(*Ords).AppendVals` → `(*Ords).Add`.
+  * Added `(*Ords).Zero`.
+  * Replaced `Ords.Grow` with `(*Ords).Grow` that modifies the receiver.
+
 ### v0.4.3
 
 Add `SelectCount`.

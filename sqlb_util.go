@@ -74,6 +74,11 @@ type structPath struct {
 	MethodIndex int
 }
 
+type structFieldValue struct {
+	Field r.StructField
+	Value r.Value
+}
+
 type typeCache struct {
 	sync.Map
 	Func func(r.Type) interface{}
@@ -291,6 +296,18 @@ func growInterfaces(prev []interface{}, size int) []interface{} {
 	return next
 }
 
+// Same as `growBytes`. WTB generics.
+func growExprs(prev []Expr, size int) []Expr {
+	len, cap := len(prev), cap(prev)
+	if cap-len >= size {
+		return prev
+	}
+
+	next := make([]Expr, len, 2*cap+size)
+	copy(next, prev)
+	return next
+}
+
 var argTrackerPool = sync.Pool{New: newArgTracker}
 
 func newArgTracker() interface{} { return new(argTracker) }
@@ -427,57 +444,32 @@ var prepCache = stringCache{Func: func(src string) interface{} {
 }}
 
 var colsCache = typeCache{Func: func(typ r.Type) interface{} {
-	return cols(typ)
+	typ = typeElem(typ)
+	if isStructType(typ) {
+		return structCols(typ)
+	}
+	return `*`
 }}
 
 var colsDeepCache = typeCache{Func: func(typ r.Type) interface{} {
-	return colsDeep(typ)
-}}
-
-var structDbFieldsCache = typeCache{Func: func(typ r.Type) interface{} {
-	return structDbFields(typ)
+	typ = typeElem(typ)
+	if isStructType(typ) {
+		return structColsDeep(typ)
+	}
+	return `*`
 }}
 
 func loadStructDbFields(typ r.Type) []r.StructField {
 	return structDbFieldsCache.Get(typeElem(typ)).([]r.StructField)
 }
 
-var structPathsCache = typeCache{Func: func(typ r.Type) interface{} {
-	return structPaths(typ)
-}}
+var structDbFieldsCache = typeCache{Func: func(typ r.Type) interface{} {
+	// No `make` because `typ.NumField()` doesn't give us the full count.
+	var out []r.StructField
 
-func loadStructPaths(typ r.Type) []structPath {
-	return structPathsCache.Get(typeElem(typ)).([]structPath)
-}
-
-var structPathMapCache = typeCache{Func: func(typ r.Type) interface{} {
-	return structPathMap(typ)
-}}
-
-func loadStructPathMap(typ r.Type) map[string]structPath {
-	return structPathMapCache.Get(typeElem(typ)).(map[string]structPath)
-}
-
-var structJsonPathToNestedDbFieldMapCache = typeCache{Func: func(typ r.Type) interface{} {
-	return structJsonPathToNestedDbFieldMap(typ)
-}}
-
-func loadStructJsonPathToNestedDbFieldMap(typ r.Type) map[string]structNestedDbField {
-	return structJsonPathToNestedDbFieldMapCache.Get(typeElem(typ)).(map[string]structNestedDbField)
-}
-
-var structJsonPathToDbPathReflectValueMapCache = typeCache{Func: func(typ r.Type) interface{} {
-	return structJsonPathToDbPathReflectValueMap(typ)
-}}
-
-func loadStructJsonPathToDbPathReflectValueMap(typ r.Type) map[string]r.Value {
-	return structJsonPathToDbPathReflectValueMapCache.Get(typeElem(typ)).(map[string]r.Value)
-}
-
-func structDbFields(typ r.Type) (out []r.StructField) {
 	typ = typeElem(typ)
 	if typ == nil {
-		return
+		return out
 	}
 
 	reqStructType(`scanning DB-related struct fields`, typ)
@@ -486,8 +478,86 @@ func structDbFields(typ r.Type) (out []r.StructField) {
 	for i := range counter(typ.NumField()) {
 		appendStructDbFields(&out, &path, typ, i)
 	}
-	return
+
+	return out
+}}
+
+func loadStructPaths(typ r.Type) []structPath {
+	return structPathsCache.Get(typeElem(typ)).([]structPath)
 }
+
+var structPathsCache = typeCache{Func: func(typ r.Type) interface{} {
+	var out []structPath
+
+	typ = typeElem(typ)
+	if typ == nil {
+		return out
+	}
+
+	reqStructType(`scanning struct field and method paths`, typ)
+
+	path := make([]int, 0, expectedStructNestingDepth)
+	for i := range counter(typ.NumField()) {
+		appendStructFieldPaths(&out, &path, typ, i)
+	}
+
+	for i := range counter(typ.NumMethod()) {
+		meth := typ.Method(i)
+		if isPublic(meth.PkgPath) {
+			out = append(out, structPath{Name: meth.Name, MethodIndex: i})
+		}
+	}
+
+	return out
+}}
+
+func loadStructPathMap(typ r.Type) map[string]structPath {
+	return structPathMapCache.Get(typeElem(typ)).(map[string]structPath)
+}
+
+var structPathMapCache = typeCache{Func: func(typ r.Type) interface{} {
+	paths := loadStructPaths(typ)
+	out := make(map[string]structPath, len(paths))
+	for _, val := range paths {
+		out[val.Name] = val
+	}
+	return out
+}}
+
+func loadStructJsonPathToNestedDbFieldMap(typ r.Type) map[string]structNestedDbField {
+	return structJsonPathToNestedDbFieldMapCache.Get(typeElem(typ)).(map[string]structNestedDbField)
+}
+
+var structJsonPathToNestedDbFieldMapCache = typeCache{Func: func(typ r.Type) interface{} {
+	typ = typeElem(typ)
+	if typ == nil {
+		return map[string]structNestedDbField(nil)
+	}
+
+	reqStructType(`generating JSON-DB path mapping from struct type`, typ)
+
+	buf := map[string]structNestedDbField{}
+	jsonPath := make([]string, 0, expectedStructNestingDepth)
+	dbPath := make([]string, 0, expectedStructNestingDepth)
+
+	for i := range counter(typ.NumField()) {
+		addJsonPathsToDbPaths(buf, &jsonPath, &dbPath, typ.Field(i))
+	}
+	return buf
+}}
+
+func loadStructJsonPathToDbPathFieldValueMap(typ r.Type) map[string]structFieldValue {
+	return structJsonPathToDbPathFieldValueMapCache.Get(typeElem(typ)).(map[string]structFieldValue)
+}
+
+var structJsonPathToDbPathFieldValueMapCache = typeCache{Func: func(typ r.Type) interface{} {
+	src := loadStructJsonPathToNestedDbFieldMap(typ)
+	out := make(map[string]structFieldValue, len(src))
+	for key, val := range src {
+		out[key] = structFieldValue{val.Field, r.ValueOf(val.DbPath)}
+	}
+	return out
+}}
 
 func appendStructDbFields(buf *[]r.StructField, path *[]int, typ r.Type, index int) {
 	field := typ.Field(index)
@@ -512,28 +582,6 @@ func appendStructDbFields(buf *[]r.StructField, path *[]int, typ r.Type, index i
 	}
 }
 
-func structPaths(typ r.Type) (out []structPath) {
-	typ = typeElem(typ)
-	if typ == nil {
-		return
-	}
-
-	reqStructType(`scanning struct field and method paths`, typ)
-
-	path := make([]int, 0, expectedStructNestingDepth)
-	for i := range counter(typ.NumField()) {
-		appendStructFieldPaths(&out, &path, typ, i)
-	}
-
-	for i := range counter(typ.NumMethod()) {
-		meth := typ.Method(i)
-		if isPublic(meth.PkgPath) {
-			out = append(out, structPath{Name: meth.Name, MethodIndex: i})
-		}
-	}
-	return
-}
-
 func appendStructFieldPaths(buf *[]structPath, path *[]int, typ r.Type, index int) {
 	field := typ.Field(index)
 	if !isPublic(field.PkgPath) {
@@ -551,15 +599,6 @@ func appendStructFieldPaths(buf *[]structPath, path *[]int, typ r.Type, index in
 			appendStructFieldPaths(buf, path, typ, i)
 		}
 	}
-}
-
-func structPathMap(typ r.Type) map[string]structPath {
-	paths := loadStructPaths(typ)
-	out := make(map[string]structPath, len(paths))
-	for _, val := range paths {
-		out[val.Name] = val
-	}
-	return out
 }
 
 func makeIter(val interface{}) (out iter) {
@@ -591,14 +630,14 @@ type iter struct {
 
 	root   r.Value
 	fields []r.StructField
-	filter interface{ HasField(r.StructField) bool }
+	filter Filter
 }
 
 func (self *iter) next() bool {
 	for self.index < len(self.fields) {
 		field := self.fields[self.index]
 
-		if self.filter != nil && !self.filter.HasField(field) {
+		if self.filter != nil && !self.filter.AllowField(field) {
 			self.index++
 			continue
 		}
@@ -737,14 +776,6 @@ func tagIdent(tag string) string {
 	return tag
 }
 
-func cols(typ r.Type) string {
-	typ = typeElem(typ)
-	if isStructType(typ) {
-		return structCols(typ)
-	}
-	return `*`
-}
-
 func structCols(typ r.Type) string {
 	reqStructType(`generating struct columns string from struct type`, typ)
 
@@ -756,14 +787,6 @@ func structCols(typ r.Type) string {
 		buf = Ident(FieldDbName(field)).Append(buf)
 	}
 	return bytesToMutableString(buf)
-}
-
-func colsDeep(typ r.Type) string {
-	typ = typeElem(typ)
-	if isStructType(typ) {
-		return structColsDeep(typ)
-	}
-	return `*`
 }
 
 func structColsDeep(typ r.Type) string {
@@ -813,33 +836,6 @@ func appendFieldCols(buf *[]byte, path *[]string, field r.StructField) {
 	text = AliasedPath(*path).Append(text)
 
 	*buf = text
-}
-
-func structJsonPathToNestedDbFieldMap(typ r.Type) map[string]structNestedDbField {
-	typ = typeElem(typ)
-	if typ == nil {
-		return nil
-	}
-
-	reqStructType(`generating JSON-DB path mapping from struct type`, typ)
-
-	buf := map[string]structNestedDbField{}
-	jsonPath := make([]string, 0, expectedStructNestingDepth)
-	dbPath := make([]string, 0, expectedStructNestingDepth)
-
-	for i := range counter(typ.NumField()) {
-		addJsonPathsToDbPaths(buf, &jsonPath, &dbPath, typ.Field(i))
-	}
-	return buf
-}
-
-func structJsonPathToDbPathReflectValueMap(typ r.Type) map[string]r.Value {
-	src := loadStructJsonPathToNestedDbFieldMap(typ)
-	out := make(map[string]r.Value, len(src))
-	for key, val := range src {
-		out[key] = r.ValueOf(val.DbPath)
-	}
-	return out
 }
 
 func addJsonPathsToDbPaths(
@@ -930,4 +926,10 @@ func appendPrefixSub(
 	bui.Str(prefix)
 	bui.SubAny(val)
 	return bui.Get()
+}
+
+// Borrowed from the standard	library.
+func noescape(src unsafe.Pointer) unsafe.Pointer {
+	out := uintptr(src)
+	return unsafe.Pointer(out ^ 0)
 }

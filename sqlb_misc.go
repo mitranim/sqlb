@@ -200,7 +200,18 @@ var _ = Sparse(Partial{})
 func (self Partial) Get() interface{} { return self.Val }
 
 // Implement `Sparse`, using the underlying filter.
-func (self Partial) HasField(field r.StructField) bool {
+func (self Partial) AllowField(field r.StructField) bool {
 	name := FieldJsonName(field)
 	return name != `` && self.Fil != nil && self.Fil.Has(name)
+}
+
+/*
+Implements `Filter` by requiring that the struct field has this specific tag.
+The tag's value for any given field is ignored, only its existence is checked.
+*/
+type TagFilter string
+
+func (self TagFilter) AllowField(field r.StructField) bool {
+	_, ok := field.Tag.Lookup(string(self))
+	return ok
 }

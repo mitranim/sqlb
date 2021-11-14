@@ -123,22 +123,44 @@ func Test_Ord_combos(t *testing.T) {
 	testExpr(t, rei(`("one")."two" desc nulls last`), OrdDescNullsLast{`one`, `two`})
 }
 
-func Test_OrdsParserFor(t *testing.T) {
-	eq(t, OrdsParser{}, OrdsParserFor(nil))
-	eq(t, OrdsParser{Type: r.TypeOf(Outer{})}, OrdsParserFor(Outer{}))
-	eq(t, OrdsParser{Type: r.TypeOf(Outer{})}, OrdsParserFor(&Outer{}))
-	eq(t, OrdsParser{Type: r.TypeOf(Outer{})}, OrdsParserFor((*Outer)(nil)))
-	eq(t, OrdsParser{Type: r.TypeOf(Outer{})}, OrdsParserFor([]Outer(nil)))
-	eq(t, OrdsParser{Type: r.TypeOf(Outer{})}, OrdsParserFor([]*Outer(nil)))
-	eq(t, OrdsParser{Type: r.TypeOf(Outer{})}, OrdsParserFor((*[]Outer)(nil)))
-	eq(t, OrdsParser{Type: r.TypeOf(Outer{})}, OrdsParserFor((*[]*Outer)(nil)))
+func Test_ParseOpt_OrType(t *testing.T) {
+	test := func(exp r.Type, src, typ interface{}) {
+		t.Helper()
+
+		opt := ParseOpt{Type: r.TypeOf(src)}
+		opt.OrType(typ)
+
+		eq(t, exp, opt.Type)
+	}
+
+	test(nil, nil, nil)
+
+	test(r.TypeOf(Outer{}), nil, Outer{})
+	test(r.TypeOf(Outer{}), nil, &Outer{})
+	test(r.TypeOf(Outer{}), nil, (*Outer)(nil))
+	test(r.TypeOf(Outer{}), nil, []Outer(nil))
+	test(r.TypeOf(Outer{}), nil, []*Outer(nil))
+	test(r.TypeOf(Outer{}), nil, (*[]Outer)(nil))
+	test(r.TypeOf(Outer{}), nil, (*[]*Outer)(nil))
+
+	test(r.TypeOf(Internal{}), Internal{}, nil)
+	test(r.TypeOf(Internal{}), Internal{}, Outer{})
+	test(r.TypeOf(Internal{}), Internal{}, &Outer{})
+	test(r.TypeOf(Internal{}), Internal{}, (*Outer)(nil))
+	test(r.TypeOf(Internal{}), Internal{}, []Outer(nil))
+	test(r.TypeOf(Internal{}), Internal{}, []*Outer(nil))
+	test(r.TypeOf(Internal{}), Internal{}, (*[]Outer)(nil))
+	test(r.TypeOf(Internal{}), Internal{}, (*[]*Outer)(nil))
 }
 
-// Delegates to `(*OrdsParser).ParseSlice` which is tested separately.
-func Test_OrdsParser_UnmarshalJSON(t *testing.T) {
+// Delegates to `(*ParserOrds).ParseSlice` which is tested separately.
+func Test_ParserOrds_UnmarshalJSON(t *testing.T) {
 	test := func(exp Ords, src string, typ interface{}) {
 		t.Helper()
-		par := OrdsParserFor(typ)
+
+		var par ParserOrds
+		par.OrType(typ)
+
 		eq(t, nil, par.UnmarshalJSON([]byte(src)))
 		eq(t, exp, par.Ords)
 	}
@@ -158,10 +180,13 @@ func Test_OrdsParser_UnmarshalJSON(t *testing.T) {
 	)
 }
 
-func Test_OrdsParser_ParseSlice_invalid(t *testing.T) {
+func Test_ParserOrds_ParseSlice_invalid(t *testing.T) {
 	test := func(src, msg string, typ interface{}) {
 		t.Helper()
-		par := OrdsParserFor(typ)
+
+		var par ParserOrds
+		par.OrType(typ)
+
 		panics(t, msg, func() {
 			try(par.ParseSlice([]string{src}))
 		})
@@ -183,19 +208,22 @@ func Test_OrdsParser_ParseSlice_invalid(t *testing.T) {
 
 func testOrdsParsing(t testing.TB, exp Ords, src []string, typ interface{}) {
 	t.Helper()
-	par := OrdsParserFor(typ)
+
+	var par ParserOrds
+	par.OrType(typ)
+
 	eq(t, nil, par.ParseSlice(src))
 	eq(t, exp, par.Ords)
 }
 
-func Test_OrdsParser_ParseSlice_empty(t *testing.T) {
+func Test_ParserOrds_ParseSlice_empty(t *testing.T) {
 	testOrdsParsing(t, Ords(nil), nil, nil)
 	testOrdsParsing(t, Ords(nil), []string{}, nil)
 	testOrdsParsing(t, Ords(nil), []string{``}, nil)
 	testOrdsParsing(t, Ords(nil), []string{``, ``}, nil)
 }
 
-func Test_OrdsParser_ParseSlice_single(t *testing.T) {
+func Test_ParserOrds_ParseSlice_single(t *testing.T) {
 	test := func(exp Expr, src string, typ interface{}) {
 		t.Helper()
 		testOrdsParsing(t, Ords{exp}, []string{src}, typ)
@@ -219,7 +247,7 @@ func Test_OrdsParser_ParseSlice_single(t *testing.T) {
 	test(OrdDescNullsLast{`outer_id`}, `  outerId   dEsC   nUlLs   LaSt  `, Outer{})
 }
 
-func Test_OrdsParser_ParseSlice_multiple(t *testing.T) {
+func Test_ParserOrds_ParseSlice_multiple(t *testing.T) {
 	test := func(exp Ords, src []string, typ interface{}) {
 		t.Helper()
 		testOrdsParsing(t, exp, src, typ)
@@ -244,21 +272,66 @@ func Test_OrdsParser_ParseSlice_multiple(t *testing.T) {
 	)
 }
 
-func Test_OrdsParser_ParseSlice_lax(t *testing.T) {
+func Test_ParserOrds_ParseSlice_lax(t *testing.T) {
 	test := func(src []string, typ interface{}) {
 		t.Helper()
 
 		panics(t, `no DB path corresponding to JSON path`, func() {
-			par := OrdsParserFor(typ)
+			var par ParserOrds
+			par.OrType(typ)
 			try(par.ParseSlice(src))
 		})
 
-		par := OrdsParserFor(typ)
+		var par ParserOrds
+		par.OrType(typ)
 		par.Lax = true
+
 		eq(t, nil, par.ParseSlice(src))
 		eq(t, 0, len(par.Ords))
 	}
 
 	test([]string{`outerId`}, nil)
 	test([]string{`outer_id`}, Outer{})
+}
+
+func Test_ParseOpt_Filter(t *testing.T) {
+	type Target struct {
+		Tagged   string `json:"jsonTagged"   db:"db_tagged" ord:""`
+		Untagged string `json:"jsonUntagged" db:"db_untagged"`
+	}
+
+	t.Run(`without filter`, func(t *testing.T) {
+		par := ParserOrds{ParseOpt: ParseOpt{
+			Type: r.TypeOf(Target{}),
+		}}
+
+		try(par.ParseSlice([]string{
+			`jsonTagged asc`,
+			`jsonUntagged desc`,
+		}))
+
+		eq(
+			t,
+			Ords{
+				OrdAsc{`db_tagged`},
+				OrdDesc{`db_untagged`},
+			},
+			par.Ords,
+		)
+	})
+
+	t.Run(`with filter`, func(t *testing.T) {
+		par := ParserOrds{ParseOpt: ParseOpt{
+			Type:   r.TypeOf(Target{}),
+			Filter: TagFilter(`ord`),
+		}}
+
+		panics(
+			t,
+			`no DB path corresponding to JSON path "jsonUntagged" in type Target`,
+			func() {
+				try(par.ParseSlice([]string{`jsonUntagged asc`}))
+			},
+		)
+	})
 }

@@ -720,66 +720,70 @@ func ExampleOrds_manual() {
 	// order by "col0" desc, random() asc
 }
 
-func ExampleOrds_parse() {
+func ExampleOrds_OrdsParser() {
 	type SomeStruct struct {
 		Col0 string `json:"jsonField0" db:"dbCol0"`
 		Col1 string `json:"jsonField1" db:"dbCol1"`
 	}
 
-	parser := s.OrdsParserFor((*SomeStruct)(nil))
-
-	err := parser.ParseSlice([]string{`jsonField0 asc`, `jsonField1 desc nulls last`})
+	var ords s.Ords
+	err := ords.OrdsParser((*SomeStruct)(nil)).ParseSlice([]string{
+		`jsonField0 asc`,
+		`jsonField1 desc nulls last`,
+	})
 	if err != nil {
 		panic(err)
 	}
 
-	fmt.Printf("%#v\n\n", parser.Ords)
-	fmt.Println(parser.Ords)
+	fmt.Printf("%#v\n\n", ords)
+	fmt.Println(ords)
 	// Output:
 	// sqlb.Ords{sqlb.OrdAsc{"dbCol0"}, sqlb.OrdDescNullsLast{"dbCol1"}}
 	//
 	// order by "dbCol0" asc, "dbCol1" desc nulls last
 }
 
-func ExampleOrdsParser_ParseSlice() {
+func ExampleParserOrds_ParseSlice() {
 	type SomeStruct struct {
 		Col0 string `json:"jsonField0" db:"dbCol0"`
 		Col1 string `json:"jsonField1" db:"dbCol1"`
 	}
 
-	parser := s.OrdsParserFor((*SomeStruct)(nil))
+	var par s.ParserOrds
+	par.OrType((*SomeStruct)(nil))
 
-	err := parser.ParseSlice([]string{`jsonField0 asc`, `jsonField1 desc nulls last`})
+	err := par.ParseSlice([]string{`jsonField0 asc`, `jsonField1 desc nulls last`})
 	if err != nil {
 		panic(err)
 	}
 
-	fmt.Printf("%#v\n\n", parser.Ords)
-	fmt.Println(parser.Ords)
+	fmt.Printf("%#v\n\n", par.Ords)
+	fmt.Println(par.Ords)
 	// Output:
 	// sqlb.Ords{sqlb.OrdAsc{"dbCol0"}, sqlb.OrdDescNullsLast{"dbCol1"}}
 	//
 	// order by "dbCol0" asc, "dbCol1" desc nulls last
 }
 
-func ExampleOrdsParser_UnmarshalJSON() {
+func ExampleParserOrds_UnmarshalJSON() {
 	type SomeStruct struct {
 		Col0 string `json:"jsonField0" db:"dbCol0"`
 		Col1 string `json:"jsonField1" db:"dbCol1"`
 	}
 
-	parser := s.OrdsParserFor((*SomeStruct)(nil))
+	var par s.ParserOrds
+	par.OrType((*SomeStruct)(nil))
 
 	err := json.Unmarshal(
 		[]byte(`["jsonField0 asc", "jsonField1 desc nulls last"]`),
-		&parser,
+		&par,
 	)
 	if err != nil {
 		panic(err)
 	}
 
-	fmt.Printf("%#v\n\n", parser.Ords)
-	fmt.Println(parser.Ords)
+	fmt.Printf("%#v\n\n", par.Ords)
+	fmt.Println(par.Ords)
 	// Output:
 	// sqlb.Ords{sqlb.OrdAsc{"dbCol0"}, sqlb.OrdDescNullsLast{"dbCol1"}}
 	//

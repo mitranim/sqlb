@@ -563,13 +563,15 @@ func Benchmark_parse_ords(b *testing.B) {
 
 //go:noinline
 func benchParseOrds() {
-	parser := benchOrdsParser
+	parser := benchParserOrds
 	try(parser.ParseSlice(benchOrderingStrings))
 }
 
-var benchOrdsParser = OrdsParser{
+var benchParserOrds = ParserOrds{
 	Ords: make(Ords, 0, len(benchOrderingStrings)),
-	Type: r.TypeOf((*External)(nil)).Elem(),
+	ParseOpt: ParseOpt{
+		Type: r.TypeOf((*External)(nil)).Elem(),
+	},
 }
 
 var benchOrderingStrings = []string{

@@ -1875,10 +1875,10 @@ func TestPartial(t *testing.T) {
 		test(&Partial{})
 	})
 
-	t.Run(`HasField`, func(t *testing.T) {
+	t.Run(`AllowField`, func(t *testing.T) {
 		test := func(exp bool, val interface{}, fil Haser, tag r.StructTag) {
 			t.Helper()
-			eq(t, exp, Partial{val, fil}.HasField(r.StructField{Tag: tag}))
+			eq(t, exp, Partial{val, fil}.AllowField(r.StructField{Tag: tag}))
 		}
 
 		test(false, nil, nil, ``)

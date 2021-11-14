@@ -209,3 +209,13 @@ func errUnsupportedType(while string, typ r.Type) ErrInvalidInput {
 		fmt.Errorf(`unsupported type %q of kind %q`, typ, typ.Kind()),
 	}}
 }
+
+func errInvalidOrd(src string) ErrInvalidInput {
+	return ErrInvalidInput{Err{
+		`parsing ordering expression`,
+		fmt.Errorf(
+			`%q is not a valid ordering string; expected format: "<ident> (asc|desc)? (nulls (?:first|last))?"`,
+			src,
+		),
+	}}
+}

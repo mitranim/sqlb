@@ -83,7 +83,7 @@ type Haser interface{ Has(string) bool }
 
 /*
 Represents an arbitrary struct where not all fields are "present". Calling
-`.Get` returns the underlying struct value. Calling `.HasField` answers the
+`.Get` returns the underlying struct value. Calling `.AllowField` answers the
 question "is this field present?".
 
 Secretly supported by struct-scanning expressions such as `StructInsert`,
@@ -96,6 +96,14 @@ functionality optional.
 Concrete implementation: `Partial`.
 */
 type Sparse interface {
+	Filter
 	Get() interface{}
-	HasField(r.StructField) bool
+}
+
+/*
+Filters struct fields. Used by `Sparse` and `ParseOpt`. Implemented by
+`TagFilter`.
+*/
+type Filter interface {
+	AllowField(r.StructField) bool
 }
