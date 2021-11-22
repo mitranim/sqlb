@@ -99,14 +99,14 @@ func (self OrdsParser) UnmarshalJSON(src []byte) (err error) {
 	defer rec(&err)
 	var vals []string
 	try(json.Unmarshal(src, &vals))
-	self.ptr().parseSlice(vals)
+	self.noescape().parseSlice(vals)
 	return
 }
 
 // See `(*ParserOrds).ParseSlice` for docs.
 func (self OrdsParser) ParseSlice(src []string) (err error) {
 	defer rec(&err)
-	self.ptr().parseSlice(src)
+	self.noescape().parseSlice(src)
 	return
 }
 
@@ -185,7 +185,7 @@ func (self *OrdsParser) filter(field r.StructField) bool {
 }
 
 // Prevents a weird spurious escape that shows up in benchmarks.
-func (self *OrdsParser) ptr() *OrdsParser {
+func (self *OrdsParser) noescape() *OrdsParser {
 	return (*OrdsParser)(noescape(unsafe.Pointer(self)))
 }
 

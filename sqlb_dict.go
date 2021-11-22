@@ -93,13 +93,15 @@ func (self StructDict) GotNamed(key string) (interface{}, bool) {
 
 	In our benchmarks, making a struct dict is about 15 times faster than a normal
 	dict (100ns vs 1500ns for 12 fields and 12 methods), but accessing various
-	fields and methods is about 25 times slower on average(5000ns vs 200ns for 12
-	fields and 12 methods). The total numbers are close enough, and small enough,
-	to justify both, depending on the use case.
+	fields and methods is about 25 times slower on average (5000ns vs 200ns for
+	12 fields and 12 methods). When using only fields without methods, the
+	access time numbers are much closer (700ns vs 100ns for 12 fields). The
+	total numbers are close enough, and small enough, to justify both, depending
+	on the use case.
 
 	Compared to using `reflect.Value.FieldByName` and `reflect.Value.MethodByName`
-	every time, using a cached dict with field and method indexes improves average
-	access performance by about 3 times in our benchmarks.
+	every time, using a cached dict with field and method indexes improves
+	average access performance by about 3 times in our benchmarks.
 	*/
 
 	val := valueDeref(self[0])

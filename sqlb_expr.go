@@ -368,10 +368,6 @@ func (self Eq) AppendLhs(text []byte, args []interface{}) ([]byte, []interface{}
 
 func (self Eq) AppendRhs(text []byte, args []interface{}) ([]byte, []interface{}) {
 	bui := Bui{text, args}
-
-	// Questionable. Could be avoided by using `is not distinct from`, but at the
-	// time of writing, that operator doesn't work on indexes in PG, resulting in
-	// atrocious performance.
 	val := norm(self[1])
 
 	if val == nil {

@@ -104,6 +104,13 @@ type Sparse interface {
 Filters struct fields. Used by `Sparse` and `ParseOpt`. Implemented by
 `TagFilter`.
 */
-type Filter interface {
-	AllowField(r.StructField) bool
-}
+type Filter interface{ AllowField(r.StructField) bool }
+
+/*
+Optional interface that allows `sqlb` to determine if a given value is null,
+allowing some expressions to generate `is null` / `is not null` clauses. Not
+actually required; nils of Go nilable types are automatically considered null,
+and `sqlb` falls back on encoding the value via `driver.Valuer`. This interface
+is supported for additional flexibility and efficiency.
+*/
+type Nullable interface{ IsNull() bool }

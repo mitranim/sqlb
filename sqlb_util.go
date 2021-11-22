@@ -211,14 +211,33 @@ func rec(ptr *error) {
 	panic(val)
 }
 
+/*
+Questionable. Could be avoided by using `is [not] distinct from` which works for
+both nulls and non-nulls, but at the time of writing, that operator doesn't
+work on indexes in PG, resulting in atrocious performance.
+*/
 func norm(val interface{}) interface{} {
-	impl, _ := val.(driver.Valuer)
-	if impl != nil {
-		val, err := impl.Value()
+	val = normNil(val)
+	if val == nil {
+		return nil
+	}
+
+	nullable, _ := val.(Nullable)
+	if nullable != nil {
+		if nullable.IsNull() {
+			return nil
+		}
+		return val
+	}
+
+	valuer, _ := val.(driver.Valuer)
+	if valuer != nil {
+		val, err := valuer.Value()
 		try(err)
 		return val
 	}
-	return normNil(val)
+
+	return val
 }
 
 func normNil(val interface{}) interface{} {

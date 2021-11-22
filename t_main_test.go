@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 	"time"
-	"unsafe"
+	u "unsafe"
 )
 
 type Internal struct {
@@ -196,8 +196,14 @@ actual (simple):
 func is(t testing.TB, exp, act interface{}) {
 	t.Helper()
 
-	expIface := *(*iface)(unsafe.Pointer(&exp))
-	actIface := *(*iface)(unsafe.Pointer(&act))
+	// nolint:structcheck
+	type iface struct {
+		typ u.Pointer
+		dat u.Pointer
+	}
+
+	expIface := *(*iface)(u.Pointer(&exp))
+	actIface := *(*iface)(u.Pointer(&act))
 
 	if expIface != actIface {
 		t.Fatalf(`
@@ -217,27 +223,16 @@ actual (simple):
 	}
 }
 
-// nolint:structcheck
-type iface struct {
-	typ unsafe.Pointer
-	dat unsafe.Pointer
-}
-
 func notEq(t testing.TB, exp, act interface{}) {
 	t.Helper()
 	if r.DeepEqual(exp, act) {
-		fatalNotEq(t, exp, act)
-	}
-}
-
-func fatalNotEq(t testing.TB, exp, act interface{}) {
-	t.Helper()
-	t.Fatalf(`
+		t.Fatalf(`
 unexpected equality (detailed):
 	%#[1]v
 unexpected equality (simple):
 	%[1]v
-`, exp, act)
+	`, exp, act)
+	}
 }
 
 func panics(t testing.TB, msg string, fun func()) {
