@@ -1149,9 +1149,10 @@ func (self Update) AppendExpr(text []byte, args []interface{}) ([]byte, []interf
 		bui.Set(StructAssign{self.Fields}.AppendExpr(bui.Get()))
 	}
 
+	// TODO: when empty, panic with `ErrEmptyAssign` (rename to `ErrEmpty`).
 	if self.Where != nil {
 		bui.Str(`where`)
-		bui.Set(And{self.Where}.AppendExpr(bui.Get()))
+		bui.Set(Cond{`null`, `and`, self.Where}.AppendExpr(bui.Get()))
 	}
 
 	bui.Str(`returning *`)
@@ -1178,6 +1179,7 @@ func (self Delete) AppendExpr(text []byte, args []interface{}) ([]byte, []interf
 	bui.Str(`delete from`)
 	bui.Set(self.From.AppendExpr(bui.Get()))
 
+	// TODO: when empty, panic with `ErrEmptyAssign` (rename to `ErrEmpty`).
 	bui.Str(`where`)
 	bui.Set(Cond{`null`, `and`, self.Where}.AppendExpr(bui.Get()))
 

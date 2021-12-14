@@ -587,9 +587,12 @@ func appendStructDbFields(buf *[]r.StructField, path *[]int, typ r.Type, index i
 	defer resliceInts(path, len(*path))
 	*path = append(*path, index)
 
-	if FieldDbName(field) != `` {
-		field.Index = copyInts(*path)
-		*buf = append(*buf, field)
+	tag, ok := field.Tag.Lookup(TagNameDb)
+	if ok {
+		if tagIdent(tag) != `` {
+			field.Index = copyInts(*path)
+			*buf = append(*buf, field)
+		}
 		return
 	}
 
@@ -825,13 +828,16 @@ func appendFieldCols(buf *[]byte, path *[]string, field r.StructField) {
 		return
 	}
 
-	dbName := FieldDbName(field)
 	typ := typeDeref(field.Type)
+	tag, ok := field.Tag.Lookup(TagNameDb)
+	dbName := tagIdent(tag)
 
 	if dbName == `` {
-		if field.Anonymous && typ.Kind() == r.Struct {
-			for i := range counter(typ.NumField()) {
-				appendFieldCols(buf, path, typ.Field(i))
+		if !ok {
+			if field.Anonymous && typ.Kind() == r.Struct {
+				for i := range counter(typ.NumField()) {
+					appendFieldCols(buf, path, typ.Field(i))
+				}
 			}
 		}
 		return
@@ -864,19 +870,19 @@ func addJsonPathsToDbPaths(
 		return
 	}
 
-	jsonName := FieldJsonName(field)
-	dbName := FieldDbName(field)
 	typ := typeDeref(field.Type)
+	jsonName := FieldJsonName(field)
+	tag, ok := field.Tag.Lookup(TagNameDb)
+	dbName := tagIdent(tag)
 
 	if dbName == `` {
-		if field.Anonymous && typ.Kind() == r.Struct {
-			for i := range counter(typ.NumField()) {
-				addJsonPathsToDbPaths(buf, jsonPath, dbPath, typ.Field(i))
+		if !ok {
+			if field.Anonymous && typ.Kind() == r.Struct {
+				for i := range counter(typ.NumField()) {
+					addJsonPathsToDbPaths(buf, jsonPath, dbPath, typ.Field(i))
+				}
 			}
 		}
-		return
-	}
-	if jsonName == `` {
 		return
 	}
 
@@ -950,5 +956,6 @@ func appendPrefixSub(
 // Borrowed from the standard	library.
 func noescape(src unsafe.Pointer) unsafe.Pointer {
 	out := uintptr(src)
+	// nolint:staticcheck
 	return unsafe.Pointer(out ^ 0)
 }

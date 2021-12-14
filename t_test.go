@@ -1092,7 +1092,7 @@ func TestUpdate(t *testing.T) {
 	)
 
 	test(
-		rei(`update "some_table" set "one" = $1 where true returning *`, 20),
+		rei(`update "some_table" set "one" = $1 where null returning *`, 20),
 		Update{`some_table`, Partial{UnitStruct{10}, nil}, UnitStruct{20}},
 	)
 
@@ -1670,7 +1670,7 @@ func Test_combinations(t *testing.T) {
 	)
 }
 
-func Testcolumn_fields(t *testing.T) {
+func Test_column_fields(t *testing.T) {
 	eq(
 		t,
 		[][2]string{

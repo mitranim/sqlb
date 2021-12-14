@@ -2,6 +2,11 @@ package sqlb
 
 import r "reflect"
 
+const (
+	TagNameDb   = `db`
+	TagNameJson = `json`
+)
+
 /*
 Encodes the provided expressions and returns the resulting text and args.
 Shortcut for using `(*Bui).Exprs` and `Bui.Reify`. Provided mostly for
@@ -76,13 +81,13 @@ func StructQ(text string, args interface{}) StrQ {
 // convention of eliding anything after a comma and treating "-" as a
 // non-name.
 func FieldDbName(field r.StructField) string {
-	return tagIdent(field.Tag.Get("db"))
+	return tagIdent(field.Tag.Get(TagNameDb))
 }
 
 // Returns the field's JSON column name from the "json" tag, following the same
 // conventions as the `encoding/json` package.
 func FieldJsonName(field r.StructField) string {
-	return tagIdent(field.Tag.Get("json"))
+	return tagIdent(field.Tag.Get(TagNameJson))
 }
 
 const (

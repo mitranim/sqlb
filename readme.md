@@ -100,6 +100,16 @@ func Example_composition() {
 
 ## Changelog
 
+### v0.5.2
+
+`Update` now defaults to `where null` rather than `where true`. The new behavior is aligned with `Delete`.
+
+Embedded struct fields tagged with `db:""` or `db:"-"` are now completely ignored. The old behavior treated them as untagged, traversing them. The new behavior allows to completely skip an embedded struct, on an opt-in basis, without having to modify the `db` tags of its inner fields.
+
+### v0.5.1
+
+Added optional support for a hidden `Nullable` interface, shared with the library `github.com/mitranim/gt`.
+
 ### v0.5.0
 
 * Revised ords parsing.

@@ -44,7 +44,7 @@ func (self CommaAppender) String() string { return AppenderString(&self) }
 
 /*
 Implement `Appender`. Appends comma-separated text representations of the inner
-encoders	to the output buffer, skipping any empty representations.
+encoders to the output buffer, skipping any empty representations.
 */
 func (self CommaAppender) Append(buf []byte) []byte {
 	var found bool
