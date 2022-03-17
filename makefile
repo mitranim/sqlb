@@ -1,7 +1,7 @@
 MAKEFLAGS := --silent --always-make
 TESTFLAGS := $(if $(filter $(verb), true), -v,) -count=1
 TEST      := test $(TESTFLAGS) -timeout=1s -run=$(run)
-BENCH     := test $(TESTFLAGS) -run=- -bench=$(or $(run),.) -benchmem
+BENCH     := test $(TESTFLAGS) -run=- -bench=$(or $(run),.) -benchmem -benchtime=128ms
 WATCH     := watchexec -r -c -d=0 -n
 
 test_w:

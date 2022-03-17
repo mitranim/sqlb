@@ -739,6 +739,8 @@ expression is `*`.
 Unlike many other struct-scanning expressions, this doesn't support filtering
 via `Sparse`. It operates at the level of a struct type, not an individual
 struct value.
+
+TODO actually support `Sparse` because it's used for insert.
 */
 type Cols [1]interface{}
 
@@ -846,6 +848,7 @@ func (self StructInsert) AppendExpr(text []byte, args []interface{}) ([]byte, []
 	for iter.next() {
 		if iter.first() {
 			bui.Str(`(`)
+			// TODO use `Cols` with support for `Sparse`.
 			bui.Str(TypeCols(iter.root.Type()))
 			bui.Str(`)`)
 			bui.Str(`values (`)

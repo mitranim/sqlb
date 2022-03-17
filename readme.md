@@ -100,6 +100,10 @@ func Example_composition() {
 
 ## Changelog
 
+### v0.5.3
+
+Added `SliceCommaAppender`.
+
 ### v0.5.2
 
 `Update` now defaults to `where null` rather than `where true`. The new behavior is aligned with `Delete`.

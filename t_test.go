@@ -983,7 +983,7 @@ func TestSelect(t *testing.T) {
 
 	test(
 		rei(`select * from "table_name" where $1 and $2`, 10, 20),
-		Select{`table_name`, []interface{}{10, 20}},
+		Select{`table_name`, list{10, 20}},
 	)
 
 	test(
@@ -2007,6 +2007,30 @@ func TestTryAppend(t *testing.T) {
 	panics(t, `unsupported type "chan int" of kind "chan"`, func() {
 		TryAppend(nil, (chan int)(nil))
 	})
+}
+
+func TestSliceCommaAppender(t *testing.T) {
+	test := func(exp string, val Encoder) { testEncoder(t, exp, val) }
+
+	type SCA = SliceCommaAppender
+
+	test(``, SCA{})
+	test(``, SCA{nil})
+	test(``, SCA{SCA{}})
+	test(``, SCA{list(nil)})
+	test(``, SCA{list{}})
+	test(``, SCA{list{nil}})
+	test(``, SCA{list{nil, nil}})
+	test(``, SCA{list{nil, nil}})
+	test(``, SCA{Stringer{nil}})
+	test(``, SCA{list{Stringer{nil}}})
+	test(``, SCA{list{nil, Stringer{}, nil, Stringer{``}}})
+	test(`10`, SCA{list{Stringer{10}}})
+	test(`10`, SCA{list{nil, Stringer{10}, nil}})
+	test(`10`, SCA{list{nil, Stringer{``}, Stringer{10}, nil, Stringer{``}}})
+	test(`10,20`, SCA{list{Stringer{10}, nil, Stringer{20}}})
+	test(`10,20`, SCA{list{nil, Stringer{10}, nil, Stringer{20}, nil, Stringer{``}}})
+	test(`10,20,30`, SCA{list{SCA{Stringer{10}}, SCA{list{Stringer{20}, Stringer{``}, Stringer{30}}}}})
 }
 
 func TestCommaAppender(t *testing.T) {
