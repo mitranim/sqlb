@@ -21,7 +21,7 @@ func AppenderString(val Appender) string {
 }
 
 // Variant of `String` that panics on error.
-func TryString(val interface{}) string {
+func TryString(val any) string {
 	out, err := String(val)
 	try(err)
 	return out
@@ -48,7 +48,7 @@ encodable types, without swallowing errors. Differences from `fmt.Sprint`:
 			* Encodes floats without the scientific notation.
 		* Aliases of `[]byte`.
 */
-func String(src interface{}) (string, error) {
+func String(src any) (string, error) {
 	if src == nil {
 		return ``, nil
 	}
@@ -120,7 +120,7 @@ func String(src interface{}) (string, error) {
 }
 
 // Variant of `Append` that panics on error.
-func TryAppend(buf []byte, src interface{}) []byte {
+func TryAppend(buf []byte, src any) []byte {
 	out, err := Append(buf, src)
 	try(err)
 	return out
@@ -149,7 +149,7 @@ Special cases:
 
 Used internally by `CommaAppender`, exported for advanced users.
 */
-func Append(buf []byte, src interface{}) ([]byte, error) {
+func Append(buf []byte, src any) ([]byte, error) {
 	if src == nil {
 		return buf, nil
 	}
@@ -220,7 +220,7 @@ func Append(buf []byte, src interface{}) ([]byte, error) {
 }
 
 // Variant of `AppendWith` that panics on error.
-func TryAppendWith(buf *[]byte, delim string, val interface{}) bool {
+func TryAppendWith(buf *[]byte, delim string, val any) bool {
 	out, err := AppendWith(buf, delim, val)
 	try(err)
 	return out
@@ -233,7 +233,7 @@ returns true. Otherwise reverts the buffer to the original length and returns
 false. If the buffer got reallocated with increased capacity, preserves the new
 capacity.
 */
-func AppendWith(buf *[]byte, delim string, val interface{}) (bool, error) {
+func AppendWith(buf *[]byte, delim string, val any) (bool, error) {
 	if buf == nil {
 		return false, nil
 	}

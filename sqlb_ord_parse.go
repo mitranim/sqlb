@@ -36,7 +36,7 @@ If `.Type` is empty, sets the type of the provided value. Otherwise this is a
 nop. The input is used only as a type carrier; its actual value is ignored. The
 type is consulted when decoding orderings from an input such as JSON.
 */
-func (self *ParseOpt) OrType(typ interface{}) {
+func (self *ParseOpt) OrType(typ any) {
 	if self.Type == nil {
 		self.Type = typeElemOf(typ)
 	}

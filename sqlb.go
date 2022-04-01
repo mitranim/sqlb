@@ -15,7 +15,7 @@ expression-encoding panics and convert them to errors.
 All `Expr` types in this package also implement `Appender` and `fmt.Stringer`.
 */
 type Expr interface {
-	AppendExpr([]byte, []interface{}) ([]byte, []interface{})
+	AppendExpr([]byte, []any) ([]byte, []any)
 }
 
 /*
@@ -24,7 +24,7 @@ input in order to be a valid expression. Implemented by preparsed query types,
 namely by `Prep`.
 */
 type ParamExpr interface {
-	AppendParamExpr([]byte, []interface{}, ArgDict) ([]byte, []interface{})
+	AppendParamExpr([]byte, []any, ArgDict) ([]byte, []any)
 }
 
 /*
@@ -43,8 +43,8 @@ validate used/unused arguments.
 type ArgDict interface {
 	IsEmpty() bool
 	Len() int
-	GotOrdinal(int) (interface{}, bool)
-	GotNamed(string) (interface{}, bool)
+	GotOrdinal(int) (any, bool)
+	GotNamed(string) (any, bool)
 }
 
 /*
@@ -89,7 +89,7 @@ question "is this field present?".
 Secretly supported by struct-scanning expressions such as `StructInsert`,
 `StructAssign`, `StructValues`, `Cond`, and more. These types attempt to upcast
 the inner value to `Sparse`, falling back on using the inner value as-is. This
-allows to correctly implement REST PATCH semantics by using only the fields
+allows to correctly implement REST "PATCH" semantics by using only the fields
 that were present in a particular HTTP request, while keeping this
 functionality optional.
 
@@ -97,7 +97,7 @@ Concrete implementation: `Partial`.
 */
 type Sparse interface {
 	Filter
-	Get() interface{}
+	Get() any
 }
 
 /*

@@ -15,7 +15,7 @@ interpolated into the resulting query string. See the examples.
 type Str string
 
 // Implement the `Expr` interface, making this a sub-expression.
-func (self Str) AppendExpr(text []byte, args []interface{}) ([]byte, []interface{}) {
+func (self Str) AppendExpr(text []byte, args []any) ([]byte, []any) {
 	return self.Append(text), args
 }
 
@@ -32,7 +32,7 @@ func (self Str) String() string { return string(self) }
 type Ident string
 
 // Implement the `Expr` interface, making this a sub-expression.
-func (self Ident) AppendExpr(text []byte, args []interface{}) ([]byte, []interface{}) {
+func (self Ident) AppendExpr(text []byte, args []any) ([]byte, []any) {
 	return self.Append(text), args
 }
 
@@ -58,7 +58,7 @@ begin with a schema, use `Path` instead.
 type Identifier []string
 
 // Implement the `Expr` interface, making this a sub-expression.
-func (self Identifier) AppendExpr(text []byte, args []interface{}) ([]byte, []interface{}) {
+func (self Identifier) AppendExpr(text []byte, args []any) ([]byte, []any) {
 	return self.Append(text), args
 }
 
@@ -102,7 +102,7 @@ instead.
 type Path []string
 
 // Implement the `Expr` interface, making this a sub-expression.
-func (self Path) AppendExpr(text []byte, args []interface{}) ([]byte, []interface{}) {
+func (self Path) AppendExpr(text []byte, args []any) ([]byte, []any) {
 	return self.Append(text), args
 }
 
@@ -153,7 +153,7 @@ https://github.com/mitranim/gos.
 type PseudoPath []string
 
 // Implement the `Expr` interface, making this a sub-expression.
-func (self PseudoPath) AppendExpr(text []byte, args []interface{}) ([]byte, []interface{}) {
+func (self PseudoPath) AppendExpr(text []byte, args []any) ([]byte, []any) {
 	return self.Append(text), args
 }
 
@@ -203,7 +203,7 @@ by `PseudoPath` alias. Useful for building "select" clauses. Used internally by
 type AliasedPath []string
 
 // Implement the `Expr` interface, making this a sub-expression.
-func (self AliasedPath) AppendExpr(text []byte, args []interface{}) ([]byte, []interface{}) {
+func (self AliasedPath) AppendExpr(text []byte, args []any) ([]byte, []any) {
 	return self.Append(text), args
 }
 
@@ -247,7 +247,7 @@ Same as `Identifier`, but preceded by the word "table". The SQL clause
 type Table Identifier
 
 // Implement the `Expr` interface, making this a sub-expression.
-func (self Table) AppendExpr(text []byte, args []interface{}) ([]byte, []interface{}) {
+func (self Table) AppendExpr(text []byte, args []any) ([]byte, []any) {
 	return self.Append(text), args
 }
 
@@ -272,7 +272,7 @@ space-separated if necessary.
 type Exprs []Expr
 
 // Implement the `Expr` interface, making this a sub-expression.
-func (self Exprs) AppendExpr(text []byte, args []interface{}) ([]byte, []interface{}) {
+func (self Exprs) AppendExpr(text []byte, args []any) ([]byte, []any) {
 	bui := Bui{text, args}
 	for _, val := range self {
 		bui.Expr(val)
@@ -291,10 +291,10 @@ func (self Exprs) String() string { return exprString(&self) }
 Represents an SQL "any()" expression. The inner value may be an instance of
 `Expr`, or an arbitrary argument.
 */
-type Any [1]interface{}
+type Any [1]any
 
 // Implement the `Expr` interface, making this a sub-expression.
-func (self Any) AppendExpr(text []byte, args []interface{}) ([]byte, []interface{}) {
+func (self Any) AppendExpr(text []byte, args []any) ([]byte, []any) {
 	bui := Bui{text, args}
 	bui.Str(`any (`)
 	bui.Any(self[0])
@@ -316,11 +316,11 @@ arbitrary argument.
 */
 type Assign struct {
 	Lhs Ident
-	Rhs interface{}
+	Rhs any
 }
 
 // Implement the `Expr` interface, making this a sub-expression.
-func (self Assign) AppendExpr(text []byte, args []interface{}) ([]byte, []interface{}) {
+func (self Assign) AppendExpr(text []byte, args []any) ([]byte, []any) {
 	bui := Bui{text, args}
 	bui.Any(self.Lhs)
 	bui.Str(`=`)
@@ -339,10 +339,10 @@ func (self Assign) String() string { return exprString(&self) }
 Short for "equal". Represents SQL equality such as `A = B` or `A is null`.
 Counterpart to `Neq`.
 */
-type Eq [2]interface{}
+type Eq [2]any
 
 // Implement the `Expr` interface, making this a sub-expression.
-func (self Eq) AppendExpr(text []byte, args []interface{}) ([]byte, []interface{}) {
+func (self Eq) AppendExpr(text []byte, args []any) ([]byte, []any) {
 	text, args = self.AppendLhs(text, args)
 	text, args = self.AppendRhs(text, args)
 	return text, args
@@ -360,13 +360,13 @@ Note: LHS and RHS are encoded differently because some SQL equality expressions
 are asymmetric. For example, `any` allows an array only on the RHS, and there's
 no way to invert it (AFAIK).
 */
-func (self Eq) AppendLhs(text []byte, args []interface{}) ([]byte, []interface{}) {
+func (self Eq) AppendLhs(text []byte, args []any) ([]byte, []any) {
 	bui := Bui{text, args}
 	bui.SubAny(self[0])
 	return bui.Get()
 }
 
-func (self Eq) AppendRhs(text []byte, args []interface{}) ([]byte, []interface{}) {
+func (self Eq) AppendRhs(text []byte, args []any) ([]byte, []any) {
 	bui := Bui{text, args}
 	val := norm(self[1])
 
@@ -384,10 +384,10 @@ func (self Eq) AppendRhs(text []byte, args []interface{}) ([]byte, []interface{}
 Short for "not equal". Represents SQL non-equality such as `A <> B` or
 `A is not null`. Counterpart to `Eq`.
 */
-type Neq [2]interface{}
+type Neq [2]any
 
 // Implement the `Expr` interface, making this a sub-expression.
-func (self Neq) AppendExpr(text []byte, args []interface{}) ([]byte, []interface{}) {
+func (self Neq) AppendExpr(text []byte, args []any) ([]byte, []any) {
 	text, args = self.AppendLhs(text, args)
 	text, args = self.AppendRhs(text, args)
 	return text, args
@@ -401,13 +401,13 @@ func (self Neq) Append(text []byte) []byte { return exprAppend(&self, text) }
 func (self Neq) String() string { return exprString(&self) }
 
 // See the comment on `Eq.AppendLhs`.
-func (self Neq) AppendLhs(text []byte, args []interface{}) ([]byte, []interface{}) {
+func (self Neq) AppendLhs(text []byte, args []any) ([]byte, []any) {
 	bui := Bui{text, args}
 	bui.SubAny(self[0])
 	return bui.Get()
 }
 
-func (self Neq) AppendRhs(text []byte, args []interface{}) ([]byte, []interface{}) {
+func (self Neq) AppendRhs(text []byte, args []any) ([]byte, []any) {
 	bui := Bui{text, args}
 	val := norm(self[1])
 
@@ -422,10 +422,10 @@ func (self Neq) AppendRhs(text []byte, args []interface{}) ([]byte, []interface{
 }
 
 // Represents an SQL expression `A = any(B)`. Counterpart to `NeqAny`.
-type EqAny [2]interface{}
+type EqAny [2]any
 
 // Implement the `Expr` interface, making this a sub-expression.
-func (self EqAny) AppendExpr(text []byte, args []interface{}) ([]byte, []interface{}) {
+func (self EqAny) AppendExpr(text []byte, args []any) ([]byte, []any) {
 	bui := Bui{text, args}
 	bui.SubAny(self[0])
 	bui.Str(`=`)
@@ -441,10 +441,10 @@ func (self EqAny) Append(text []byte) []byte { return exprAppend(&self, text) }
 func (self EqAny) String() string { return exprString(&self) }
 
 // Represents an SQL expression `A <> any(B)`. Counterpart to `EqAny`.
-type NeqAny [2]interface{}
+type NeqAny [2]any
 
 // Implement the `Expr` interface, making this a sub-expression.
-func (self NeqAny) AppendExpr(text []byte, args []interface{}) ([]byte, []interface{}) {
+func (self NeqAny) AppendExpr(text []byte, args []any) ([]byte, []any) {
 	bui := Bui{text, args}
 	bui.SubAny(self[0])
 	bui.Str(`<>`)
@@ -461,10 +461,10 @@ func (self NeqAny) String() string { return exprString(&self) }
 
 // Represents SQL logical negation such as `not A`. The inner value can be an
 // instance of `Expr` or an arbitrary argument.
-type Not [1]interface{}
+type Not [1]any
 
 // Implement the `Expr` interface, making this a sub-expression.
-func (self Not) AppendExpr(text []byte, args []interface{}) ([]byte, []interface{}) {
+func (self Not) AppendExpr(text []byte, args []any) ([]byte, []any) {
 	bui := Bui{text, args}
 	bui.Str(`not`)
 	bui.SubAny(self[0])
@@ -488,11 +488,11 @@ slice.
 type Seq struct {
 	Empty string
 	Delim string
-	Val   interface{}
+	Val   any
 }
 
 // Implement the `Expr` interface, making this a sub-expression.
-func (self Seq) AppendExpr(text []byte, args []interface{}) ([]byte, []interface{}) {
+func (self Seq) AppendExpr(text []byte, args []any) ([]byte, []any) {
 	bui := Bui{text, args}
 	val := self.Val
 
@@ -513,7 +513,7 @@ func (self Seq) Append(text []byte) []byte { return exprAppend(&self, text) }
 // Implement the `fmt.Stringer` interface for debug purposes.
 func (self Seq) String() string { return exprString(&self) }
 
-func (self *Seq) any(bui *Bui, val interface{}) {
+func (self *Seq) any(bui *Bui, val any) {
 	switch kindOf(val) {
 	case r.Invalid:
 		self.appendEmpty(bui)
@@ -528,7 +528,7 @@ func (self *Seq) appendEmpty(bui *Bui) {
 	bui.Str(self.Empty)
 }
 
-func (self Seq) appendSlice(bui *Bui, src interface{}) {
+func (self Seq) appendSlice(bui *Bui, src any) {
 	val := valueOf(src)
 
 	if val.Len() == 0 {
@@ -553,10 +553,10 @@ func (self Seq) appendSlice(bui *Bui, src interface{}) {
 Represents a comma-separated list of arbitrary sub-expressions. The inner value
 may be nil or a single `Expr`, otherwise it must be a slice.
 */
-type Comma [1]interface{}
+type Comma [1]any
 
 // Implement the `Expr` interface, making this a sub-expression.
-func (self Comma) AppendExpr(text []byte, args []interface{}) ([]byte, []interface{}) {
+func (self Comma) AppendExpr(text []byte, args []any) ([]byte, []any) {
 	// May revise in the future. Some SQL expressions, such as composite literals
 	// expressed as strings, are sensitive to whitespace around commas.
 	return Seq{``, `, `, self[0]}.AppendExpr(text, args)
@@ -578,10 +578,10 @@ SQL `and` operator. Rules for the inner value:
 	* non-empty slice  -> render its individual elements joined by `and`
 	* non-empty struct -> render column equality conditions joined by `and`
 */
-type And [1]interface{}
+type And [1]any
 
 // Implement the `Expr` interface, making this a sub-expression.
-func (self And) AppendExpr(text []byte, args []interface{}) ([]byte, []interface{}) {
+func (self And) AppendExpr(text []byte, args []any) ([]byte, []any) {
 	return Cond{`true`, `and`, self[0]}.AppendExpr(text, args)
 }
 
@@ -601,10 +601,10 @@ SQL `or` operator. Rules for the inner value:
 	* non-empty slice  -> render its individual elements joined by `or`
 	* non-empty struct -> render column equality conditions joined by `or`
 */
-type Or [1]interface{}
+type Or [1]any
 
 // Implement the `Expr` interface, making this a sub-expression.
-func (self Or) AppendExpr(text []byte, args []interface{}) ([]byte, []interface{}) {
+func (self Or) AppendExpr(text []byte, args []any) ([]byte, []any) {
 	return Cond{`false`, `or`, self[0]}.AppendExpr(text, args)
 }
 
@@ -616,14 +616,14 @@ func (self Or) Append(text []byte) []byte { return exprAppend(&self, text) }
 func (self Or) String() string { return exprString(&self) }
 
 // Syntactic shortcut, same as `And` with a slice of sub-expressions or arguments.
-type Ands []interface{}
+type Ands []any
 
 // Implement the `Expr` interface, making this a sub-expression.
-func (self Ands) AppendExpr(text []byte, args []interface{}) ([]byte, []interface{}) {
+func (self Ands) AppendExpr(text []byte, args []any) ([]byte, []any) {
 	if len(self) == 0 {
 		return And{}.AppendExpr(text, args)
 	}
-	return And{[]interface{}(self)}.AppendExpr(text, args)
+	return And{[]any(self)}.AppendExpr(text, args)
 }
 
 // Implement the `Appender` interface, sometimes allowing more efficient text
@@ -634,14 +634,14 @@ func (self Ands) Append(text []byte) []byte { return exprAppend(&self, text) }
 func (self Ands) String() string { return exprString(&self) }
 
 // Syntactic shortcut, same as `Or` with a slice of sub-expressions or arguments.
-type Ors []interface{}
+type Ors []any
 
 // Implement the `Expr` interface, making this a sub-expression.
-func (self Ors) AppendExpr(text []byte, args []interface{}) ([]byte, []interface{}) {
+func (self Ors) AppendExpr(text []byte, args []any) ([]byte, []any) {
 	if len(self) == 0 {
 		return Or{}.AppendExpr(text, args)
 	}
-	return Or{[]interface{}(self)}.AppendExpr(text, args)
+	return Or{[]any(self)}.AppendExpr(text, args)
 }
 
 // Implement the `Appender` interface, sometimes allowing more efficient text
@@ -663,7 +663,7 @@ internally by `And` and `Or`.
 type Cond Seq
 
 // Implement the `Expr` interface, making this a sub-expression.
-func (self Cond) AppendExpr(text []byte, args []interface{}) ([]byte, []interface{}) {
+func (self Cond) AppendExpr(text []byte, args []any) ([]byte, []any) {
 	bui := Bui{text, args}
 	val := self.Val
 
@@ -684,7 +684,7 @@ func (self Cond) Append(text []byte) []byte { return exprAppend(&self, text) }
 // Implement the `fmt.Stringer` interface for debug purposes.
 func (self Cond) String() string { return exprString(&self) }
 
-func (self *Cond) any(bui *Bui, val interface{}) {
+func (self *Cond) any(bui *Bui, val any) {
 	switch kindOf(val) {
 	case r.Invalid:
 		self.appendEmpty(bui)
@@ -702,7 +702,7 @@ func (self *Cond) appendEmpty(bui *Bui) {
 }
 
 // TODO consider if we should support nested non-embedded structs.
-func (self *Cond) appendStruct(bui *Bui, src interface{}) {
+func (self *Cond) appendStruct(bui *Bui, src any) {
 	iter := makeIter(src)
 
 	for iter.next() {
@@ -725,7 +725,7 @@ func (self *Cond) appendStruct(bui *Bui, src interface{}) {
 	}
 }
 
-func (self *Cond) appendSlice(bui *Bui, val interface{}) {
+func (self *Cond) appendSlice(bui *Bui, val any) {
 	(*Seq)(self).appendSlice(bui, val)
 }
 
@@ -742,10 +742,10 @@ struct value.
 
 TODO actually support `Sparse` because it's used for insert.
 */
-type Cols [1]interface{}
+type Cols [1]any
 
 // Implement the `Expr` interface, making this a sub-expression.
-func (self Cols) AppendExpr(text []byte, args []interface{}) ([]byte, []interface{}) {
+func (self Cols) AppendExpr(text []byte, args []any) ([]byte, []any) {
 	return self.Append(text), args
 }
 
@@ -774,10 +774,10 @@ Unlike many other struct-scanning expressions, this doesn't support filtering
 via `Sparse`. It operates at the level of a struct type, not an individual
 struct value.
 */
-type ColsDeep [1]interface{}
+type ColsDeep [1]any
 
 // Implement the `Expr` interface, making this a sub-expression.
-func (self ColsDeep) AppendExpr(text []byte, args []interface{}) ([]byte, []interface{}) {
+func (self ColsDeep) AppendExpr(text []byte, args []any) ([]byte, []any) {
 	return self.Append(text), args
 }
 
@@ -803,10 +803,10 @@ Supports filtering. If the inner value implements `Sparse`, then not all fields
 are considered to be "present", which is useful for PATCH semantics. See the
 docs on `Sparse` and `Part`.
 */
-type StructValues [1]interface{}
+type StructValues [1]any
 
 // Implement the `Expr` interface, making this a sub-expression.
-func (self StructValues) AppendExpr(text []byte, args []interface{}) ([]byte, []interface{}) {
+func (self StructValues) AppendExpr(text []byte, args []any) ([]byte, []any) {
 	bui := Bui{text, args}
 	iter := makeIter(self[0])
 
@@ -838,10 +838,10 @@ Supports filtering. If the inner value implements `Sparse`, then not all fields
 are considered to be "present", which is useful for PATCH semantics. See the
 docs on `Sparse` and `Part`.
 */
-type StructInsert [1]interface{}
+type StructInsert [1]any
 
 // Implement the `Expr` interface, making this a sub-expression.
-func (self StructInsert) AppendExpr(text []byte, args []interface{}) ([]byte, []interface{}) {
+func (self StructInsert) AppendExpr(text []byte, args []any) ([]byte, []any) {
 	bui := Bui{text, args}
 	iter := makeIter(self[0])
 
@@ -885,10 +885,10 @@ are considered to be "present", which is useful for PATCH semantics. See the
 docs on `Sparse` and `Part`. If there are NO fields, panics with
 `ErrEmptyAssign`, which can be detected by user code via `errors.Is`.
 */
-type StructAssign [1]interface{}
+type StructAssign [1]any
 
 // Implement the `Expr` interface, making this a sub-expression.
-func (self StructAssign) AppendExpr(text []byte, args []interface{}) ([]byte, []interface{}) {
+func (self StructAssign) AppendExpr(text []byte, args []any) ([]byte, []any) {
 	bui := Bui{text, args}
 	iter := makeIter(self[0])
 
@@ -924,11 +924,11 @@ wrapping. Counterpart to `SelectColsDeep`.
 */
 type SelectCols struct {
 	From Expr
-	Type interface{}
+	Type any
 }
 
 // Implement the `Expr` interface, making this a sub-expression.
-func (self SelectCols) AppendExpr(text []byte, args []interface{}) ([]byte, []interface{}) {
+func (self SelectCols) AppendExpr(text []byte, args []any) ([]byte, []any) {
 	// Type-to-string is nearly free due to caching.
 	return SelectString{self.From, Cols{self.Type}.String()}.AppendExpr(text, args)
 }
@@ -948,11 +948,11 @@ wrapping. Counterpart to `SelectCols`.
 */
 type SelectColsDeep struct {
 	From Expr
-	Type interface{}
+	Type any
 }
 
 // Implement the `Expr` interface, making this a sub-expression.
-func (self SelectColsDeep) AppendExpr(text []byte, args []interface{}) ([]byte, []interface{}) {
+func (self SelectColsDeep) AppendExpr(text []byte, args []any) ([]byte, []any) {
 	// Type-to-string is nearly free due to caching.
 	return SelectString{self.From, ColsDeep{self.Type}.String()}.AppendExpr(text, args)
 }
@@ -975,7 +975,7 @@ type SelectString struct {
 }
 
 // Implement the `Expr` interface, making this a sub-expression.
-func (self SelectString) AppendExpr(text []byte, args []interface{}) ([]byte, []interface{}) {
+func (self SelectString) AppendExpr(text []byte, args []any) ([]byte, []any) {
 	bui := Bui{text, args}
 
 	if self.What == `*` {
@@ -1017,7 +1017,7 @@ type Prefix struct {
 }
 
 // Implement the `Expr` interface, making this a sub-expression.
-func (self Prefix) AppendExpr(text []byte, args []interface{}) ([]byte, []interface{}) {
+func (self Prefix) AppendExpr(text []byte, args []any) ([]byte, []any) {
 	return Wrap{self.Prefix, self.Expr, ``}.AppendExpr(text, args)
 }
 
@@ -1041,7 +1041,7 @@ type Wrap struct {
 
 // Difference from `Trio`: if the expr is nil, nothing is appended.
 // Implement the `Expr` interface, making this a sub-expression.
-func (self Wrap) AppendExpr(text []byte, args []interface{}) ([]byte, []interface{}) {
+func (self Wrap) AppendExpr(text []byte, args []any) ([]byte, []any) {
 	bui := Bui{text, args}
 
 	if self.Expr != nil {
@@ -1067,7 +1067,7 @@ If the provided expression is nil, this is a nop.
 type OrderBy [1]Expr
 
 // Implement the `Expr` interface, making this a sub-expression.
-func (self OrderBy) AppendExpr(text []byte, args []interface{}) ([]byte, []interface{}) {
+func (self OrderBy) AppendExpr(text []byte, args []any) ([]byte, []any) {
 	return Prefix{`order by`, self[0]}.AppendExpr(text, args)
 }
 
@@ -1081,11 +1081,11 @@ func (self OrderBy) String() string { return exprString(&self) }
 // Shortcut for simple "select * from A where B" expressions. See the examples.
 type Select struct {
 	From  Ident
-	Where interface{}
+	Where any
 }
 
 // Implement the `Expr` interface, making this a sub-expression.
-func (self Select) AppendExpr(text []byte, args []interface{}) ([]byte, []interface{}) {
+func (self Select) AppendExpr(text []byte, args []any) ([]byte, []any) {
 	bui := Bui{text, args}
 
 	bui.Str(`select * from`)
@@ -1110,11 +1110,11 @@ func (self Select) String() string { return exprString(&self) }
 // See the examples.
 type Insert struct {
 	Into   Ident
-	Fields interface{}
+	Fields any
 }
 
 // Implement the `Expr` interface, making this a sub-expression.
-func (self Insert) AppendExpr(text []byte, args []interface{}) ([]byte, []interface{}) {
+func (self Insert) AppendExpr(text []byte, args []any) ([]byte, []any) {
 	bui := Bui{text, args}
 
 	bui.Str(`insert into`)
@@ -1136,12 +1136,12 @@ func (self Insert) String() string { return exprString(&self) }
 // examples.
 type Update struct {
 	What   Ident
-	Where  interface{}
-	Fields interface{}
+	Where  any
+	Fields any
 }
 
 // Implement the `Expr` interface, making this a sub-expression.
-func (self Update) AppendExpr(text []byte, args []interface{}) ([]byte, []interface{}) {
+func (self Update) AppendExpr(text []byte, args []any) ([]byte, []any) {
 	bui := Bui{text, args}
 
 	bui.Str(`update`)
@@ -1172,11 +1172,11 @@ func (self Update) String() string { return exprString(&self) }
 // Shortcut for simple "delete from A where B returning *" expressions. See the examples.
 type Delete struct {
 	From  Ident
-	Where interface{}
+	Where any
 }
 
 // Implement the `Expr` interface, making this a sub-expression.
-func (self Delete) AppendExpr(text []byte, args []interface{}) ([]byte, []interface{}) {
+func (self Delete) AppendExpr(text []byte, args []any) ([]byte, []any) {
 	bui := Bui{text, args}
 
 	bui.Str(`delete from`)
@@ -1204,7 +1204,7 @@ to `s.SelectString{expr, "count(*)"}`.
 type SelectCount [1]Expr
 
 // Implement the `Expr` interface, making this a sub-expression.
-func (self SelectCount) AppendExpr(text []byte, args []interface{}) ([]byte, []interface{}) {
+func (self SelectCount) AppendExpr(text []byte, args []any) ([]byte, []any) {
 	return SelectString{self[0], `count(*)`}.AppendExpr(text, args)
 }
 
@@ -1222,11 +1222,11 @@ usually represents a function name. The args must be either nil, a single
 */
 type Call struct {
 	Text string
-	Args interface{}
+	Args any
 }
 
 // Implement the `Expr` interface, making this a sub-expression.
-func (self Call) AppendExpr(text []byte, args []interface{}) ([]byte, []interface{}) {
+func (self Call) AppendExpr(text []byte, args []any) ([]byte, []any) {
 	bui := Bui{text, args}
 	bui.Str(self.Text)
 
@@ -1261,7 +1261,7 @@ planner should be able to optimize it away.
 type RowNumberOver [1]Expr
 
 // Implement the `Expr` interface, making this a sub-expression.
-func (self RowNumberOver) AppendExpr(text []byte, args []interface{}) ([]byte, []interface{}) {
+func (self RowNumberOver) AppendExpr(text []byte, args []any) ([]byte, []any) {
 	if self[0] == nil {
 		return appendMaybeSpaced(text, `0`), args
 	}
@@ -1304,7 +1304,7 @@ type StrQ struct {
 }
 
 // Implement the `Expr` interface, making this a sub-expression.
-func (self StrQ) AppendExpr(text []byte, args []interface{}) ([]byte, []interface{}) {
+func (self StrQ) AppendExpr(text []byte, args []any) ([]byte, []any) {
 	return Preparse(self.Text).AppendParamExpr(text, args, self.Args)
 }
 
@@ -1374,7 +1374,7 @@ func (self *Prep) Parse() {
 
 // Implement the `ParamExpr` interface. Builds the expression by using the
 // provided named args. Used internally by `StrQ`.
-func (self Prep) AppendParamExpr(text []byte, args []interface{}, dict ArgDict) ([]byte, []interface{}) {
+func (self Prep) AppendParamExpr(text []byte, args []any, dict ArgDict) ([]byte, []any) {
 	if !self.HasParams {
 		return self.appendUnparametrized(text, args, dict)
 	}
@@ -1390,7 +1390,7 @@ func (self Prep) Append(text []byte) []byte {
 // Implement the `fmt.Stringer` interface for debug purposes.
 func (self Prep) String() string { return self.Source }
 
-func (self Prep) appendUnparametrized(text []byte, args []interface{}, dict ArgDict) ([]byte, []interface{}) {
+func (self Prep) appendUnparametrized(text []byte, args []any, dict ArgDict) ([]byte, []any) {
 	src := self.Source
 	if !isNil(dict) {
 		panic(errUnexpectedArgs(fmt.Sprintf(`non-parametrized expression %q`, src), dict))
@@ -1398,7 +1398,7 @@ func (self Prep) appendUnparametrized(text []byte, args []interface{}, dict ArgD
 	return Str(src).AppendExpr(text, args)
 }
 
-func (self Prep) appendParametrized(text []byte, args []interface{}, dict ArgDict) ([]byte, []interface{}) {
+func (self Prep) appendParametrized(text []byte, args []any, dict ArgDict) ([]byte, []any) {
 	if dict == nil {
 		panic(errMissingArgs(fmt.Sprintf(`parametrized expression %q`, self.Source)))
 	}
@@ -1495,7 +1495,7 @@ func appendNamed(bui *Bui, args ArgDict, tracker *argTracker, key NamedParam) {
 type OrdinalParam int
 
 // Implement the `Expr` interface, making this a sub-expression.
-func (self OrdinalParam) AppendExpr(text []byte, args []interface{}) ([]byte, []interface{}) {
+func (self OrdinalParam) AppendExpr(text []byte, args []any) ([]byte, []any) {
 	return self.Append(text), args
 }
 
@@ -1520,7 +1520,7 @@ func (self OrdinalParam) FromIndex() OrdinalParam { return self + 1 }
 type NamedParam string
 
 // Implement the `Expr` interface, making this a sub-expression.
-func (self NamedParam) AppendExpr(text []byte, args []interface{}) ([]byte, []interface{}) {
+func (self NamedParam) AppendExpr(text []byte, args []any) ([]byte, []any) {
 	return self.Append(text), args
 }
 
@@ -1547,10 +1547,10 @@ sub-expression. Implements `Expr`:
   * If expr -> append "limit (<sub-expression>)".
   * If val  -> append "limit $N" with the corresponding argument.
 */
-type Limit [1]interface{}
+type Limit [1]any
 
 // Implement the `Expr` interface, making this a sub-expression.
-func (self Limit) AppendExpr(text []byte, args []interface{}) ([]byte, []interface{}) {
+func (self Limit) AppendExpr(text []byte, args []any) ([]byte, []any) {
 	return appendPrefixSub(text, args, `limit`, self[0])
 }
 
@@ -1569,10 +1569,10 @@ Implements `Expr`:
   * If expr -> append "offset (<sub-expression>)".
   * If val  -> append "offset $N" with the corresponding argument.
 */
-type Offset [1]interface{}
+type Offset [1]any
 
 // Implement the `Expr` interface, making this a sub-expression.
-func (self Offset) AppendExpr(text []byte, args []interface{}) ([]byte, []interface{}) {
+func (self Offset) AppendExpr(text []byte, args []any) ([]byte, []any) {
 	return appendPrefixSub(text, args, `offset`, self[0])
 }
 
@@ -1595,7 +1595,7 @@ into this value, for example into a struct field of this type.
 type LimitUint uint64
 
 // Implement the `Expr` interface, making this a sub-expression.
-func (self LimitUint) AppendExpr(text []byte, args []interface{}) ([]byte, []interface{}) {
+func (self LimitUint) AppendExpr(text []byte, args []any) ([]byte, []any) {
 	return self.Append(text), args
 }
 
@@ -1620,7 +1620,7 @@ into this value, for example into a struct field of this type.
 type OffsetUint uint64
 
 // Implement the `Expr` interface, making this a sub-expression.
-func (self OffsetUint) AppendExpr(text []byte, args []interface{}) ([]byte, []interface{}) {
+func (self OffsetUint) AppendExpr(text []byte, args []any) ([]byte, []any) {
 	return self.Append(text), args
 }
 

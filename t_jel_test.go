@@ -39,7 +39,7 @@ func Test_Jel_Transcode(t *testing.T) {
 
 	eq(
 		t,
-		[]interface{}{false, `literal string`, true, parseTime(`9999-01-01T00:00:00Z`)},
+		[]any{false, `literal string`, true, parseTime(`9999-01-01T00:00:00Z`)},
 		args,
 	)
 }

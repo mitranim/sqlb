@@ -167,29 +167,29 @@ func errUnusedNamed(val NamedParam) ErrUnusedArgument {
 	}}
 }
 
-func errExpectedX(desc, while string, val interface{}) ErrInvalidInput {
+func errExpectedX(desc, while string, val any) ErrInvalidInput {
 	return ErrInvalidInput{Err{
 		while,
 		fmt.Errorf(`expected %v, found %v`, desc, val),
 	}}
 }
 
-func errExpectedSlice(while string, val interface{}) ErrInvalidInput {
+func errExpectedSlice(while string, val any) ErrInvalidInput {
 	return errExpectedX(`slice`, while, val)
 }
 
-func errExpectedStruct(while string, val interface{}) ErrInvalidInput {
+func errExpectedStruct(while string, val any) ErrInvalidInput {
 	return errExpectedX(`struct`, while, val)
 }
 
-func errUnexpectedArgs(desc, input interface{}) ErrInvalidInput {
+func errUnexpectedArgs(desc, input any) ErrInvalidInput {
 	return ErrInvalidInput{Err{
 		`building SQL expression`,
 		fmt.Errorf(`%v expected no arguments, got %#v`, desc, input),
 	}}
 }
 
-func errMissingArgs(desc interface{}) ErrInvalidInput {
+func errMissingArgs(desc any) ErrInvalidInput {
 	return ErrInvalidInput{Err{
 		`building SQL expression`,
 		fmt.Errorf(`%v expected arguments, got none`, desc),

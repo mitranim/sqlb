@@ -3,11 +3,11 @@ package sqlb
 import r "reflect"
 
 /*
-Variant of `[]interface{}` conforming to the `ArgDict` interface. Supports only
+Variant of `[]any` conforming to the `ArgDict` interface. Supports only
 ordinal parameters, not named parameters. Used for `StrQ`. See the `ListQ`
 shortcut.
 */
-type List []interface{}
+type List []any
 
 // Implement part of the `ArgDict` interface.
 func (self List) IsEmpty() bool { return self.Len() == 0 }
@@ -16,7 +16,7 @@ func (self List) IsEmpty() bool { return self.Len() == 0 }
 func (self List) Len() int { return len(self) }
 
 // Implement part of the `ArgDict` interface.
-func (self List) GotOrdinal(key int) (interface{}, bool) {
+func (self List) GotOrdinal(key int) (any, bool) {
 	if key >= 0 && key < len(self) {
 		return self[key], true
 	}
@@ -24,7 +24,7 @@ func (self List) GotOrdinal(key int) (interface{}, bool) {
 }
 
 // Implement part of the `ArgDict` interface. Always returns `nil, false`.
-func (self List) GotNamed(string) (interface{}, bool) { return nil, false }
+func (self List) GotNamed(string) (any, bool) { return nil, false }
 
 // Implement `OrdinalRanger` to automatically validate used/unused arguments.
 func (self List) RangeOrdinal(fun func(int)) {
@@ -36,11 +36,11 @@ func (self List) RangeOrdinal(fun func(int)) {
 }
 
 /*
-Variant of `map[string]interface{}` conforming to the `ArgDict` interface.
+Variant of `map[string]any` conforming to the `ArgDict` interface.
 Supports only named parameters, not ordinal parameters. Used for `StrQ`. See
 the `DictQ` shortcut.
 */
-type Dict map[string]interface{}
+type Dict map[string]any
 
 // Implement part of the `ArgDict` interface.
 func (self Dict) IsEmpty() bool { return self.Len() == 0 }
@@ -49,10 +49,10 @@ func (self Dict) IsEmpty() bool { return self.Len() == 0 }
 func (self Dict) Len() int { return len(self) }
 
 // Implement part of the `ArgDict` interface. Always returns `nil, false`.
-func (self Dict) GotOrdinal(int) (interface{}, bool) { return nil, false }
+func (self Dict) GotOrdinal(int) (any, bool) { return nil, false }
 
 // Implement part of the `ArgDict` interface.
-func (self Dict) GotNamed(key string) (interface{}, bool) {
+func (self Dict) GotNamed(key string) (any, bool) {
 	val, ok := self[key]
 	return val, ok
 }
@@ -84,10 +84,10 @@ func (self StructDict) IsEmpty() bool {
 func (self StructDict) Len() int { return 0 }
 
 // Implement part of the `ArgDict` interface. Always returns `nil, false`.
-func (self StructDict) GotOrdinal(int) (interface{}, bool) { return nil, false }
+func (self StructDict) GotOrdinal(int) (any, bool) { return nil, false }
 
 // Implement part of the `ArgDict` interface.
-func (self StructDict) GotNamed(key string) (interface{}, bool) {
+func (self StructDict) GotNamed(key string) (any, bool) {
 	/**
 	(Tested in Go 1.17.)
 

@@ -14,7 +14,7 @@ func ExampleBui() {
 
 type SomeExpr struct{}
 
-func (self SomeExpr) AppendExpr(text []byte, args []interface{}) ([]byte, []interface{}) {
+func (self SomeExpr) AppendExpr(text []byte, args []any) ([]byte, []any) {
 	bui := s.Bui{text, args}
 	bui.Str(`select`)
 	bui.Any(`some_value`)

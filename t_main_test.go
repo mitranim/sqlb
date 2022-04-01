@@ -52,35 +52,35 @@ var testOuter = Outer{
 
 type Void struct{}
 
-func (Void) GetVal() interface{} { return `val` }
+func (Void) GetVal() any { return `val` }
 
 type UnitStruct struct {
-	One interface{} `db:"one" json:"one"`
+	One any `db:"one" json:"one"`
 }
 
-func (self UnitStruct) GetOne() interface{}             { return self.One }
-func (self UnitStruct) UnaryVoid(interface{})           {}
-func (self UnitStruct) NullaryPair() (_, _ interface{}) { return }
+func (self UnitStruct) GetOne() any             { return self.One }
+func (self UnitStruct) UnaryVoid(any)           {}
+func (self UnitStruct) NullaryPair() (_, _ any) { return }
 
 type PairStruct struct {
-	One interface{} `db:"one" json:"one"`
-	Two interface{} `db:"two" json:"two"`
+	One any `db:"one" json:"one"`
+	Two any `db:"two" json:"two"`
 }
 
-func (self PairStruct) GetOne() interface{} { return self.One }
-func (self PairStruct) GetTwo() interface{} { return self.Two }
+func (self PairStruct) GetOne() any { return self.One }
+func (self PairStruct) GetTwo() any { return self.Two }
 
 type TrioStruct struct {
-	One   interface{} `db:"one" json:"one"`
-	Two   interface{} `db:"two" json:"two"`
-	Three interface{} `db:"three" json:"three"`
+	One   any `db:"one" json:"one"`
+	Two   any `db:"two" json:"two"`
+	Three any `db:"three" json:"three"`
 }
 
-func (self TrioStruct) GetOne() interface{}   { return self.One }
-func (self TrioStruct) GetTwo() interface{}   { return self.Two }
-func (self TrioStruct) GetThree() interface{} { return self.Three }
+func (self TrioStruct) GetOne() any   { return self.One }
+func (self TrioStruct) GetTwo() any   { return self.Two }
+func (self TrioStruct) GetThree() any { return self.Three }
 
-type list = []interface{}
+type list = []any
 
 type Encoder interface {
 	fmt.Stringer
@@ -128,9 +128,9 @@ func reify(vals ...Expr) R {
 }
 
 // Short for "reified".
-func rei(text string, args ...interface{}) R { return R{text, args}.Norm() }
+func rei(text string, args ...any) R { return R{text, args}.Norm() }
 
-func reiFrom(text []byte, args []interface{}) R {
+func reiFrom(text []byte, args []any) R {
 	return R{bytesToMutableString(text), args}.Norm()
 }
 
@@ -138,7 +138,7 @@ func reifyParamExpr(expr ParamExpr, dict ArgDict) R {
 	return reiFrom(expr.AppendParamExpr(nil, nil, dict))
 }
 
-func reifyUnparamPreps(vals ...string) (text []byte, args []interface{}) {
+func reifyUnparamPreps(vals ...string) (text []byte, args []any) {
 	for _, val := range vals {
 		text, args = Preparse(val).AppendParamExpr(text, args, nil)
 	}
@@ -177,7 +177,7 @@ func (self R) Norm() R {
 	return self
 }
 
-func eq(t testing.TB, exp, act interface{}) {
+func eq(t testing.TB, exp, act any) {
 	t.Helper()
 	if !r.DeepEqual(exp, act) {
 		t.Fatalf(`
@@ -193,23 +193,17 @@ actual (simple):
 	}
 }
 
-func is(t testing.TB, exp, act interface{}) {
+func sliceIs[A any](t testing.TB, exp, act []A) {
 	t.Helper()
 
-	// nolint:structcheck
-	type iface struct {
-		typ u.Pointer
-		dat u.Pointer
-	}
+	expSlice := *(*sliceHeader)(u.Pointer(&exp))
+	actSlice := *(*sliceHeader)(u.Pointer(&act))
 
-	expIface := *(*iface)(u.Pointer(&exp))
-	actIface := *(*iface)(u.Pointer(&act))
-
-	if expIface != actIface {
+	if !r.DeepEqual(expSlice, actSlice) {
 		t.Fatalf(`
-expected (interface):
+expected (slice):
 	%#[1]v
-actual (interface):
+actual (slice):
 	%#[2]v
 expected (detailed):
 	%#[3]v
@@ -219,11 +213,18 @@ expected (simple):
 	%[3]v
 actual (simple):
 	%[4]v
-`, expIface, actIface, exp, act)
+`, expSlice, actSlice, exp, act)
 	}
 }
 
-func notEq(t testing.TB, exp, act interface{}) {
+// nolint:structcheck
+type sliceHeader struct {
+	dat u.Pointer
+	len int
+	cap int
+}
+
+func notEq(t testing.TB, exp, act any) {
 	t.Helper()
 	if r.DeepEqual(exp, act) {
 		t.Fatalf(`
@@ -254,17 +255,17 @@ found the following message:
 	}
 }
 
-func funcName(val interface{}) string {
+func funcName(val any) string {
 	return runtime.FuncForPC(r.ValueOf(val).Pointer()).Name()
 }
 
-func catchAny(fun func()) (val interface{}) {
+func catchAny(fun func()) (val any) {
 	defer recAny(&val)
 	fun()
 	return
 }
 
-func recAny(ptr *interface{}) { *ptr = recover() }
+func recAny(ptr *any) { *ptr = recover() }
 
 var hugeBui = MakeBui(len(hugeQuery)*2, len(hugeQueryArgs)*2)
 
@@ -371,7 +372,7 @@ type HaserFalse struct{}
 
 func (HaserFalse) Has(string) bool { return false }
 
-type Stringer [1]interface{}
+type Stringer [1]any
 
 func (self Stringer) String() string {
 	if self[0] == nil {

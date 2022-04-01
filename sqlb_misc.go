@@ -16,7 +16,7 @@ examples. Actual code may want to use `Bui`:
 	panic(bui.CatchExprs(someExprs...))
 	text, args := bui.Reify()
 */
-func Reify(vals ...Expr) (string, []interface{}) {
+func Reify(vals ...Expr) (string, []any) {
 	var bui Bui
 	bui.Exprs(vals...)
 	return bui.Reify()
@@ -24,22 +24,22 @@ func Reify(vals ...Expr) (string, []interface{}) {
 
 /*
 Returns the output of `Cols` for the given type, but takes `reflect.Type` as
-input, rather than a type-carrying `interface{}`. Used internally by `Cols`.
+input, rather than a type-carrying `any`. Used internally by `Cols`.
 The result is cached and reused. Subsequent calls for the same type are nearly
 free.
 */
 func TypeCols(typ r.Type) string {
-	return colsCache.Get(typeElem(typ)).(string)
+	return colsCache.Get(typeElem(typ))
 }
 
 /*
 Returns the output of `ColsDeep` for the given type, but takes `reflect.Type` as
-input, rather than a type-carrying `interface{}`. Used internally by
+input, rather than a type-carrying `any`. Used internally by
 `ColsDeep`. The result is cached and reused. Subsequent calls for the same type
 are nearly free.
 */
 func TypeColsDeep(typ r.Type) string {
-	return colsDeepCache.Get(typeElem(typ)).(string)
+	return colsDeepCache.Get(typeElem(typ))
 }
 
 /*
@@ -49,11 +49,11 @@ internally by `StrQ`. User code shouldn't have to call this, but it's exported
 just in case.
 */
 func Preparse(val string) Prep {
-	return prepCache.Get(val).(Prep)
+	return prepCache.Get(val)
 }
 
 // Shortcut for `StrQ{text, List(args)}`.
-func ListQ(text string, args ...interface{}) StrQ {
+func ListQ(text string, args ...any) StrQ {
 	if len(args) == 0 {
 		return StrQ{text, nil}
 	}
@@ -61,7 +61,7 @@ func ListQ(text string, args ...interface{}) StrQ {
 }
 
 // Shortcut for `StrQ{text, Dict(args)}`.
-func DictQ(text string, args map[string]interface{}) StrQ {
+func DictQ(text string, args map[string]any) StrQ {
 	if len(args) == 0 {
 		return StrQ{text, nil}
 	}
@@ -69,7 +69,7 @@ func DictQ(text string, args map[string]interface{}) StrQ {
 }
 
 // Shortcut for `StrQ{text, StructDict{reflect.ValueOf(args)}}`.
-func StructQ(text string, args interface{}) StrQ {
+func StructQ(text string, args any) StrQ {
 	val := valueOf(args)
 	if !val.IsValid() {
 		return StrQ{text, nil}
@@ -195,14 +195,14 @@ generate one. Example PATCH endpoint using "rd":
 	}
 */
 type Partial struct {
-	Val interface{}
+	Val any
 	Fil Haser
 }
 
 var _ = Sparse(Partial{})
 
 // Implement `Sparse`, returning the underlying value.
-func (self Partial) Get() interface{} { return self.Val }
+func (self Partial) Get() any { return self.Val }
 
 // Implement `Sparse`, using the underlying filter.
 func (self Partial) AllowField(field r.StructField) bool {

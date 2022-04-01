@@ -60,7 +60,7 @@ const (
 Shortcut for instantiating `Jel` with the type of the given value. The input is
 used only as a type carrier.
 */
-func JelFor(typ interface{}) Jel { return Jel{Type: typeElemOf(typ)} }
+func JelFor(typ any) Jel { return Jel{Type: typeElemOf(typ)} }
 
 /*
 Short for "JSON Expression Language". Provides support for expressing a
@@ -142,7 +142,7 @@ The result is roughly equivalent to the following (formatted for clarity):
 		and
 		("field_two")."field_three" < '9999-01-01T00:00:00Z'
 	`
-	args := []interface{}{"literal string", time.Time("9999-01-01T00:00:00Z")}
+	args := []any{"literal string", time.Time("9999-01-01T00:00:00Z")}
 */
 type Jel struct {
 	Type r.Type
@@ -156,7 +156,7 @@ Implement `Expr`, allowing this to be used as a sub-expression in queries built
 with "github.com/mitranim/sqlb". Always generates a valid boolean expression,
 falling back on "true" if empty.
 */
-func (self Jel) AppendExpr(text []byte, args []interface{}) ([]byte, []interface{}) {
+func (self Jel) AppendExpr(text []byte, args []any) ([]byte, []any) {
 	bui := Bui{text, args}
 
 	if len(self.Text) == 0 {
@@ -199,7 +199,7 @@ func (self *Jel) UnmarshalJSON(val []byte) error {
 If `.Type` is empty, sets the type of the provided value. Otherwise this is a
 nop. The input is used only as a type carrier; its actual value is ignored.
 */
-func (self *Jel) OrType(typ interface{}) {
+func (self *Jel) OrType(typ any) {
 	if self.Type == nil {
 		self.Type = typeElemOf(typ)
 	}
@@ -403,7 +403,7 @@ func (self *Jel) decodeString(bui *Bui, input []byte) {
 // Should be used only for numbers, bools, nulls.
 // TODO: unmarshal integers into `int64` rather than `float64`.
 func (self *Jel) decodeAny(bui *Bui, input []byte) {
-	var val interface{}
+	var val any
 	try(json.Unmarshal(input, &val))
 	bui.Param(bui.Arg(val))
 }

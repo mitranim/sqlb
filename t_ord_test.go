@@ -124,7 +124,7 @@ func Test_Ord_combos(t *testing.T) {
 }
 
 func Test_ParseOpt_OrType(t *testing.T) {
-	test := func(exp r.Type, src, typ interface{}) {
+	test := func(exp r.Type, src, typ any) {
 		t.Helper()
 
 		opt := ParseOpt{Type: r.TypeOf(src)}
@@ -155,7 +155,7 @@ func Test_ParseOpt_OrType(t *testing.T) {
 
 // Delegates to `(*ParserOrds).ParseSlice` which is tested separately.
 func Test_ParserOrds_UnmarshalJSON(t *testing.T) {
-	test := func(exp Ords, src string, typ interface{}) {
+	test := func(exp Ords, src string, typ any) {
 		t.Helper()
 
 		var par ParserOrds
@@ -181,7 +181,7 @@ func Test_ParserOrds_UnmarshalJSON(t *testing.T) {
 }
 
 func Test_ParserOrds_ParseSlice_invalid(t *testing.T) {
-	test := func(src, msg string, typ interface{}) {
+	test := func(src, msg string, typ any) {
 		t.Helper()
 
 		var par ParserOrds
@@ -206,7 +206,7 @@ func Test_ParserOrds_ParseSlice_invalid(t *testing.T) {
 	test(`onlyJson`, `error "ErrUnknownField" while converting JSON identifier path to DB path: no DB path corresponding to JSON path "onlyJson" in type Outer`, Outer{})
 }
 
-func testOrdsParsing(t testing.TB, exp Ords, src []string, typ interface{}) {
+func testOrdsParsing(t testing.TB, exp Ords, src []string, typ any) {
 	t.Helper()
 
 	var par ParserOrds
@@ -224,7 +224,7 @@ func Test_ParserOrds_ParseSlice_empty(t *testing.T) {
 }
 
 func Test_ParserOrds_ParseSlice_single(t *testing.T) {
-	test := func(exp Expr, src string, typ interface{}) {
+	test := func(exp Expr, src string, typ any) {
 		t.Helper()
 		testOrdsParsing(t, Ords{exp}, []string{src}, typ)
 	}
@@ -248,7 +248,7 @@ func Test_ParserOrds_ParseSlice_single(t *testing.T) {
 }
 
 func Test_ParserOrds_ParseSlice_multiple(t *testing.T) {
-	test := func(exp Ords, src []string, typ interface{}) {
+	test := func(exp Ords, src []string, typ any) {
 		t.Helper()
 		testOrdsParsing(t, exp, src, typ)
 	}
@@ -273,7 +273,7 @@ func Test_ParserOrds_ParseSlice_multiple(t *testing.T) {
 }
 
 func Test_ParserOrds_ParseSlice_lax(t *testing.T) {
-	test := func(src []string, typ interface{}) {
+	test := func(src []string, typ any) {
 		t.Helper()
 
 		panics(t, `no DB path corresponding to JSON path`, func() {

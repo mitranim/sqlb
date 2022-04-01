@@ -100,6 +100,12 @@ func Example_composition() {
 
 ## Changelog
 
+### v0.6.0
+
+* Support `role:"ref"` struct field annotation for pointer-like generic types.
+
+* Require Go 1.18.
+
 ### v0.5.3
 
 Added `SliceCommaAppender`.

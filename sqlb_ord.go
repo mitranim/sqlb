@@ -32,14 +32,14 @@ Returns an `OrdsParser` that can decode arbitrary JSON or a string slice into
 the given `*Ords` pointer. Initializes the parser to the provided type, using
 `typ` only as a type carrier.
 */
-func (self *Ords) OrdsParser(typ interface{}) (out OrdsParser) {
+func (self *Ords) OrdsParser(typ any) (out OrdsParser) {
 	out.OrType(typ)
 	out.Ords = self
 	return
 }
 
 // Implement the `Expr` interface, making this a sub-expression.
-func (self Ords) AppendExpr(text []byte, args []interface{}) ([]byte, []interface{}) {
+func (self Ords) AppendExpr(text []byte, args []any) ([]byte, []any) {
 	bui := Bui{text, args}
 	var found bool
 
@@ -150,7 +150,7 @@ type Ordering struct {
 }
 
 // Implement the `Expr` interface, making this a sub-expression.
-func (self Ordering) AppendExpr(text []byte, args []interface{}) ([]byte, []interface{}) {
+func (self Ordering) AppendExpr(text []byte, args []any) ([]byte, []any) {
 	if self.Expr == nil {
 		return text, args
 	}
@@ -186,7 +186,7 @@ type Ord struct {
 }
 
 // Implement the `Expr` interface, making this a sub-expression.
-func (self Ord) AppendExpr(text []byte, args []interface{}) ([]byte, []interface{}) {
+func (self Ord) AppendExpr(text []byte, args []any) ([]byte, []any) {
 	return self.Append(text), args
 }
 
@@ -212,7 +212,7 @@ func (self Ord) IsEmpty() bool { return len(self.Path) == 0 }
 type OrdAsc []string
 
 // Implement the `Expr` interface, making this a sub-expression.
-func (self OrdAsc) AppendExpr(text []byte, args []interface{}) ([]byte, []interface{}) {
+func (self OrdAsc) AppendExpr(text []byte, args []any) ([]byte, []any) {
 	return Ord{Path: Path(self), Dir: DirAsc}.AppendExpr(text, args)
 }
 
@@ -228,7 +228,7 @@ func (self OrdAsc) String() string { return exprString(&self) }
 type OrdDesc []string
 
 // Implement the `Expr` interface, making this a sub-expression.
-func (self OrdDesc) AppendExpr(text []byte, args []interface{}) ([]byte, []interface{}) {
+func (self OrdDesc) AppendExpr(text []byte, args []any) ([]byte, []any) {
 	return Ord{Path: Path(self), Dir: DirDesc}.AppendExpr(text, args)
 }
 
@@ -244,7 +244,7 @@ func (self OrdDesc) String() string { return exprString(&self) }
 type OrdNullsFirst []string
 
 // Implement the `Expr` interface, making this a sub-expression.
-func (self OrdNullsFirst) AppendExpr(text []byte, args []interface{}) ([]byte, []interface{}) {
+func (self OrdNullsFirst) AppendExpr(text []byte, args []any) ([]byte, []any) {
 	return Ord{Path: Path(self), Nulls: NullsFirst}.AppendExpr(text, args)
 }
 
@@ -260,7 +260,7 @@ func (self OrdNullsFirst) String() string { return exprString(&self) }
 type OrdNullsLast []string
 
 // Implement the `Expr` interface, making this a sub-expression.
-func (self OrdNullsLast) AppendExpr(text []byte, args []interface{}) ([]byte, []interface{}) {
+func (self OrdNullsLast) AppendExpr(text []byte, args []any) ([]byte, []any) {
 	return Ord{Path: Path(self), Nulls: NullsLast}.AppendExpr(text, args)
 }
 
@@ -276,7 +276,7 @@ func (self OrdNullsLast) String() string { return exprString(&self) }
 type OrdAscNullsFirst []string
 
 // Implement the `Expr` interface, making this a sub-expression.
-func (self OrdAscNullsFirst) AppendExpr(text []byte, args []interface{}) ([]byte, []interface{}) {
+func (self OrdAscNullsFirst) AppendExpr(text []byte, args []any) ([]byte, []any) {
 	return Ord{Path: Path(self), Dir: DirAsc, Nulls: NullsFirst}.AppendExpr(text, args)
 }
 
@@ -292,7 +292,7 @@ func (self OrdAscNullsFirst) String() string { return exprString(&self) }
 type OrdAscNullsLast []string
 
 // Implement the `Expr` interface, making this a sub-expression.
-func (self OrdAscNullsLast) AppendExpr(text []byte, args []interface{}) ([]byte, []interface{}) {
+func (self OrdAscNullsLast) AppendExpr(text []byte, args []any) ([]byte, []any) {
 	return Ord{Path: Path(self), Dir: DirAsc, Nulls: NullsLast}.AppendExpr(text, args)
 }
 
@@ -308,7 +308,7 @@ func (self OrdAscNullsLast) String() string { return exprString(&self) }
 type OrdDescNullsFirst []string
 
 // Implement the `Expr` interface, making this a sub-expression.
-func (self OrdDescNullsFirst) AppendExpr(text []byte, args []interface{}) ([]byte, []interface{}) {
+func (self OrdDescNullsFirst) AppendExpr(text []byte, args []any) ([]byte, []any) {
 	return Ord{Path: Path(self), Dir: DirDesc, Nulls: NullsFirst}.AppendExpr(text, args)
 }
 
@@ -324,7 +324,7 @@ func (self OrdDescNullsFirst) String() string { return exprString(&self) }
 type OrdDescNullsLast []string
 
 // Implement the `Expr` interface, making this a sub-expression.
-func (self OrdDescNullsLast) AppendExpr(text []byte, args []interface{}) ([]byte, []interface{}) {
+func (self OrdDescNullsLast) AppendExpr(text []byte, args []any) ([]byte, []any) {
 	return Ord{Path: Path(self), Dir: DirDesc, Nulls: NullsLast}.AppendExpr(text, args)
 }
 

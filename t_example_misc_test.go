@@ -266,9 +266,9 @@ func ExampleAnd_struct() {
 	fmt.Println(s.Reify(s.And{struct{}{}}))
 
 	fmt.Println(s.Reify(s.And{struct {
-		Col0 bool        `db:"col0"`
-		Col1 interface{} `db:"col1"`
-		Col2 interface{} `db:"col2"`
+		Col0 bool `db:"col0"`
+		Col1 any  `db:"col1"`
+		Col2 any  `db:"col2"`
 	}{
 		true,
 		nil,
@@ -281,7 +281,7 @@ func ExampleAnd_struct() {
 }
 
 func ExampleAnd_slice() {
-	type list = []interface{}
+	type list = []any
 
 	fmt.Println(s.Reify(s.And{nil}))
 	fmt.Println(s.Reify(s.And{list{}}))
@@ -297,9 +297,9 @@ func ExampleOr_struct() {
 	fmt.Println(s.Reify(s.Or{struct{}{}}))
 
 	fmt.Println(s.Reify(s.Or{struct {
-		Col0 bool        `db:"col0"`
-		Col1 interface{} `db:"col1"`
-		Col2 interface{} `db:"col2"`
+		Col0 bool `db:"col0"`
+		Col1 any  `db:"col1"`
+		Col2 any  `db:"col2"`
 	}{
 		true,
 		nil,
@@ -312,7 +312,7 @@ func ExampleOr_struct() {
 }
 
 func ExampleOr_slice() {
-	type list = []interface{}
+	type list = []any
 
 	fmt.Println(s.Reify(s.Or{nil}))
 	fmt.Println(s.Reify(s.Or{list{}}))
@@ -396,9 +396,9 @@ func ExampleColsDeep_struct() {
 
 func ExampleStructValues() {
 	fmt.Println(s.Reify(s.StructValues{struct {
-		Col0 bool        `db:"col0"`
-		Col1 interface{} `db:"col1"`
-		Col2 interface{} `db:"col2"`
+		Col0 bool `db:"col0"`
+		Col1 any  `db:"col1"`
+		Col2 any  `db:"col2"`
 	}{
 		true,
 		nil,
@@ -416,9 +416,9 @@ func ExampleStructInsert_empty() {
 
 func ExampleStructInsert_nonEmpty() {
 	fmt.Println(s.Reify(s.StructInsert{struct {
-		Col0 bool        `db:"col0"`
-		Col1 interface{} `db:"col1"`
-		Col2 interface{} `db:"col2"`
+		Col0 bool `db:"col0"`
+		Col1 any  `db:"col1"`
+		Col2 any  `db:"col2"`
 	}{
 		true,
 		nil,
@@ -430,9 +430,9 @@ func ExampleStructInsert_nonEmpty() {
 
 func ExampleStructAssign() {
 	fmt.Println(s.Reify(s.StructAssign{struct {
-		Col0 bool        `db:"col0"`
-		Col1 interface{} `db:"col1"`
-		Col2 interface{} `db:"col2"`
+		Col0 bool `db:"col0"`
+		Col1 any  `db:"col1"`
+		Col2 any  `db:"col2"`
 	}{
 		true,
 		nil,
@@ -609,7 +609,7 @@ func ExampleDictQ() {
 	fmt.Println(s.Reify(
 		s.DictQ(`
 			select * from some_table where col_one = :one and col_two = :two
-		`, map[string]interface{}{
+		`, map[string]any{
 			`one`: 10,
 			`two`: 20,
 		}),

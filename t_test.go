@@ -592,14 +592,14 @@ func TestCond(t *testing.T) {
 			t,
 			rei(`"col" = (one)`),
 			Cond{`empty`, `delim`, struct {
-				Col interface{} `db:"col"`
+				Col any `db:"col"`
 			}{Str(`one`)}},
 		)
 	})
 }
 
 func TestCond_filter(t *testing.T) {
-	test := func(exp R, val interface{}, fil Haser) {
+	test := func(exp R, val any, fil Haser) {
 		t.Helper()
 		testExpr(t, exp, Cond{`empty`, `delim`, Partial{val, fil}})
 	}
@@ -611,7 +611,7 @@ func TestCond_filter(t *testing.T) {
 }
 
 func TestCols(t *testing.T) {
-	test := func(exp string, typ interface{}) {
+	test := func(exp string, typ any) {
 		t.Helper()
 		testExpr(t, rei(exp), Cols{typ})
 	}
@@ -674,7 +674,7 @@ func TestCols(t *testing.T) {
 }
 
 func TestColsDeep(t *testing.T) {
-	test := func(exp string, typ interface{}) {
+	test := func(exp string, typ any) {
 		t.Helper()
 		eq(t, exp, TypeColsDeep(typeElemOf(typ)))
 		testExpr(t, rei(exp), ColsDeep{typ})
@@ -1577,7 +1577,7 @@ func TestPreparse_dedup(t *testing.T) {
 		t.Helper()
 
 		eq(t, Preparse(val), Preparse(val))
-		is(t, prepCache.Get(val), prepCache.Get(val))
+		sliceIs(t, prepCache.Get(val).Tokens, prepCache.Get(val).Tokens)
 
 		prep := Preparse(val)
 
@@ -1744,7 +1744,7 @@ func TestList(t *testing.T) {
 	testOrdEmpty(zero)
 	testOrdEmpty(empty)
 
-	testOrdFull := func(key int, expVal interface{}, expOk bool) {
+	testOrdFull := func(key int, expVal any, expOk bool) {
 		t.Helper()
 		val, ok := full.GotOrdinal(key)
 		eq(t, expVal, val)
@@ -1859,7 +1859,7 @@ func testArgDictNamed(t testing.TB, zero, empty, full ArgDict) {
 
 func TestPartial(t *testing.T) {
 	t.Run(`Get`, func(t *testing.T) {
-		test := func(val interface{}) {
+		test := func(val any) {
 			eq(t, val, Partial{val, nil}.Get())
 		}
 
@@ -1876,7 +1876,7 @@ func TestPartial(t *testing.T) {
 	})
 
 	t.Run(`AllowField`, func(t *testing.T) {
-		test := func(exp bool, val interface{}, fil Haser, tag r.StructTag) {
+		test := func(exp bool, val any, fil Haser, tag r.StructTag) {
 			t.Helper()
 			eq(t, exp, Partial{val, fil}.AllowField(r.StructField{Tag: tag}))
 		}
@@ -1920,7 +1920,7 @@ func TestPartial(t *testing.T) {
 
 // Incomplete, TODO more.
 func TestTryString(t *testing.T) {
-	test := func(exp string, src interface{}) {
+	test := func(exp string, src any) {
 		t.Helper()
 		eq(t, exp, TryString(src))
 	}
@@ -1965,7 +1965,7 @@ func TestTryString(t *testing.T) {
 
 // Incomplete, TODO more.
 func TestTryAppend(t *testing.T) {
-	test := func(exp string, src interface{}) {
+	test := func(exp string, src any) {
 		t.Helper()
 		const prefix = `this prefix must be preserved `
 		eq(t, prefix+exp, string(TryAppend([]byte(prefix), src)))

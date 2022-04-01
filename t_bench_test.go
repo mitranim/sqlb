@@ -17,7 +17,7 @@ func benchDeleteAst() Expr {
 	return qDeleteAst(`some_table`, External{})
 }
 
-func qDeleteAst(from Ident, where interface{}) Expr {
+func qDeleteAst(from Ident, where any) Expr {
 	return Delete{from, where}
 }
 
@@ -58,7 +58,7 @@ func benchDeleteText() Expr {
 	return qDeleteText(`some_table`, External{})
 }
 
-func qDeleteText(ident Ident, where interface{}) Expr {
+func qDeleteText(ident Ident, where any) Expr {
 	return StrQ{`delete from :ident where :where returning *`, Dict{
 		`ident`: ident,
 		`where`: And{where},
@@ -243,18 +243,18 @@ func benchMakeStructDict() ArgDict {
 }
 
 type BenchStructDict struct {
-	Key_c603c58746a69833a1528050c33d interface{}
-	Key_abfbb9e94e4093a47683e8ef606b interface{}
-	Key_907b548d45948a206907ed9c9097 interface{}
-	Key_5ee2513a41a88d173cd53d389c14 interface{}
-	Key_0ac8b89b46bba5d4d076e71d6232 interface{}
-	Key_b754f88b42fcbd6c30e3bb544909 interface{}
-	Key_e52daa684071891a1dae084bfd00 interface{}
-	Key_3106dc324be4b3ff5d477e71c593 interface{}
-	Key_a7b558a54d178bdb6fcf3368939b interface{}
-	Key_1622da954c8a8f6fec82e6fd3c34 interface{}
-	Key_fa3892644f1392aee8e66b799b3f interface{}
-	Key_b9aa15254438b0b7a32489947c50 interface{}
+	Key_c603c58746a69833a1528050c33d any
+	Key_abfbb9e94e4093a47683e8ef606b any
+	Key_907b548d45948a206907ed9c9097 any
+	Key_5ee2513a41a88d173cd53d389c14 any
+	Key_0ac8b89b46bba5d4d076e71d6232 any
+	Key_b754f88b42fcbd6c30e3bb544909 any
+	Key_e52daa684071891a1dae084bfd00 any
+	Key_3106dc324be4b3ff5d477e71c593 any
+	Key_a7b558a54d178bdb6fcf3368939b any
+	Key_1622da954c8a8f6fec82e6fd3c34 any
+	Key_fa3892644f1392aee8e66b799b3f any
+	Key_b9aa15254438b0b7a32489947c50 any
 }
 
 func (self BenchStructDict) Key_ce59b8e14f77b6e6e9cd28cecacd() string {
@@ -318,7 +318,7 @@ func Benchmark_list_access(b *testing.B) {
 var benchList = benchMakeList()
 
 func benchTestListAccess(t testing.TB, list ArgDict) {
-	test := func(key int, expVal interface{}, expOk bool) {
+	test := func(key int, expVal any, expOk bool) {
 		t.Helper()
 		val, ok := list.GotOrdinal(key)
 		eq(t, expVal, val)

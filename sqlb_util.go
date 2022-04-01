@@ -79,39 +79,25 @@ type structFieldValue struct {
 	Value r.Value
 }
 
-type typeCache struct {
+func cacheOf[Key, Val any](fun func(Key) Val) *cache[Key, Val] {
+	return &cache[Key, Val]{Func: fun}
+}
+
+type cache[Key, Val any] struct {
 	sync.Map
-	Func func(r.Type) interface{}
+	Func func(Key) Val
 }
 
 // Susceptible to "thundering herd". An improvement from no caching, but still
 // not ideal.
-func (self *typeCache) Get(key r.Type) interface{} {
-	val, ok := self.Load(key)
-	if !ok {
-		if self.Func != nil {
-			val = self.Func(key)
-		}
-		self.Store(key, val)
+func (self *cache[Key, Val]) Get(key Key) Val {
+	iface, ok := self.Load(key)
+	if ok {
+		return iface.(Val)
 	}
-	return val
-}
 
-type stringCache struct {
-	sync.Map
-	Func func(string) interface{}
-}
-
-// Susceptible to "thundering herd". An improvement from no caching, but still
-// not ideal.
-func (self *stringCache) Get(key string) interface{} {
-	val, ok := self.Load(key)
-	if !ok {
-		if self.Func != nil {
-			val = self.Func(key)
-		}
-		self.Store(key, val)
-	}
+	val := self.Func(key)
+	self.Store(key, val)
 	return val
 }
 
@@ -216,7 +202,7 @@ Questionable. Could be avoided by using `is [not] distinct from` which works for
 both nulls and non-nulls, but at the time of writing, that operator doesn't
 work on indexes in PG, resulting in atrocious performance.
 */
-func norm(val interface{}) interface{} {
+func norm(val any) any {
 	val = normNil(val)
 	if val == nil {
 		return nil
@@ -240,7 +226,7 @@ func norm(val interface{}) interface{} {
 	return val
 }
 
-func normNil(val interface{}) interface{} {
+func normNil(val any) any {
 	if isNil(val) {
 		return nil
 	}
@@ -304,13 +290,13 @@ func growBytes(prev []byte, size int) []byte {
 }
 
 // Same as `growBytes`. WTB generics.
-func growInterfaces(prev []interface{}, size int) []interface{} {
+func growInterfaces(prev []any, size int) []any {
 	len, cap := len(prev), cap(prev)
 	if cap-len >= size {
 		return prev
 	}
 
-	next := make([]interface{}, len, 2*cap+size)
+	next := make([]any, len, 2*cap+size)
 	copy(next, prev)
 	return next
 }
@@ -329,7 +315,7 @@ func growExprs(prev []Expr, size int) []Expr {
 
 var argTrackerPool = sync.Pool{New: newArgTracker}
 
-func newArgTracker() interface{} { return new(argTracker) }
+func newArgTracker() any { return new(argTracker) }
 
 func getArgTracker() *argTracker {
 	return argTrackerPool.Get().(*argTracker)
@@ -456,33 +442,33 @@ func validateIdent(val string) {
 	}
 }
 
-var prepCache = stringCache{Func: func(src string) interface{} {
+var prepCache = cacheOf(func(src string) Prep {
 	prep := Prep{Source: src}
 	prep.Parse()
 	return prep
-}}
+})
 
-var colsCache = typeCache{Func: func(typ r.Type) interface{} {
+var colsCache = cacheOf(func(typ r.Type) string {
 	typ = typeElem(typ)
 	if isStructType(typ) {
 		return structCols(typ)
 	}
 	return `*`
-}}
+})
 
-var colsDeepCache = typeCache{Func: func(typ r.Type) interface{} {
+var colsDeepCache = cacheOf(func(typ r.Type) string {
 	typ = typeElem(typ)
 	if isStructType(typ) {
 		return structColsDeep(typ)
 	}
 	return `*`
-}}
+})
 
 func loadStructDbFields(typ r.Type) []r.StructField {
-	return structDbFieldsCache.Get(typeElem(typ)).([]r.StructField)
+	return structDbFieldsCache.Get(typeElem(typ))
 }
 
-var structDbFieldsCache = typeCache{Func: func(typ r.Type) interface{} {
+var structDbFieldsCache = cacheOf(func(typ r.Type) []r.StructField {
 	// No `make` because `typ.NumField()` doesn't give us the full count.
 	var out []r.StructField
 
@@ -499,13 +485,13 @@ var structDbFieldsCache = typeCache{Func: func(typ r.Type) interface{} {
 	}
 
 	return out
-}}
+})
 
 func loadStructPaths(typ r.Type) []structPath {
-	return structPathsCache.Get(typeElem(typ)).([]structPath)
+	return structPathsCache.Get(typeElem(typ))
 }
 
-var structPathsCache = typeCache{Func: func(typ r.Type) interface{} {
+var structPathsCache = cacheOf(func(typ r.Type) []structPath {
 	var out []structPath
 
 	typ = typeElem(typ)
@@ -528,29 +514,29 @@ var structPathsCache = typeCache{Func: func(typ r.Type) interface{} {
 	}
 
 	return out
-}}
+})
 
 func loadStructPathMap(typ r.Type) map[string]structPath {
-	return structPathMapCache.Get(typeElem(typ)).(map[string]structPath)
+	return structPathMapCache.Get(typeElem(typ))
 }
 
-var structPathMapCache = typeCache{Func: func(typ r.Type) interface{} {
+var structPathMapCache = cacheOf(func(typ r.Type) map[string]structPath {
 	paths := loadStructPaths(typ)
 	out := make(map[string]structPath, len(paths))
 	for _, val := range paths {
 		out[val.Name] = val
 	}
 	return out
-}}
+})
 
 func loadStructJsonPathToNestedDbFieldMap(typ r.Type) map[string]structNestedDbField {
-	return structJsonPathToNestedDbFieldMapCache.Get(typeElem(typ)).(map[string]structNestedDbField)
+	return structJsonPathToNestedDbFieldMapCache.Get(typeElem(typ))
 }
 
-var structJsonPathToNestedDbFieldMapCache = typeCache{Func: func(typ r.Type) interface{} {
+var structJsonPathToNestedDbFieldMapCache = cacheOf(func(typ r.Type) map[string]structNestedDbField {
 	typ = typeElem(typ)
 	if typ == nil {
-		return map[string]structNestedDbField(nil)
+		return nil
 	}
 
 	reqStructType(`generating JSON-DB path mapping from struct type`, typ)
@@ -563,20 +549,20 @@ var structJsonPathToNestedDbFieldMapCache = typeCache{Func: func(typ r.Type) int
 		addJsonPathsToDbPaths(buf, &jsonPath, &dbPath, typ.Field(i))
 	}
 	return buf
-}}
+})
 
 func loadStructJsonPathToDbPathFieldValueMap(typ r.Type) map[string]structFieldValue {
-	return structJsonPathToDbPathFieldValueMapCache.Get(typeElem(typ)).(map[string]structFieldValue)
+	return structJsonPathToDbPathFieldValueMapCache.Get(typeElem(typ))
 }
 
-var structJsonPathToDbPathFieldValueMapCache = typeCache{Func: func(typ r.Type) interface{} {
+var structJsonPathToDbPathFieldValueMapCache = cacheOf(func(typ r.Type) map[string]structFieldValue {
 	src := loadStructJsonPathToNestedDbFieldMap(typ)
 	out := make(map[string]structFieldValue, len(src))
 	for key, val := range src {
 		out[key] = structFieldValue{val.Field, r.ValueOf(val.DbPath)}
 	}
 	return out
-}}
+})
 
 func appendStructDbFields(buf *[]r.StructField, path *[]int, typ r.Type, index int) {
 	field := typ.Field(index)
@@ -612,7 +598,6 @@ func appendStructFieldPaths(buf *[]structPath, path *[]int, typ r.Type, index in
 
 	defer resliceInts(path, len(*path))
 	*path = append(*path, index)
-
 	*buf = append(*buf, structPath{Name: field.Name, FieldIndex: copyInts(*path)})
 
 	typ = typeDeref(field.Type)
@@ -623,7 +608,7 @@ func appendStructFieldPaths(buf *[]structPath, path *[]int, typ r.Type, index in
 	}
 }
 
-func makeIter(val interface{}) (out iter) {
+func makeIter(val any) (out iter) {
 	if val == nil {
 		return
 	}
@@ -694,19 +679,19 @@ func valueDeref(val r.Value) r.Value {
 	return val
 }
 
-func typeElemOf(typ interface{}) r.Type {
+func typeElemOf(typ any) r.Type {
 	return typeElem(r.TypeOf(typ))
 }
 
-func typeOf(typ interface{}) r.Type {
+func typeOf(typ any) r.Type {
 	return typeDeref(r.TypeOf(typ))
 }
 
-func valueOf(val interface{}) r.Value {
+func valueOf(val any) r.Value {
 	return valueDeref(r.ValueOf(val))
 }
 
-func kindOf(val interface{}) r.Kind {
+func kindOf(val any) r.Kind {
 	typ := typeOf(val)
 	if typ != nil {
 		return typ.Kind()
@@ -757,7 +742,7 @@ func typeName(typ r.Type) string {
 	return typ.Name()
 }
 
-func isNil(val interface{}) bool {
+func isNil(val any) bool {
 	return val == nil || isValueNil(r.ValueOf(val))
 }
 
@@ -777,11 +762,32 @@ func isNilable(kind r.Kind) bool {
 func isPublic(pkgPath string) bool { return pkgPath == `` }
 
 func typeDeref(typ r.Type) r.Type {
-	for typ != nil && typ.Kind() == r.Ptr {
-		typ = typ.Elem()
+	if typ == nil {
+		return nil
 	}
-	return typ
+	return typeDerefCache.Get(typ)
 }
+
+var typeDerefCache = cacheOf(func(typ r.Type) r.Type {
+	for typ != nil {
+		if typ.Kind() == r.Ptr {
+			typ = typ.Elem()
+			continue
+		}
+
+		if typ.Kind() == r.Struct && typ.NumField() > 0 {
+			field := typ.Field(0)
+			if field.Tag.Get(`role`) == `ref` {
+				typ = field.Type
+				continue
+			}
+		}
+
+		break
+	}
+
+	return typ
+})
 
 /*
 TODO: consider validating that the name doesn't contain double quotes. We might
@@ -939,9 +945,9 @@ func appendIntWith(text []byte, delim string, val int64) []byte {
 }
 
 func appendPrefixSub(
-	text []byte, args []interface{}, prefix string, val interface{},
+	text []byte, args []any, prefix string, val any,
 ) (
-	[]byte, []interface{},
+	[]byte, []any,
 ) {
 	if val == nil {
 		return text, args

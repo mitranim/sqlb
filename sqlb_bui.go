@@ -7,7 +7,7 @@ buffers.
 func MakeBui(textCap, argsCap int) Bui {
 	return Bui{
 		make([]byte, 0, textCap),
-		make([]interface{}, 0, argsCap),
+		make([]any, 0, argsCap),
 	}
 }
 
@@ -20,12 +20,12 @@ allow future Go versions to optimize it away completely.
 */
 type Bui struct {
 	Text []byte
-	Args []interface{}
+	Args []any
 }
 
 // Returns text and args as-is. Useful shortcut for passing them to
 // `AppendExpr`.
-func (self Bui) Get() ([]byte, []interface{}) {
+func (self Bui) Get() ([]byte, []any) {
 	return self.Text, self.Args
 }
 
@@ -36,14 +36,14 @@ interface-induced allocation:
 
 	bui.Set(SomeExpr{}.AppendExpr(bui.Get()))
 */
-func (self *Bui) Set(text []byte, args []interface{}) {
+func (self *Bui) Set(text []byte, args []any) {
 	self.Text = text
 	self.Args = args
 }
 
 // Shortcut for `self.String(), self.Args`. Go database drivers tend to require
-// `string, []interface{}` as inputs for queries and statements.
-func (self Bui) Reify() (string, []interface{}) {
+// `string, []any` as inputs for queries and statements.
+func (self Bui) Reify() (string, []any) {
 	return self.String(), self.Args
 }
 
@@ -127,7 +127,7 @@ func (self *Bui) Param(val OrdinalParam) {
 
 // Appends an arg to the inner slice of args, returning the corresponding
 // ordinal parameter that should be appended to the text.
-func (self *Bui) Arg(val interface{}) OrdinalParam {
+func (self *Bui) Arg(val any) OrdinalParam {
 	self.Args = append(self.Args, val)
 	return OrdinalParam(len(self.Args))
 }
@@ -138,7 +138,7 @@ Appends an arbitrary value. If the value implements `Expr`, this calls
 Otherwise, appends an argument to the inner slice of args, and the
 corresponding ordinal parameter such as "$1"/"$2"/.../"$N" to the text.
 */
-func (self *Bui) Any(val interface{}) {
+func (self *Bui) Any(val any) {
 	impl, _ := val.(Expr)
 	if impl != nil {
 		self.Expr(impl)
@@ -165,7 +165,7 @@ Appends an arbitrary value or sub-expression. Like `(*Bui).Any`, but if the
 value implements `Expr`, this uses `(*Bui).SubExpr` in order to parenthesize
 the sub-expression.
 */
-func (self *Bui) SubAny(val interface{}) {
+func (self *Bui) SubAny(val any) {
 	impl, _ := val.(Expr)
 	if impl != nil {
 		self.SubExpr(impl)
