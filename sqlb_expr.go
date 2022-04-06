@@ -875,6 +875,50 @@ func (self StructInsert) Append(text []byte) []byte { return exprAppend(&self, t
 func (self StructInsert) String() string { return exprString(&self) }
 
 /*
+Shortcut for creating `StructsInsert` from the given values.
+Workaround for lack of type inference in type literals.
+*/
+func StructsInsertOf[A any](val ...A) StructsInsert[A] { return val }
+
+/*
+Variant of `StructInsert` that supports multiple structs. Generates a
+names-and-values clause suitable for bulk insertion. The inner type must be a
+struct. An empty slice generates an empty expression. See the examples.
+*/
+type StructsInsert[A any] []A
+
+// Implement the `Expr` interface, making this a sub-expression.
+func (self StructsInsert[A]) AppendExpr(text []byte, args []any) ([]byte, []any) {
+	if len(self) == 0 {
+		return text, args
+	}
+
+	bui := Bui{text, args}
+
+	bui.Str(`(`)
+	bui.Str(TypeCols(typeOf((*A)(nil))))
+	bui.Str(`) values`)
+
+	for ind, val := range self {
+		if ind > 0 {
+			bui.Str(`, `)
+		}
+		bui.Str(`(`)
+		bui.Set(StructValues{val}.AppendExpr(bui.Get()))
+		bui.Str(`)`)
+	}
+
+	return bui.Get()
+}
+
+// Implement the `Appender` interface, sometimes allowing more efficient text
+// encoding.
+func (self StructsInsert[_]) Append(text []byte) []byte { return exprAppend(&self, text) }
+
+// Implement the `fmt.Stringer` interface for debug purposes.
+func (self StructsInsert[_]) String() string { return exprString(&self) }
+
+/*
 Represents an SQL assignment clause suitable for "update set" operations. The
 inner value must be a struct. The resulting expression consists of
 comma-separated assignments with column names and values derived from the

@@ -819,6 +819,39 @@ func TestStructInsert_filter(t *testing.T) {
 	testExpr(t, rei(`("one", "two") values ($1, $2)`, 10, 20), StructInsert{Partial{&PairStruct{10, 20}, HaserTrue{}}})
 }
 
+/*
+Uses `TypeCols` and `StructInsert` internally.
+We only need a few sanity checks.
+*/
+func TestStructsInsert(t *testing.T) {
+	testExpr(t, rei(``), StructsInsertOf[any]())
+	testExpr(t, rei(`() values ()`), StructsInsertOf(Void{}))
+	testExpr(t, rei(`() values ()`), StructsInsertOf(&Void{}))
+
+	testExpr(t, rei(``), StructsInsertOf[UnitStruct]())
+	testExpr(t, rei(`("one") values ($1)`, nil), StructsInsertOf(UnitStruct{}))
+	testExpr(t, rei(`("one") values ($1)`, nil), StructsInsertOf(&UnitStruct{}))
+	testExpr(t, rei(`("one") values ($1)`, `two`), StructsInsertOf(UnitStruct{`two`}))
+	testExpr(t, rei(`("one") values ($1)`, `two`), StructsInsertOf(&UnitStruct{`two`}))
+	testExpr(t, rei(`("one") values ($1)`, 10), StructsInsertOf(UnitStruct{10}))
+	testExpr(t, rei(`("one") values ($1)`, 10), StructsInsertOf(&UnitStruct{10}))
+	testExpr(t, rei(`("one") values ((two))`), StructsInsertOf(&UnitStruct{Str(`two`)}))
+
+	testExpr(
+		t,
+		rei(`("one") values ($1), ($2)`, 10, 20),
+		StructsInsertOf(UnitStruct{10}, UnitStruct{20}),
+	)
+
+	testExpr(t, rei(`("one", "two") values ($1, $2)`, 10, 20), StructsInsertOf(PairStruct{10, 20}))
+
+	testExpr(
+		t,
+		rei(`("one", "two") values ($1, $2), ($3, $4)`, 10, 20, 30, 40),
+		StructsInsertOf(PairStruct{10, 20}, PairStruct{30, 40}),
+	)
+}
+
 func TestStructAssign(t *testing.T) {
 	panics(t, `assignment must have at least one field`, func() {
 		StructAssign{}.AppendExpr(nil, nil)

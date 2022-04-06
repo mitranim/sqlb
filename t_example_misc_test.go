@@ -428,6 +428,26 @@ func ExampleStructInsert_nonEmpty() {
 	// ("col0", "col1", "col2") values ($1, $2, (some_func ($3))) [true <nil> 10]
 }
 
+func ExampleStructsInsert_empty() {
+	fmt.Println(s.StructsInsertOf[any]())
+	// Output:
+}
+
+func ExampleStructsInsert_nonEmpty() {
+	type Row struct {
+		Col0 bool   `db:"col0"`
+		Col1 int64  `db:"col1"`
+		Col2 string `db:"col2"`
+	}
+
+	fmt.Println(s.Reify(s.StructsInsertOf(
+		Row{true, 10, `one`},
+		Row{false, 20, `two`},
+	)))
+	// Output:
+	// ("col0", "col1", "col2") values ($1, $2, $3), ($4, $5, $6) [true 10 one false 20 two]
+}
+
 func ExampleStructAssign() {
 	fmt.Println(s.Reify(s.StructAssign{struct {
 		Col0 bool `db:"col0"`
