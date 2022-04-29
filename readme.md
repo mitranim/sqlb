@@ -100,6 +100,10 @@ func Example_composition() {
 
 ## Changelog
 
+### v0.6.2
+
+`CommaAppender` and `ArrayAppender` are now parametrized on the element type.
+
 ### v0.6.1
 
 Added `StructsInsert`, `StructsInsertOf`.

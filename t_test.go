@@ -2067,37 +2067,42 @@ func TestSliceCommaAppender(t *testing.T) {
 }
 
 func TestCommaAppender(t *testing.T) {
+	type Type = CommaAppender[Appender]
+
 	test := func(exp string, val Encoder) { testEncoder(t, exp, val) }
 
-	test(``, CommaAppender{})
-	test(``, CommaAppender{nil, nil, nil})
-	test(``, CommaAppender{nil, CommaAppender{}, CommaAppender{nil}, nil, Stringer{}})
-	test(``, CommaAppender{Stringer{nil}})
-	test(``, CommaAppender{nil, Stringer{}, nil, Stringer{``}})
-	test(`10`, CommaAppender{Stringer{10}})
-	test(`10`, CommaAppender{nil, Stringer{10}, nil})
-	test(`10`, CommaAppender{nil, Stringer{``}, Stringer{10}, nil, Stringer{``}})
-	test(`10,20`, CommaAppender{Stringer{10}, nil, Stringer{20}})
-	test(`10,20`, CommaAppender{nil, Stringer{10}, nil, Stringer{20}, nil, Stringer{``}})
-	test(`10,20,30`, CommaAppender{CommaAppender{Stringer{10}}, CommaAppender{Stringer{20}, Stringer{``}, Stringer{30}}})
+	test(``, Type{})
+	test(``, Type{nil, nil, nil})
+	test(``, Type{nil, Type{}, Type{nil}, nil, Stringer{}})
+	test(``, Type{Stringer{nil}})
+	test(``, Type{nil, Stringer{}, nil, Stringer{``}})
+	test(`10`, Type{Stringer{10}})
+	test(`10`, Type{nil, Stringer{10}, nil})
+	test(`10`, Type{nil, Stringer{``}, Stringer{10}, nil, Stringer{``}})
+	test(`10,20`, Type{Stringer{10}, nil, Stringer{20}})
+	test(`10,20`, Type{nil, Stringer{10}, nil, Stringer{20}, nil, Stringer{``}})
+	test(`10,20,30`, Type{Type{Stringer{10}}, Type{Stringer{20}, Stringer{``}, Stringer{30}}})
 }
 
 func TestArrayAppender(t *testing.T) {
+	type Comma = CommaAppender[Appender]
+	type Type = ArrayAppender[Appender]
+
 	test := func(exp string, val Encoder) { testEncoder(t, exp, val) }
 
-	test(`{}`, ArrayAppender{})
-	test(`{}`, ArrayAppender{nil, nil, nil})
-	test(`{}`, ArrayAppender{nil, CommaAppender{}, CommaAppender{nil}, nil, Stringer{}})
-	test(`{{},{}}`, ArrayAppender{nil, ArrayAppender{}, ArrayAppender{nil}, nil, Stringer{}})
-	test(`{}`, ArrayAppender{Stringer{nil}})
-	test(`{}`, ArrayAppender{nil, Stringer{}, nil, Stringer{``}})
-	test(`{10}`, ArrayAppender{Stringer{10}})
-	test(`{10}`, ArrayAppender{nil, Stringer{10}, nil})
-	test(`{10}`, ArrayAppender{nil, Stringer{``}, Stringer{10}, nil, Stringer{``}})
-	test(`{10,20}`, ArrayAppender{Stringer{10}, nil, Stringer{20}})
-	test(`{10,20}`, ArrayAppender{nil, Stringer{10}, nil, Stringer{20}, nil, Stringer{``}})
-	test(`{10,20,30}`, ArrayAppender{CommaAppender{Stringer{10}}, CommaAppender{Stringer{20}, Stringer{``}, Stringer{30}}})
-	test(`{{10},{20,30}}`, ArrayAppender{ArrayAppender{Stringer{10}}, ArrayAppender{Stringer{20}, Stringer{``}, Stringer{30}}})
+	test(`{}`, Type{})
+	test(`{}`, Type{nil, nil, nil})
+	test(`{}`, Type{nil, Comma{}, Comma{nil}, nil, Stringer{}})
+	test(`{{},{}}`, Type{nil, Type{}, Type{nil}, nil, Stringer{}})
+	test(`{}`, Type{Stringer{nil}})
+	test(`{}`, Type{nil, Stringer{}, nil, Stringer{``}})
+	test(`{10}`, Type{Stringer{10}})
+	test(`{10}`, Type{nil, Stringer{10}, nil})
+	test(`{10}`, Type{nil, Stringer{``}, Stringer{10}, nil, Stringer{``}})
+	test(`{10,20}`, Type{Stringer{10}, nil, Stringer{20}})
+	test(`{10,20}`, Type{nil, Stringer{10}, nil, Stringer{20}, nil, Stringer{``}})
+	test(`{10,20,30}`, Type{Comma{Stringer{10}}, Comma{Stringer{20}, Stringer{``}, Stringer{30}}})
+	test(`{{10},{20,30}}`, Type{Type{Stringer{10}}, Type{Stringer{20}, Stringer{``}, Stringer{30}}})
 }
 
 func TestLimit(t *testing.T) {
