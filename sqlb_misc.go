@@ -1,6 +1,9 @@
 package sqlb
 
-import r "reflect"
+import (
+	"fmt"
+	r "reflect"
+)
 
 const (
 	TagNameDb   = `db`
@@ -108,12 +111,54 @@ func (self Dir) Append(text []byte) []byte {
 // Implement `fmt.Stringer` for debug purposes.
 func (self Dir) String() string {
 	switch self {
+	default:
+		return ``
 	case DirAsc:
 		return `asc`
 	case DirDesc:
 		return `desc`
+	}
+}
+
+// Parses from a string, which must be either empty, "asc" or "desc".
+func (self *Dir) Parse(src string) error {
+	switch src {
+	case ``:
+		*self = DirNone
+		return nil
+	case `asc`:
+		*self = DirAsc
+		return nil
+	case `desc`:
+		*self = DirDesc
+		return nil
 	default:
-		return ``
+		return ErrInvalidInput{Err{
+			`parsing order direction`,
+			fmt.Errorf(`unrecognized direction %q`, src),
+		}}
+	}
+}
+
+// Implement `encoding.TextUnmarshaler`.
+func (self Dir) MarshalText() ([]byte, error) {
+	return stringToBytesUnsafe(self.String()), nil
+}
+
+// Implement `encoding.TextMarshaler`.
+func (self *Dir) UnmarshalText(src []byte) error {
+	return self.Parse(bytesToMutableString(src))
+}
+
+// Implement `json.Marshaler`.
+func (self Dir) MarshalJSON() ([]byte, error) {
+	switch self {
+	default:
+		return stringToBytesUnsafe(`null`), nil
+	case DirAsc:
+		return stringToBytesUnsafe(`"asc"`), nil
+	case DirDesc:
+		return stringToBytesUnsafe(`"desc"`), nil
 	}
 }
 
@@ -121,12 +166,12 @@ func (self Dir) String() string {
 // representing this value.
 func (self Dir) GoString() string {
 	switch self {
+	default:
+		return `sqlb.DirNone`
 	case DirAsc:
 		return `sqlb.DirAsc`
 	case DirDesc:
 		return `sqlb.DirDesc`
-	default:
-		return `sqlb.DirNone`
 	}
 }
 

@@ -1,6 +1,7 @@
 package sqlb
 
 import (
+	"encoding/json"
 	r "reflect"
 	"testing"
 )
@@ -333,5 +334,51 @@ func Test_ParseOpt_Filter(t *testing.T) {
 				try(par.ParseSlice([]string{`jsonUntagged asc`}))
 			},
 		)
+	})
+}
+
+func TestDir(t *testing.T) {
+	t.Run(`String`, func(t *testing.T) {
+		eq(t, ``, DirNone.String())
+		eq(t, `asc`, DirAsc.String())
+		eq(t, `desc`, DirDesc.String())
+	})
+
+	t.Run(`Parse`, func(t *testing.T) {
+		test := func(exp Dir, src string) {
+			t.Helper()
+			var tar Dir
+			try(tar.Parse(src))
+			eq(t, exp, tar)
+		}
+
+		test(DirNone, ``)
+		test(DirAsc, `asc`)
+		test(DirDesc, `desc`)
+	})
+
+	t.Run(`MarshalJSON`, func(t *testing.T) {
+		test := func(exp string, src Dir) {
+			t.Helper()
+			eq(t, exp, string(try1(json.Marshal(src))))
+		}
+
+		test(`null`, DirNone)
+		test(`"asc"`, DirAsc)
+		test(`"desc"`, DirDesc)
+	})
+
+	t.Run(`UnmarshalJSON`, func(t *testing.T) {
+		test := func(exp Dir, src string) {
+			t.Helper()
+			var tar Dir
+			try(json.Unmarshal([]byte(src), &tar))
+			eq(t, exp, tar)
+		}
+
+		test(DirNone, `null`)
+		test(DirNone, `""`)
+		test(DirAsc, `"asc"`)
+		test(DirDesc, `"desc"`)
 	})
 }

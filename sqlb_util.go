@@ -181,6 +181,11 @@ func try(err error) {
 	}
 }
 
+func try1[A any](val A, err error) A {
+	try(err)
+	return val
+}
+
 // Must be deferred.
 func rec(ptr *error) {
 	val := recover()
@@ -218,9 +223,7 @@ func norm(val any) any {
 
 	valuer, _ := val.(driver.Valuer)
 	if valuer != nil {
-		val, err := valuer.Value()
-		try(err)
-		return val
+		return try1(valuer.Value())
 	}
 
 	return val

@@ -118,19 +118,31 @@ func (self *Bui) CatchExprs(vals ...Expr) (err error) {
 	return
 }
 
-// Appends an ordinal parameter such as "$1", space-separated from previous text
-// if necessary.
-func (self *Bui) Param(val OrdinalParam) {
+/*
+Appends an ordinal parameter such as "$1", space-separated from previous text if
+necessary. Requires caution: does not verify the existence of the corresponding
+argument.
+*/
+func (self *Bui) OrphanParam(val OrdinalParam) {
 	self.Space()
 	self.Text = val.Append(self.Text)
 }
 
-// Appends an arg to the inner slice of args, returning the corresponding
-// ordinal parameter that should be appended to the text.
-func (self *Bui) Arg(val any) OrdinalParam {
+/*
+Appends an arg to the inner slice of args, returning the corresponding ordinal
+parameter that should be appended to the text. Requires caution: does not
+append the corresponding ordinal parameter.
+*/
+func (self *Bui) OrphanArg(val any) OrdinalParam {
 	self.Args = append(self.Args, val)
 	return OrdinalParam(len(self.Args))
 }
+
+/*
+Appends an argument to `.Args` and a corresponding ordinal parameter to
+`.Text`.
+*/
+func (self *Bui) Arg(val any) { self.OrphanParam(self.OrphanArg(val)) }
 
 /*
 Appends an arbitrary value. If the value implements `Expr`, this calls
@@ -151,13 +163,13 @@ func (self *Bui) Any(val any) {
 		if val == nil {
 			self.Str(`null`)
 		} else {
-			self.Param(self.Arg(val))
+			self.Arg(val)
 		}
 
 	Makes some assumptions, and might be the wrong place for such a special case.
 	*/
 
-	self.Param(self.Arg(val))
+	self.Arg(val)
 }
 
 /*
@@ -171,5 +183,5 @@ func (self *Bui) SubAny(val any) {
 		self.SubExpr(impl)
 		return
 	}
-	self.Param(self.Arg(val))
+	self.Arg(val)
 }

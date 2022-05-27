@@ -384,7 +384,7 @@ func (self *Jel) decodeCast(bui *Bui, name string, args []json.RawMessage) {
 	val := r.New(field.Field.Type)
 	try(json.Unmarshal(args[0], val.Interface()))
 
-	bui.Param(bui.Arg(val.Elem().Interface()))
+	bui.Arg(val.Elem().Interface())
 }
 
 func (self *Jel) decodeString(bui *Bui, input []byte) {
@@ -405,5 +405,5 @@ func (self *Jel) decodeString(bui *Bui, input []byte) {
 func (self *Jel) decodeAny(bui *Bui, input []byte) {
 	var val any
 	try(json.Unmarshal(input, &val))
-	bui.Param(bui.Arg(val))
+	bui.Arg(val)
 }

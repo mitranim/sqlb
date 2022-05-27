@@ -21,11 +21,7 @@ func AppenderString(val Appender) string {
 }
 
 // Variant of `String` that panics on error.
-func TryString(val any) string {
-	out, err := String(val)
-	try(err)
-	return out
-}
+func TryString(val any) string { return try1(String(val)) }
 
 /*
 Missing feature of the standard library: return a string representation of an
@@ -120,11 +116,7 @@ func String(src any) (string, error) {
 }
 
 // Variant of `Append` that panics on error.
-func TryAppend(buf []byte, src any) []byte {
-	out, err := Append(buf, src)
-	try(err)
-	return out
-}
+func TryAppend(buf []byte, src any) []byte { return try1(Append(buf, src)) }
 
 /*
 Missing feature of the standard library: append the text representation of an
@@ -221,9 +213,7 @@ func Append(buf []byte, src any) ([]byte, error) {
 
 // Variant of `AppendWith` that panics on error.
 func TryAppendWith(buf *[]byte, delim string, val any) bool {
-	out, err := AppendWith(buf, delim, val)
-	try(err)
-	return out
+	return try1(AppendWith(buf, delim, val))
 }
 
 /*

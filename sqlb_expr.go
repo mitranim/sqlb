@@ -1501,12 +1501,12 @@ func appendOrdinal(bui *Bui, args ArgDict, tracker *argTracker, key OrdinalParam
 
 	ord, ok := tracker.GotOrdinal(key)
 	if ok {
-		bui.Param(ord)
+		bui.OrphanParam(ord)
 		return
 	}
 
-	ord = bui.Arg(arg)
-	bui.Param(ord)
+	ord = bui.OrphanArg(arg)
+	bui.OrphanParam(ord)
 	tracker.SetOrdinal(key, ord)
 }
 
@@ -1526,12 +1526,12 @@ func appendNamed(bui *Bui, args ArgDict, tracker *argTracker, key NamedParam) {
 
 	ord, ok := tracker.GotNamed(key)
 	if ok {
-		bui.Param(ord)
+		bui.OrphanParam(ord)
 		return
 	}
 
-	ord = bui.Arg(arg)
-	bui.Param(ord)
+	ord = bui.OrphanArg(arg)
+	bui.OrphanParam(ord)
 	tracker.SetNamed(key, ord)
 }
 

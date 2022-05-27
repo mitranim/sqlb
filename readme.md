@@ -100,6 +100,11 @@ func Example_composition() {
 
 ## Changelog
 
+### v0.6.3
+
+* `Dir` supports text parsing and encoding.
+* Minor breaking change: `Bui.Arg` now appends both an argument and a parameter.
+
 ### v0.6.2
 
 `CommaAppender` and `ArrayAppender` are now parametrized on the element type.
