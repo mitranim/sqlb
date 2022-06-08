@@ -100,6 +100,16 @@ func Example_composition() {
 
 ## Changelog
 
+### v0.6.4
+
+`OrdsParser` support default "dir" and "nulls" in struct tags:
+
+```go
+type Ordable struct {
+  Name string `json:"name" db:"name" ord.dir:"desc" ord.nulls:"last"`
+}
+```
+
 ### v0.6.3
 
 * `Dir` supports text parsing and encoding.

@@ -337,6 +337,110 @@ func Test_ParseOpt_Filter(t *testing.T) {
 	})
 }
 
+func Test_ParserOrds_default_dir(t *testing.T) {
+	test := func(typ any, src []string, exp Ords) {
+		t.Helper()
+
+		var par ParserOrds
+		par.OrType(typ)
+
+		try(par.ParseSlice(src))
+		eq(t, exp, par.Ords)
+	}
+
+	test(
+		struct {
+			Name string `json:"name" db:"name" ord.dir:""`
+		}{},
+		[]string{`name`},
+		Ords{Path{`name`}},
+	)
+
+	test(
+		struct {
+			Name string `json:"name" db:"name" ord.dir:"asc"`
+		}{},
+		[]string{`name`},
+		Ords{OrdAsc{`name`}},
+	)
+
+	test(
+		struct {
+			Name string `json:"name" db:"name" ord.dir:"asc"`
+		}{},
+		[]string{`name desc`},
+		Ords{OrdDesc{`name`}},
+	)
+
+	test(
+		struct {
+			Name string `json:"name" db:"name" ord.dir:"desc"`
+		}{},
+		[]string{`name`},
+		Ords{OrdDesc{`name`}},
+	)
+
+	test(
+		struct {
+			Name string `json:"name" db:"name" ord.dir:"desc"`
+		}{},
+		[]string{`name asc`},
+		Ords{OrdAsc{`name`}},
+	)
+}
+
+func Test_ParserOrds_default_nulls(t *testing.T) {
+	test := func(typ any, src []string, exp Ords) {
+		t.Helper()
+
+		var par ParserOrds
+		par.OrType(typ)
+
+		try(par.ParseSlice(src))
+		eq(t, exp, par.Ords)
+	}
+
+	test(
+		struct {
+			Name string `json:"name" db:"name" ord.nulls:""`
+		}{},
+		[]string{`name`},
+		Ords{Path{`name`}},
+	)
+
+	test(
+		struct {
+			Name string `json:"name" db:"name" ord.nulls:"first"`
+		}{},
+		[]string{`name`},
+		Ords{OrdNullsFirst{`name`}},
+	)
+
+	test(
+		struct {
+			Name string `json:"name" db:"name" ord.nulls:"first"`
+		}{},
+		[]string{`name nulls last`},
+		Ords{OrdNullsLast{`name`}},
+	)
+
+	test(
+		struct {
+			Name string `json:"name" db:"name" ord.nulls:"last"`
+		}{},
+		[]string{`name`},
+		Ords{OrdNullsLast{`name`}},
+	)
+
+	test(
+		struct {
+			Name string `json:"name" db:"name" ord.nulls:"last"`
+		}{},
+		[]string{`name nulls first`},
+		Ords{OrdNullsFirst{`name`}},
+	)
+}
+
 func TestDir(t *testing.T) {
 	t.Run(`String`, func(t *testing.T) {
 		eq(t, ``, DirNone.String())

@@ -144,7 +144,21 @@ func (self *OrdsParser) parseAppend(src string) {
 	}
 
 	dir := strDir(match[2])
+	if dir == DirNone {
+		def := entry.Field.Tag.Get(`ord.dir`)
+		if def != `` {
+			dir = strDir(def)
+		}
+	}
+
 	nulls := strNulls(match[3])
+	if nulls == NullsNone {
+		def := entry.Field.Tag.Get(`ord.nulls`)
+		if def != `` {
+			nulls = strNulls(def)
+		}
+	}
+
 	path := entry.Value
 
 	/**
