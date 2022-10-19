@@ -22,3 +22,12 @@ lint_w:
 lint:
 	golangci-lint run
 	echo [lint] ok
+
+# Example: `make release tag=v0.0.1`.
+release:
+ifeq ($(tag),)
+	$(error missing tag)
+endif
+	git pull --rebase
+	git show-ref --tags --quiet "$(tag)" || git tag "$(tag)"
+	git push origin $$(git symbolic-ref --short HEAD) "$(tag)"

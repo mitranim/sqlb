@@ -35,7 +35,7 @@ type Appender interface{ Append([]byte) []byte }
 
 /*
 Dictionary of arbitrary arguments, ordinal and/or named. Used as input to
-`ParamExpr`(parametrized expressions). This package provides multiple
+`ParamExpr` (parametrized expressions). This package provides multiple
 implementations: slice-based `List`, map-based `Dict`, and struct-based
 `StructDict`. May optionally implement `OrdinalRanger` and `NamedRanger` to
 validate used/unused arguments.

@@ -62,6 +62,10 @@ func (self UnitStruct) GetOne() any             { return self.One }
 func (self UnitStruct) UnaryVoid(any)           {}
 func (self UnitStruct) NullaryPair() (_, _ any) { return }
 
+type UnitStruct1 struct {
+	Two any `db:"two" json:"two"`
+}
+
 type PairStruct struct {
 	One any `db:"one" json:"one"`
 	Two any `db:"two" json:"two"`
@@ -69,6 +73,11 @@ type PairStruct struct {
 
 func (self PairStruct) GetOne() any { return self.One }
 func (self PairStruct) GetTwo() any { return self.Two }
+
+type PairStruct1 struct {
+	Three any `db:"three" json:"three"`
+	Four  any `db:"four" json:"four"`
+}
 
 type TrioStruct struct {
 	One   any `db:"one" json:"one"`

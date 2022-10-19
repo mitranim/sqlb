@@ -51,9 +51,7 @@ Caches the result for each source string, reusing it for future calls. Used
 internally by `StrQ`. User code shouldn't have to call this, but it's exported
 just in case.
 */
-func Preparse(val string) Prep {
-	return prepCache.Get(val)
-}
+func Preparse(val string) Prep { return prepCache.Get(val) }
 
 // Shortcut for `StrQ{text, List(args)}`.
 func ListQ(text string, args ...any) StrQ {

@@ -100,6 +100,10 @@ func Example_composition() {
 
 ## Changelog
 
+### v0.6.5
+
+Add `Upsert`.
+
 ### v0.6.4
 
 `OrdsParser` support default "dir" and "nulls" in struct tags:

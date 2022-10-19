@@ -50,6 +50,11 @@ func (self Ident) Append(text []byte) []byte {
 // Implement the `fmt.Stringer` interface for debug purposes.
 func (self Ident) String() string { return AppenderString(&self) }
 
+// Shortcut for internal use.
+func (self Ident) BuiAppend(bui *Bui) {
+	bui.Text = self.Append(bui.Text)
+}
+
 /*
 Represents a nested SQL identifier where all elements are quoted but not
 parenthesized. Useful for schema-qualified paths. For nested paths that don't
@@ -282,10 +287,10 @@ func (self Exprs) AppendExpr(text []byte, args []any) ([]byte, []any) {
 
 // Implement the `Appender` interface, sometimes allowing more efficient text
 // encoding.
-func (self Exprs) Append(text []byte) []byte { return exprAppend(&self, text) }
+func (self Exprs) Append(text []byte) []byte { return exprAppend(self, text) }
 
 // Implement the `fmt.Stringer` interface for debug purposes.
-func (self Exprs) String() string { return exprString(&self) }
+func (self Exprs) String() string { return exprString(self) }
 
 /*
 Represents an SQL "any()" expression. The inner value may be an instance of
@@ -304,10 +309,10 @@ func (self Any) AppendExpr(text []byte, args []any) ([]byte, []any) {
 
 // Implement the `Appender` interface, sometimes allowing more efficient text
 // encoding.
-func (self Any) Append(text []byte) []byte { return exprAppend(&self, text) }
+func (self Any) Append(text []byte) []byte { return exprAppend(self, text) }
 
 // Implement the `fmt.Stringer` interface for debug purposes.
-func (self Any) String() string { return exprString(&self) }
+func (self Any) String() string { return exprString(self) }
 
 /*
 Represents an SQL assignment such as `"some_col" = arbitrary_expression`. The
@@ -330,10 +335,10 @@ func (self Assign) AppendExpr(text []byte, args []any) ([]byte, []any) {
 
 // Implement the `Appender` interface, sometimes allowing more efficient text
 // encoding.
-func (self Assign) Append(text []byte) []byte { return exprAppend(&self, text) }
+func (self Assign) Append(text []byte) []byte { return exprAppend(self, text) }
 
 // Implement the `fmt.Stringer` interface for debug purposes.
-func (self Assign) String() string { return exprString(&self) }
+func (self Assign) String() string { return exprString(self) }
 
 /*
 Short for "equal". Represents SQL equality such as `A = B` or `A is null`.
@@ -350,10 +355,10 @@ func (self Eq) AppendExpr(text []byte, args []any) ([]byte, []any) {
 
 // Implement the `Appender` interface, sometimes allowing more efficient text
 // encoding.
-func (self Eq) Append(text []byte) []byte { return exprAppend(&self, text) }
+func (self Eq) Append(text []byte) []byte { return exprAppend(self, text) }
 
 // Implement the `fmt.Stringer` interface for debug purposes.
-func (self Eq) String() string { return exprString(&self) }
+func (self Eq) String() string { return exprString(self) }
 
 /*
 Note: LHS and RHS are encoded differently because some SQL equality expressions
@@ -395,10 +400,10 @@ func (self Neq) AppendExpr(text []byte, args []any) ([]byte, []any) {
 
 // Implement the `Appender` interface, sometimes allowing more efficient text
 // encoding.
-func (self Neq) Append(text []byte) []byte { return exprAppend(&self, text) }
+func (self Neq) Append(text []byte) []byte { return exprAppend(self, text) }
 
 // Implement the `fmt.Stringer` interface for debug purposes.
-func (self Neq) String() string { return exprString(&self) }
+func (self Neq) String() string { return exprString(self) }
 
 // See the comment on `Eq.AppendLhs`.
 func (self Neq) AppendLhs(text []byte, args []any) ([]byte, []any) {
@@ -435,10 +440,10 @@ func (self EqAny) AppendExpr(text []byte, args []any) ([]byte, []any) {
 
 // Implement the `Appender` interface, sometimes allowing more efficient text
 // encoding.
-func (self EqAny) Append(text []byte) []byte { return exprAppend(&self, text) }
+func (self EqAny) Append(text []byte) []byte { return exprAppend(self, text) }
 
 // Implement the `fmt.Stringer` interface for debug purposes.
-func (self EqAny) String() string { return exprString(&self) }
+func (self EqAny) String() string { return exprString(self) }
 
 // Represents an SQL expression `A <> any(B)`. Counterpart to `EqAny`.
 type NeqAny [2]any
@@ -454,10 +459,10 @@ func (self NeqAny) AppendExpr(text []byte, args []any) ([]byte, []any) {
 
 // Implement the `Appender` interface, sometimes allowing more efficient text
 // encoding.
-func (self NeqAny) Append(text []byte) []byte { return exprAppend(&self, text) }
+func (self NeqAny) Append(text []byte) []byte { return exprAppend(self, text) }
 
 // Implement the `fmt.Stringer` interface for debug purposes.
-func (self NeqAny) String() string { return exprString(&self) }
+func (self NeqAny) String() string { return exprString(self) }
 
 // Represents SQL logical negation such as `not A`. The inner value can be an
 // instance of `Expr` or an arbitrary argument.
@@ -473,10 +478,10 @@ func (self Not) AppendExpr(text []byte, args []any) ([]byte, []any) {
 
 // Implement the `Appender` interface, sometimes allowing more efficient text
 // encoding.
-func (self Not) Append(text []byte) []byte { return exprAppend(&self, text) }
+func (self Not) Append(text []byte) []byte { return exprAppend(self, text) }
 
 // Implement the `fmt.Stringer` interface for debug purposes.
-func (self Not) String() string { return exprString(&self) }
+func (self Not) String() string { return exprString(self) }
 
 /*
 Represents a sequence of arbitrary sub-expressions or arguments, joined with a
@@ -508,10 +513,10 @@ func (self Seq) AppendExpr(text []byte, args []any) ([]byte, []any) {
 
 // Implement the `Appender` interface, sometimes allowing more efficient text
 // encoding.
-func (self Seq) Append(text []byte) []byte { return exprAppend(&self, text) }
+func (self Seq) Append(text []byte) []byte { return exprAppend(self, text) }
 
 // Implement the `fmt.Stringer` interface for debug purposes.
-func (self Seq) String() string { return exprString(&self) }
+func (self Seq) String() string { return exprString(self) }
 
 func (self *Seq) any(bui *Bui, val any) {
 	switch kindOf(val) {
@@ -564,10 +569,10 @@ func (self Comma) AppendExpr(text []byte, args []any) ([]byte, []any) {
 
 // Implement the `Appender` interface, sometimes allowing more efficient text
 // encoding.
-func (self Comma) Append(text []byte) []byte { return exprAppend(&self, text) }
+func (self Comma) Append(text []byte) []byte { return exprAppend(self, text) }
 
 // Implement the `fmt.Stringer` interface for debug purposes.
-func (self Comma) String() string { return exprString(&self) }
+func (self Comma) String() string { return exprString(self) }
 
 /*
 Represents a sequence of arbitrary sub-expressions or arguments joined by the
@@ -587,10 +592,10 @@ func (self And) AppendExpr(text []byte, args []any) ([]byte, []any) {
 
 // Implement the `Appender` interface, sometimes allowing more efficient text
 // encoding.
-func (self And) Append(text []byte) []byte { return exprAppend(&self, text) }
+func (self And) Append(text []byte) []byte { return exprAppend(self, text) }
 
 // Implement the `fmt.Stringer` interface for debug purposes.
-func (self And) String() string { return exprString(&self) }
+func (self And) String() string { return exprString(self) }
 
 /*
 Represents a sequence of arbitrary sub-expressions or arguments joined by the
@@ -610,10 +615,10 @@ func (self Or) AppendExpr(text []byte, args []any) ([]byte, []any) {
 
 // Implement the `Appender` interface, sometimes allowing more efficient text
 // encoding.
-func (self Or) Append(text []byte) []byte { return exprAppend(&self, text) }
+func (self Or) Append(text []byte) []byte { return exprAppend(self, text) }
 
 // Implement the `fmt.Stringer` interface for debug purposes.
-func (self Or) String() string { return exprString(&self) }
+func (self Or) String() string { return exprString(self) }
 
 // Syntactic shortcut, same as `And` with a slice of sub-expressions or arguments.
 type Ands []any
@@ -628,10 +633,10 @@ func (self Ands) AppendExpr(text []byte, args []any) ([]byte, []any) {
 
 // Implement the `Appender` interface, sometimes allowing more efficient text
 // encoding.
-func (self Ands) Append(text []byte) []byte { return exprAppend(&self, text) }
+func (self Ands) Append(text []byte) []byte { return exprAppend(self, text) }
 
 // Implement the `fmt.Stringer` interface for debug purposes.
-func (self Ands) String() string { return exprString(&self) }
+func (self Ands) String() string { return exprString(self) }
 
 // Syntactic shortcut, same as `Or` with a slice of sub-expressions or arguments.
 type Ors []any
@@ -646,10 +651,10 @@ func (self Ors) AppendExpr(text []byte, args []any) ([]byte, []any) {
 
 // Implement the `Appender` interface, sometimes allowing more efficient text
 // encoding.
-func (self Ors) Append(text []byte) []byte { return exprAppend(&self, text) }
+func (self Ors) Append(text []byte) []byte { return exprAppend(self, text) }
 
 // Implement the `fmt.Stringer` interface for debug purposes.
-func (self Ors) String() string { return exprString(&self) }
+func (self Ors) String() string { return exprString(self) }
 
 /*
 Superset of `Seq` with additional support for structs. When the inner value is
@@ -679,10 +684,10 @@ func (self Cond) AppendExpr(text []byte, args []any) ([]byte, []any) {
 
 // Implement the `Appender` interface, sometimes allowing more efficient text
 // encoding.
-func (self Cond) Append(text []byte) []byte { return exprAppend(&self, text) }
+func (self Cond) Append(text []byte) []byte { return exprAppend(self, text) }
 
 // Implement the `fmt.Stringer` interface for debug purposes.
-func (self Cond) String() string { return exprString(&self) }
+func (self Cond) String() string { return exprString(self) }
 
 func (self *Cond) any(bui *Bui, val any) {
 	switch kindOf(val) {
@@ -823,10 +828,10 @@ func (self StructValues) AppendExpr(text []byte, args []any) ([]byte, []any) {
 
 // Implement the `Appender` interface, sometimes allowing more efficient text
 // encoding.
-func (self StructValues) Append(text []byte) []byte { return exprAppend(&self, text) }
+func (self StructValues) Append(text []byte) []byte { return exprAppend(self, text) }
 
 // Implement the `fmt.Stringer` interface for debug purposes.
-func (self StructValues) String() string { return exprString(&self) }
+func (self StructValues) String() string { return exprString(self) }
 
 /*
 Represents a names-and-values clause suitable for insertion. The inner value
@@ -869,10 +874,10 @@ func (self StructInsert) AppendExpr(text []byte, args []any) ([]byte, []any) {
 
 // Implement the `Appender` interface, sometimes allowing more efficient text
 // encoding.
-func (self StructInsert) Append(text []byte) []byte { return exprAppend(&self, text) }
+func (self StructInsert) Append(text []byte) []byte { return exprAppend(self, text) }
 
 // Implement the `fmt.Stringer` interface for debug purposes.
-func (self StructInsert) String() string { return exprString(&self) }
+func (self StructInsert) String() string { return exprString(self) }
 
 /*
 Shortcut for creating `StructsInsert` from the given values.
@@ -913,10 +918,10 @@ func (self StructsInsert[A]) AppendExpr(text []byte, args []any) ([]byte, []any)
 
 // Implement the `Appender` interface, sometimes allowing more efficient text
 // encoding.
-func (self StructsInsert[_]) Append(text []byte) []byte { return exprAppend(&self, text) }
+func (self StructsInsert[_]) Append(text []byte) []byte { return exprAppend(self, text) }
 
 // Implement the `fmt.Stringer` interface for debug purposes.
-func (self StructsInsert[_]) String() string { return exprString(&self) }
+func (self StructsInsert[_]) String() string { return exprString(self) }
 
 /*
 Represents an SQL assignment clause suitable for "update set" operations. The
@@ -955,10 +960,10 @@ func (self StructAssign) AppendExpr(text []byte, args []any) ([]byte, []any) {
 
 // Implement the `Appender` interface, sometimes allowing more efficient text
 // encoding.
-func (self StructAssign) Append(text []byte) []byte { return exprAppend(&self, text) }
+func (self StructAssign) Append(text []byte) []byte { return exprAppend(self, text) }
 
 // Implement the `fmt.Stringer` interface for debug purposes.
-func (self StructAssign) String() string { return exprString(&self) }
+func (self StructAssign) String() string { return exprString(self) }
 
 /*
 Wraps an arbitrary sub-expression, using `Cols{.Type}` to select specific
@@ -979,10 +984,10 @@ func (self SelectCols) AppendExpr(text []byte, args []any) ([]byte, []any) {
 
 // Implement the `Appender` interface, sometimes allowing more efficient text
 // encoding.
-func (self SelectCols) Append(text []byte) []byte { return exprAppend(&self, text) }
+func (self SelectCols) Append(text []byte) []byte { return exprAppend(self, text) }
 
 // Implement the `fmt.Stringer` interface for debug purposes.
-func (self SelectCols) String() string { return exprString(&self) }
+func (self SelectCols) String() string { return exprString(self) }
 
 /*
 Wraps an arbitrary sub-expression, using `ColsDeep{.Type}` to select specific
@@ -1003,10 +1008,10 @@ func (self SelectColsDeep) AppendExpr(text []byte, args []any) ([]byte, []any) {
 
 // Implement the `Appender` interface, sometimes allowing more efficient text
 // encoding.
-func (self SelectColsDeep) Append(text []byte) []byte { return exprAppend(&self, text) }
+func (self SelectColsDeep) Append(text []byte) []byte { return exprAppend(self, text) }
 
 // Implement the `fmt.Stringer` interface for debug purposes.
-func (self SelectColsDeep) String() string { return exprString(&self) }
+func (self SelectColsDeep) String() string { return exprString(self) }
 
 /*
 Represents an SQL expression "select .What from (.From) as _". Mostly an
@@ -1045,10 +1050,10 @@ func (self SelectString) AppendExpr(text []byte, args []any) ([]byte, []any) {
 
 // Implement the `Appender` interface, sometimes allowing more efficient text
 // encoding.
-func (self SelectString) Append(text []byte) []byte { return exprAppend(&self, text) }
+func (self SelectString) Append(text []byte) []byte { return exprAppend(self, text) }
 
 // Implement the `fmt.Stringer` interface for debug purposes.
-func (self SelectString) String() string { return exprString(&self) }
+func (self SelectString) String() string { return exprString(self) }
 
 /*
 Combines an expression with a string prefix. If the expr is nil, this is a nop,
@@ -1067,10 +1072,10 @@ func (self Prefix) AppendExpr(text []byte, args []any) ([]byte, []any) {
 
 // Implement the `Appender` interface, sometimes allowing more efficient text
 // encoding.
-func (self Prefix) Append(text []byte) []byte { return exprAppend(&self, text) }
+func (self Prefix) Append(text []byte) []byte { return exprAppend(self, text) }
 
 // Implement the `fmt.Stringer` interface for debug purposes.
-func (self Prefix) String() string { return exprString(&self) }
+func (self Prefix) String() string { return exprString(self) }
 
 /*
 Combines an expression with a string prefix and suffix. If the expr is nil, this
@@ -1099,10 +1104,10 @@ func (self Wrap) AppendExpr(text []byte, args []any) ([]byte, []any) {
 
 // Implement the `Appender` interface, sometimes allowing more efficient text
 // encoding.
-func (self Wrap) Append(text []byte) []byte { return exprAppend(&self, text) }
+func (self Wrap) Append(text []byte) []byte { return exprAppend(self, text) }
 
 // Implement the `fmt.Stringer` interface for debug purposes.
-func (self Wrap) String() string { return exprString(&self) }
+func (self Wrap) String() string { return exprString(self) }
 
 /*
 If the provided expression is not nil, prepends the keywords "order by" to it.
@@ -1117,10 +1122,10 @@ func (self OrderBy) AppendExpr(text []byte, args []any) ([]byte, []any) {
 
 // Implement the `Appender` interface, sometimes allowing more efficient text
 // encoding.
-func (self OrderBy) Append(text []byte) []byte { return exprAppend(&self, text) }
+func (self OrderBy) Append(text []byte) []byte { return exprAppend(self, text) }
 
 // Implement the `fmt.Stringer` interface for debug purposes.
-func (self OrderBy) String() string { return exprString(&self) }
+func (self OrderBy) String() string { return exprString(self) }
 
 // Shortcut for simple "select * from A where B" expressions. See the examples.
 type Select struct {
@@ -1145,10 +1150,10 @@ func (self Select) AppendExpr(text []byte, args []any) ([]byte, []any) {
 
 // Implement the `Appender` interface, sometimes allowing more efficient text
 // encoding.
-func (self Select) Append(text []byte) []byte { return exprAppend(&self, text) }
+func (self Select) Append(text []byte) []byte { return exprAppend(self, text) }
 
 // Implement the `fmt.Stringer` interface for debug purposes.
-func (self Select) String() string { return exprString(&self) }
+func (self Select) String() string { return exprString(self) }
 
 // Shortcut for simple "insert into A (B) values (C) returning *" expressions.
 // See the examples.
@@ -1171,10 +1176,10 @@ func (self Insert) AppendExpr(text []byte, args []any) ([]byte, []any) {
 
 // Implement the `Appender` interface, sometimes allowing more efficient text
 // encoding.
-func (self Insert) Append(text []byte) []byte { return exprAppend(&self, text) }
+func (self Insert) Append(text []byte) []byte { return exprAppend(self, text) }
 
 // Implement the `fmt.Stringer` interface for debug purposes.
-func (self Insert) String() string { return exprString(&self) }
+func (self Insert) String() string { return exprString(self) }
 
 // Shortcut for simple "update A set B where C returning *" expressions. See the
 // examples.
@@ -1208,10 +1213,10 @@ func (self Update) AppendExpr(text []byte, args []any) ([]byte, []any) {
 
 // Implement the `Appender` interface, sometimes allowing more efficient text
 // encoding.
-func (self Update) Append(text []byte) []byte { return exprAppend(&self, text) }
+func (self Update) Append(text []byte) []byte { return exprAppend(self, text) }
 
 // Implement the `fmt.Stringer` interface for debug purposes.
-func (self Update) String() string { return exprString(&self) }
+func (self Update) String() string { return exprString(self) }
 
 // Shortcut for simple "delete from A where B returning *" expressions. See the examples.
 type Delete struct {
@@ -1236,10 +1241,135 @@ func (self Delete) AppendExpr(text []byte, args []any) ([]byte, []any) {
 
 // Implement the `Appender` interface, sometimes allowing more efficient text
 // encoding.
-func (self Delete) Append(text []byte) []byte { return exprAppend(&self, text) }
+func (self Delete) Append(text []byte) []byte { return exprAppend(self, text) }
 
 // Implement the `fmt.Stringer` interface for debug purposes.
-func (self Delete) String() string { return exprString(&self) }
+func (self Delete) String() string { return exprString(self) }
+
+/*
+Represents an SQL upsert query like this:
+
+	insert into some_table
+		(key_0, key_1, col_2, col_3)
+	values
+		($1, $2, $3, $4)
+	on conflict (key_0, key_1)
+	do update set
+		key_0 = excluded.key_0,
+		key_1 = excluded.key_1,
+		col_2 = excluded.col_2,
+		col_3 = excluded.col_3
+	returning *
+
+Notes:
+
+	* `.Keys` must be a struct.
+	* `.Keys` supports `Sparse` and may be empty.
+	* When `.Keys` is empty, this is equivalent to the `Insert` type.
+	* `.Cols` must be a struct.
+	* `.Cols` supports `Sparse` and may be empty.
+	* `.Keys` provides names and values for key columns which participate
+	  in the `on conflict` clause.
+	* `.Cols` provides names and values for other columns.
+*/
+type Upsert struct {
+	What Ident
+	Keys any
+	Cols any
+}
+
+// Implement the `Expr` interface, making this a sub-expression.
+func (self Upsert) AppendExpr(text []byte, args []any) ([]byte, []any) {
+	keysIter := makeIter(self.Keys)
+	if !keysIter.has() {
+		return Insert{self.What, self.Cols}.AppendExpr(text, args)
+	}
+
+	bui := Bui{text, args}
+	colsIter := makeIter(self.Cols)
+	hasCols := colsIter.has()
+
+	bui.Str(`insert into`)
+	bui.Set(self.What.AppendExpr(bui.Get()))
+
+	// Set of column names for insertion.
+	// Adapted from `StructInsert`.
+	{
+		bui.Str(`(`)
+		bui.Str(TypeCols(keysIter.root.Type()))
+		if hasCols {
+			bui.Str(`,`)
+			bui.Str(TypeCols(colsIter.root.Type()))
+		}
+		bui.Str(`)`)
+	}
+
+	bui.Str(`values`)
+
+	// Set of column values for insertion.
+	// Adapted from `StructInsert`.
+	{
+		bui.Str(`(`)
+
+		for keysIter.next() {
+			if !keysIter.first() {
+				bui.Str(`,`)
+			}
+			bui.SubAny(keysIter.value.Interface())
+		}
+
+		for colsIter.next() {
+			bui.Str(`,`)
+			bui.SubAny(colsIter.value.Interface())
+		}
+
+		bui.Str(`)`)
+	}
+
+	// Conflict clause with key column names.
+	{
+		bui.Str(`on conflict (`)
+		bui.Str(TypeCols(keysIter.root.Type()))
+		bui.Str(`)`)
+	}
+
+	// Assignment clauses for all columns.
+	{
+		bui.Str(`do update set`)
+
+		keysIter.reinit()
+		colsIter.reinit()
+
+		for keysIter.next() {
+			if !keysIter.first() {
+				bui.Str(`,`)
+			}
+			appendAssignExcluded(&bui, &keysIter)
+		}
+
+		for colsIter.next() {
+			bui.Str(`,`)
+			appendAssignExcluded(&bui, &colsIter)
+		}
+	}
+
+	bui.Str(`returning *`)
+	return bui.Get()
+}
+
+// Implement the `Appender` interface, sometimes allowing more efficient text
+// encoding.
+func (self Upsert) Append(text []byte) []byte { return exprAppend(self, text) }
+
+// Implement the `fmt.Stringer` interface for debug purposes.
+func (self Upsert) String() string { return exprString(self) }
+
+func appendAssignExcluded(bui *Bui, iter *iter) {
+	name := Ident(FieldDbName(iter.field))
+	name.BuiAppend(bui)
+	bui.Str(` = excluded.`)
+	name.BuiAppend(bui)
+}
 
 /*
 Shortcut for selecting `count(*)` from an arbitrary sub-expression. Equivalent
@@ -1254,10 +1384,10 @@ func (self SelectCount) AppendExpr(text []byte, args []any) ([]byte, []any) {
 
 // Implement the `Appender` interface, sometimes allowing more efficient text
 // encoding.
-func (self SelectCount) Append(text []byte) []byte { return exprAppend(&self, text) }
+func (self SelectCount) Append(text []byte) []byte { return exprAppend(self, text) }
 
 // Implement the `fmt.Stringer` interface for debug purposes.
-func (self SelectCount) String() string { return exprString(&self) }
+func (self SelectCount) String() string { return exprString(self) }
 
 /*
 Represents an SQL function call expression. The text prefix is optional and
@@ -1285,10 +1415,10 @@ func (self Call) AppendExpr(text []byte, args []any) ([]byte, []any) {
 
 // Implement the `Appender` interface, sometimes allowing more efficient text
 // encoding.
-func (self Call) Append(text []byte) []byte { return exprAppend(&self, text) }
+func (self Call) Append(text []byte) []byte { return exprAppend(self, text) }
 
 // Implement the `fmt.Stringer` interface for debug purposes.
-func (self Call) String() string { return exprString(&self) }
+func (self Call) String() string { return exprString(self) }
 
 /*
 Represents the Postgres window function `row_number`:
@@ -1320,10 +1450,10 @@ func (self RowNumberOver) AppendExpr(text []byte, args []any) ([]byte, []any) {
 
 // Implement the `Appender` interface, sometimes allowing more efficient text
 // encoding.
-func (self RowNumberOver) Append(text []byte) []byte { return exprAppend(&self, text) }
+func (self RowNumberOver) Append(text []byte) []byte { return exprAppend(self, text) }
 
 // Implement the `fmt.Stringer` interface for debug purposes.
-func (self RowNumberOver) String() string { return exprString(&self) }
+func (self RowNumberOver) String() string { return exprString(self) }
 
 /*
 Short for "string query". Represents an SQL query with parameters such as "$1"
@@ -1354,10 +1484,10 @@ func (self StrQ) AppendExpr(text []byte, args []any) ([]byte, []any) {
 
 // Implement the `Appender` interface, sometimes allowing more efficient text
 // encoding.
-func (self StrQ) Append(text []byte) []byte { return exprAppend(&self, text) }
+func (self StrQ) Append(text []byte) []byte { return exprAppend(self, text) }
 
 // Implement the `fmt.Stringer` interface for debug purposes.
-func (self StrQ) String() string { return exprString(&self) }
+func (self StrQ) String() string { return exprString(self) }
 
 /*
 Short for "preparsed" or "prepared". Partially parsed representation of
@@ -1600,7 +1730,7 @@ func (self Limit) AppendExpr(text []byte, args []any) ([]byte, []any) {
 
 // Implement the `Appender` interface, sometimes allowing more efficient text
 // encoding.
-func (self Limit) Append(text []byte) []byte { return exprAppend(&self, text) }
+func (self Limit) Append(text []byte) []byte { return exprAppend(self, text) }
 
 // Implement the `fmt.Stringer` interface for debug purposes.
 func (self Limit) String() string { return AppenderString(&self) }
@@ -1622,7 +1752,7 @@ func (self Offset) AppendExpr(text []byte, args []any) ([]byte, []any) {
 
 // Implement the `Appender` interface, sometimes allowing more efficient text
 // encoding.
-func (self Offset) Append(text []byte) []byte { return exprAppend(&self, text) }
+func (self Offset) Append(text []byte) []byte { return exprAppend(self, text) }
 
 // Implement the `fmt.Stringer` interface for debug purposes.
 func (self Offset) String() string { return AppenderString(&self) }

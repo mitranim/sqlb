@@ -1188,6 +1188,50 @@ func TestDelete(t *testing.T) {
 	)
 }
 
+func TestUpsert(t *testing.T) {
+	test := exprTest(t)
+
+	test(
+		rei(`insert into "" default values returning *`),
+		Upsert{},
+	)
+
+	test(
+		rei(`insert into "table" default values returning *`),
+		Upsert{`table`, Void{}, Void{}},
+	)
+
+	test(
+		rei(`insert into "" ("one") values ($1) returning *`, 10),
+		Upsert{``, nil, UnitStruct{10}},
+	)
+
+	test(
+		rei(`insert into "" ("one") values ($1) returning *`, 10),
+		Upsert{``, Void{}, UnitStruct{10}},
+	)
+
+	test(
+		rei(`insert into "table" ("one", "two") values ($1, $2) returning *`, 10, 20),
+		Upsert{`table`, Void{}, PairStruct{10, 20}},
+	)
+
+	test(
+		rei(`insert into "table" ("one") values ($1) on conflict ("one") do update set "one" = excluded."one" returning *`, 10),
+		Upsert{`table`, UnitStruct{10}, nil},
+	)
+
+	test(
+		rei(`insert into "table" ("one", "two") values ($1, $2) on conflict ("one") do update set "one" = excluded."one", "two" = excluded."two" returning *`, 10, 20),
+		Upsert{`table`, UnitStruct{10}, UnitStruct1{20}},
+	)
+
+	test(
+		rei(`insert into "table" ("one", "two", "three", "four") values ($1, $2, $3, $4) on conflict ("one", "two") do update set "one" = excluded."one", "two" = excluded."two", "three" = excluded."three", "four" = excluded."four" returning *`, 10, 20, 30, 40),
+		Upsert{`table`, PairStruct{10, 20}, PairStruct1{30, 40}},
+	)
+}
+
 func TestSelectCount(t *testing.T) {
 	test := exprTest(t)
 

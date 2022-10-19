@@ -271,12 +271,12 @@ func trimPrefixByte(val string, prefix byte) (string, error) {
 	return val[byteLen:], nil
 }
 
-func exprAppend(expr Expr, text []byte) []byte {
+func exprAppend[A Expr](expr A, text []byte) []byte {
 	text, _ = expr.AppendExpr(text, nil)
 	return text
 }
 
-func exprString(expr Expr) string {
+func exprString[A Expr](expr A) string {
 	return bytesToMutableString(exprAppend(expr, nil))
 }
 
@@ -612,26 +612,15 @@ func appendStructFieldPaths(buf *[]structPath, path *[]int, typ r.Type, index in
 }
 
 func makeIter(val any) (out iter) {
-	if val == nil {
-		return
-	}
-
-	sparse, _ := val.(Sparse)
-	if sparse != nil {
-		out.root = valueOf(sparse.Get())
-		out.filter = sparse
-	} else {
-		out.root = valueOf(val)
-	}
-
-	if out.root.IsValid() {
-		out.fields = loadStructDbFields(out.root.Type())
-	}
+	out.init(val)
 	return
 }
 
-// Allows clearer code.
-// Seems to incur no measurable overhead.
+/*
+Allows clearer code. Seems to incur no measurable overhead compared to
+equivalent inline code. However, be aware that converting a stack-allocated
+source value to `any` tends to involve copying.
+*/
 type iter struct {
 	field r.StructField
 	value r.Value
@@ -643,11 +632,36 @@ type iter struct {
 	filter Filter
 }
 
+func (self *iter) init(src any) {
+	if src == nil {
+		return
+	}
+
+	sparse, _ := src.(Sparse)
+	if sparse != nil {
+		self.root = valueOf(sparse.Get())
+		self.filter = sparse
+	} else {
+		self.root = valueOf(src)
+	}
+
+	if self.root.IsValid() {
+		self.fields = loadStructDbFields(self.root.Type())
+	}
+}
+
+func (self *iter) reinit() {
+	self.index = 0
+	self.count = 0
+}
+
 func (self *iter) next() bool {
+	fil := self.filter
+
 	for self.index < len(self.fields) {
 		field := self.fields[self.index]
 
-		if self.filter != nil && !self.filter.AllowField(field) {
+		if fil != nil && !fil.AllowField(field) {
 			self.index++
 			continue
 		}
@@ -664,6 +678,25 @@ func (self *iter) next() bool {
 
 func (self *iter) empty() bool { return self.count == 0 }
 func (self *iter) first() bool { return self.count == 1 }
+
+/*
+Returns true if the iterator would visit at least one field/value, otherwise
+returns false. Requires `.init`.
+*/
+func (self *iter) has() bool {
+	fil := self.filter
+
+	if fil == nil {
+		return len(self.fields) > 0
+	}
+
+	for _, field := range self.fields {
+		if fil.AllowField(field) {
+			return true
+		}
+	}
+	return false
+}
 
 func typeElem(typ r.Type) r.Type {
 	for typ != nil && (typ.Kind() == r.Ptr || typ.Kind() == r.Slice) {
