@@ -1232,6 +1232,32 @@ func TestUpsert(t *testing.T) {
 	)
 }
 
+func TestUpsert_sparse(t *testing.T) {
+	test := exprTest(t)
+	keys := PairStruct{10, 20}
+	cols := PairStruct1{30, 40}
+
+	test(
+		rei(`insert into "table" ("one", "two") values ($1, $2) on conflict ("one", "two") do update set "one" = excluded."one", "two" = excluded."two" returning *`, 10, 20),
+		Upsert{`table`, keys, Partial{Val: cols}},
+	)
+
+	test(
+		rei(`insert into "table" ("one", "two", "three") values ($1, $2, $3) on conflict ("one", "two") do update set "one" = excluded."one", "two" = excluded."two", "three" = excluded."three" returning *`, 10, 20, 30),
+		Upsert{`table`, keys, Partial{cols, HaserSlice{`three`}}},
+	)
+
+	test(
+		rei(`insert into "table" ("one", "two", "four") values ($1, $2, $3) on conflict ("one", "two") do update set "one" = excluded."one", "two" = excluded."two", "four" = excluded."four" returning *`, 10, 20, 40),
+		Upsert{`table`, keys, Partial{cols, HaserSlice{`four`}}},
+	)
+
+	test(
+		rei(`insert into "table" ("one", "two", "three", "four") values ($1, $2, $3, $4) on conflict ("one", "two") do update set "one" = excluded."one", "two" = excluded."two", "three" = excluded."three", "four" = excluded."four" returning *`, 10, 20, 30, 40),
+		Upsert{`table`, keys, Partial{cols, HaserSlice{`three`, `four`}}},
+	)
+}
+
 func TestSelectCount(t *testing.T) {
 	test := exprTest(t)
 

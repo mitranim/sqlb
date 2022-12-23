@@ -23,7 +23,7 @@ lint:
 	golangci-lint run
 	echo [lint] ok
 
-# Example: `make release tag=v0.0.1`.
+# Example: `make release tag=v0.1.0`.
 release:
 ifeq ($(tag),)
 	$(error missing tag)

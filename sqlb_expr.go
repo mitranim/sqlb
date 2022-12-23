@@ -1287,7 +1287,6 @@ func (self Upsert) AppendExpr(text []byte, args []any) ([]byte, []any) {
 
 	bui := Bui{text, args}
 	colsIter := makeIter(self.Cols)
-	hasCols := colsIter.has()
 
 	bui.Str(`insert into`)
 	bui.Set(self.What.AppendExpr(bui.Get()))
@@ -1297,9 +1296,9 @@ func (self Upsert) AppendExpr(text []byte, args []any) ([]byte, []any) {
 	{
 		bui.Str(`(`)
 		bui.Str(TypeCols(keysIter.root.Type()))
-		if hasCols {
+		for colsIter.next() {
 			bui.Str(`,`)
-			bui.Str(TypeCols(colsIter.root.Type()))
+			Ident(FieldDbName(colsIter.field)).BuiAppend(&bui)
 		}
 		bui.Str(`)`)
 	}
@@ -1310,6 +1309,8 @@ func (self Upsert) AppendExpr(text []byte, args []any) ([]byte, []any) {
 	// Adapted from `StructInsert`.
 	{
 		bui.Str(`(`)
+		keysIter.reinit()
+		colsIter.reinit()
 
 		for keysIter.next() {
 			if !keysIter.first() {
@@ -1336,7 +1337,6 @@ func (self Upsert) AppendExpr(text []byte, args []any) ([]byte, []any) {
 	// Assignment clauses for all columns.
 	{
 		bui.Str(`do update set`)
-
 		keysIter.reinit()
 		colsIter.reinit()
 

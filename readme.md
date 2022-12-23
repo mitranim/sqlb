@@ -100,6 +100,10 @@ func Example_composition() {
 
 ## Changelog
 
+### v0.6.6
+
+Fixed support for non-empty sparse structs in `Upsert`.
+
 ### v0.6.5
 
 Add `Upsert`.

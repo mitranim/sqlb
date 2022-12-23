@@ -381,6 +381,17 @@ type HaserFalse struct{}
 
 func (HaserFalse) Has(string) bool { return false }
 
+type HaserSlice []string
+
+func (self HaserSlice) Has(tar string) bool {
+	for _, val := range self {
+		if val == tar {
+			return true
+		}
+	}
+	return false
+}
+
 type Stringer [1]any
 
 func (self Stringer) String() string {
