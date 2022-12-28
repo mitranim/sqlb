@@ -814,15 +814,8 @@ type StructValues [1]any
 func (self StructValues) AppendExpr(text []byte, args []any) ([]byte, []any) {
 	bui := Bui{text, args}
 	iter := makeIter(self[0])
-
 	// TODO consider panicking when empty.
-	for iter.next() {
-		if !iter.first() {
-			bui.Str(`,`)
-		}
-		bui.SubAny(iter.value.Interface())
-	}
-
+	iterAppendVals(&bui, iter, false)
 	return bui.Get()
 }
 
@@ -850,25 +843,23 @@ func (self StructInsert) AppendExpr(text []byte, args []any) ([]byte, []any) {
 	bui := Bui{text, args}
 	iter := makeIter(self[0])
 
-	for iter.next() {
-		if iter.first() {
-			bui.Str(`(`)
-			// TODO use `Cols` with support for `Sparse`.
-			bui.Str(TypeCols(iter.root.Type()))
-			bui.Str(`)`)
-			bui.Str(`values (`)
-		} else {
-			bui.Str(`,`)
-		}
-		bui.SubAny(iter.value.Interface())
-	}
-
-	if iter.empty() {
-		bui.Str(`default values`)
-	} else {
+	/**
+	The condition is slightly suboptimal: if the source is `Sparse`, `iter.has`
+	may iterate the fields and invoke a filter for multiple fields which happen
+	to be "missing", until it finds one that is "present". Then we iterate to
+	append cols, and to append values, for a total of three loops. It would be
+	more optimal to iterate only for cols and values, not for the condition.
+	*/
+	if iter.has() {
+		bui.Str(`(`)
+		iterAppendCols(&bui, iter, false)
 		bui.Str(`)`)
+		bui.Str(`values (`)
+		iterAppendVals(&bui, iter, false)
+		bui.Str(`)`)
+	} else {
+		bui.Str(`default values`)
 	}
-
 	return bui.Get()
 }
 
@@ -1295,11 +1286,8 @@ func (self Upsert) AppendExpr(text []byte, args []any) ([]byte, []any) {
 	// Adapted from `StructInsert`.
 	{
 		bui.Str(`(`)
-		bui.Str(TypeCols(keysIter.root.Type()))
-		for colsIter.next() {
-			bui.Str(`,`)
-			Ident(FieldDbName(colsIter.field)).BuiAppend(&bui)
-		}
+		iterAppendCols(&bui, keysIter, false)
+		iterAppendCols(&bui, colsIter, true)
 		bui.Str(`)`)
 	}
 
@@ -1309,48 +1297,23 @@ func (self Upsert) AppendExpr(text []byte, args []any) ([]byte, []any) {
 	// Adapted from `StructInsert`.
 	{
 		bui.Str(`(`)
-		keysIter.reinit()
-		colsIter.reinit()
-
-		for keysIter.next() {
-			if !keysIter.first() {
-				bui.Str(`,`)
-			}
-			bui.SubAny(keysIter.value.Interface())
-		}
-
-		for colsIter.next() {
-			bui.Str(`,`)
-			bui.SubAny(colsIter.value.Interface())
-		}
-
+		iterAppendVals(&bui, keysIter, false)
+		iterAppendVals(&bui, colsIter, true)
 		bui.Str(`)`)
 	}
 
 	// Conflict clause with key column names.
 	{
 		bui.Str(`on conflict (`)
-		bui.Str(TypeCols(keysIter.root.Type()))
+		iterAppendCols(&bui, keysIter, false)
 		bui.Str(`)`)
 	}
 
 	// Assignment clauses for all columns.
 	{
 		bui.Str(`do update set`)
-		keysIter.reinit()
-		colsIter.reinit()
-
-		for keysIter.next() {
-			if !keysIter.first() {
-				bui.Str(`,`)
-			}
-			appendAssignExcluded(&bui, &keysIter)
-		}
-
-		for colsIter.next() {
-			bui.Str(`,`)
-			appendAssignExcluded(&bui, &colsIter)
-		}
+		upsertAppendAssignExcluded(&bui, keysIter, false)
+		upsertAppendAssignExcluded(&bui, colsIter, true)
 	}
 
 	bui.Str(`returning *`)
@@ -1364,11 +1327,35 @@ func (self Upsert) Append(text []byte) []byte { return exprAppend(self, text) }
 // Implement the `fmt.Stringer` interface for debug purposes.
 func (self Upsert) String() string { return exprString(self) }
 
-func appendAssignExcluded(bui *Bui, iter *iter) {
-	name := Ident(FieldDbName(iter.field))
-	name.BuiAppend(bui)
-	bui.Str(` = excluded.`)
-	name.BuiAppend(bui)
+func iterAppendCols(bui *Bui, iter iter, continued bool) {
+	for iter.next() {
+		if continued || !iter.first() {
+			bui.Str(`,`)
+		}
+		Ident(FieldDbName(iter.field)).BuiAppend(bui)
+	}
+}
+
+func iterAppendVals(bui *Bui, iter iter, continued bool) {
+	for iter.next() {
+		if continued || !iter.first() {
+			bui.Str(`,`)
+		}
+		bui.SubAny(iter.value.Interface())
+	}
+}
+
+func upsertAppendAssignExcluded(bui *Bui, iter iter, continued bool) {
+	for iter.next() {
+		if continued || !iter.first() {
+			bui.Str(`,`)
+		}
+
+		name := Ident(FieldDbName(iter.field))
+		name.BuiAppend(bui)
+		bui.Str(` = excluded.`)
+		name.BuiAppend(bui)
+	}
 }
 
 /*

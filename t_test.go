@@ -1256,6 +1256,20 @@ func TestUpsert_sparse(t *testing.T) {
 		rei(`insert into "table" ("one", "two", "three", "four") values ($1, $2, $3, $4) on conflict ("one", "two") do update set "one" = excluded."one", "two" = excluded."two", "three" = excluded."three", "four" = excluded."four" returning *`, 10, 20, 30, 40),
 		Upsert{`table`, keys, Partial{cols, HaserSlice{`three`, `four`}}},
 	)
+
+	test(
+		rei(`insert into "table" ("one", "three", "four") values ($1, $2, $3) on conflict ("one") do update set "one" = excluded."one", "three" = excluded."three", "four" = excluded."four" returning *`, 10, 30, 40),
+		Upsert{`table`, Partial{keys, HaserSlice{`one`}}, cols},
+	)
+
+	test(
+		rei(`insert into "table" ("one", "four") values ($1, $2) on conflict ("one") do update set "one" = excluded."one", "four" = excluded."four" returning *`, 10, 40),
+		Upsert{
+			`table`,
+			Partial{keys, HaserSlice{`one`}},
+			Partial{cols, HaserSlice{`four`}},
+		},
+	)
 }
 
 func TestSelectCount(t *testing.T) {

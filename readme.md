@@ -100,6 +100,10 @@ func Example_composition() {
 
 ## Changelog
 
+### v0.6.7
+
+Fixed an edge case bug in `Upsert`.
+
 ### v0.6.6
 
 Fixed support for non-empty sparse structs in `Upsert`.

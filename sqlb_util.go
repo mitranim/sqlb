@@ -650,6 +650,7 @@ func (self *iter) init(src any) {
 	}
 }
 
+//nolint:unused
 func (self *iter) reinit() {
 	self.index = 0
 	self.count = 0
