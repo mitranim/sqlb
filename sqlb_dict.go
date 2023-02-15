@@ -29,8 +29,8 @@ func (self List) GotNamed(string) (any, bool) { return nil, false }
 // Implement `OrdinalRanger` to automatically validate used/unused arguments.
 func (self List) RangeOrdinal(fun func(int)) {
 	if fun != nil {
-		for i := range counter(len(self)) {
-			fun(i)
+		for ind := range counter(len(self)) {
+			fun(ind)
 		}
 	}
 }
@@ -65,6 +65,27 @@ func (self Dict) RangeNamed(fun func(string)) {
 		}
 	}
 }
+
+/*
+Variant of `Dict` without support for validating unused arguments. Note that
+missing arguments are still detected and cause errors. Useful when generating
+the dictionary dynamically, rather than hardcoding the set of keys. Must be
+used with `StrQ` or `Prep`, rather than with `DictQ`, because the latter always
+converts the given dictionary to `Dict`.
+*/
+type LaxDict Dict
+
+// Implement part of the `ArgDict` interface.
+func (self LaxDict) IsEmpty() bool { return Dict(self).IsEmpty() }
+
+// Implement part of the `ArgDict` interface.
+func (self LaxDict) Len() int { return Dict(self).Len() }
+
+// Implement part of the `ArgDict` interface. Always returns `nil, false`.
+func (self LaxDict) GotOrdinal(int) (any, bool) { return nil, false }
+
+// Implement part of the `ArgDict` interface.
+func (self LaxDict) GotNamed(key string) (any, bool) { return Dict(self).GotNamed(key) }
 
 /*
 Implements `ArgDict` by reading struct fields and methods by name. Supports only

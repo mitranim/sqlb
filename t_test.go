@@ -1889,15 +1889,16 @@ func TestList(t *testing.T) {
 }
 
 func TestDict(t *testing.T) {
-	zero := Dict(nil)
-	empty := Dict{}
-	full := benchDict
+	testArgDictMap[Dict](t)
 
-	eq(t, 0, zero.Len())
-	eq(t, 0, empty.Len())
-	eq(t, 24, full.Len())
+	panics(t, `unused named argument ":two" (key "two")`, func() {
+		tryUnusedNamedArg[Dict]()
+	})
+}
 
-	testArgDictNamed(t, zero, empty, full)
+func TestLaxDict(t *testing.T) {
+	testArgDictMap[LaxDict](t)
+	tryUnusedNamedArg[LaxDict]()
 }
 
 func TestStructDict(t *testing.T) {
@@ -1910,6 +1911,27 @@ func TestStructDict(t *testing.T) {
 	eq(t, 0, full.Len())
 
 	testArgDictNamed(t, zero, empty, full)
+}
+
+type ArgDictMap interface {
+	ArgDict
+	~map[string]any
+}
+
+func testArgDictMap[Type ArgDictMap](t *testing.T) {
+	zero := Type(nil)
+	empty := Type{}
+	full := benchDict
+
+	eq(t, 0, zero.Len())
+	eq(t, 0, empty.Len())
+	eq(t, 24, full.Len())
+
+	testArgDictNamed(t, zero, empty, full)
+}
+
+func tryUnusedNamedArg[Type ArgDictMap]() {
+	StrQ{`:one`, Type{`one`: 10, `two`: 20}}.AppendExpr(nil, nil)
 }
 
 func testArgDictNamed(t testing.TB, zero, empty, full ArgDict) {

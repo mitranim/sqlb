@@ -175,8 +175,8 @@ func Benchmark_make_list(b *testing.B) {
 //go:noinline
 func benchMakeList() ArgDict {
 	list := make(List, 24)
-	for i := range list {
-		list[i] = (i + 1) * 10
+	for ind := range list {
+		list[ind] = (ind + 1) * 10
 	}
 	return list
 }

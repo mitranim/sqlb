@@ -94,8 +94,8 @@ func (self SliceCommaAppender) Append(buf []byte) []byte {
 	}
 
 	var found bool
-	for i := range counter(src.Len()) {
-		elem := src.Index(i)
+	for ind := range counter(src.Len()) {
+		elem := src.Index(ind)
 		if !elem.IsValid() {
 			continue
 		}

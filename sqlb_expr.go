@@ -73,8 +73,8 @@ func (self Identifier) Append(text []byte) []byte {
 	if len(self) == 0 {
 		return text
 	}
-	for i, val := range self {
-		if i > 0 {
+	for ind, val := range self {
+		if ind > 0 {
 			text = append(text, `.`...)
 		}
 		text = Ident(val).Append(text)
@@ -172,9 +172,9 @@ func (self PseudoPath) Append(text []byte) []byte {
 	text = maybeAppendSpace(text)
 	text = append(text, quoteDouble)
 
-	for i, val := range self {
+	for ind, val := range self {
 		validateIdent(val)
-		if i > 0 {
+		if ind > 0 {
 			text = append(text, `.`...)
 		}
 		text = append(text, val...)
@@ -546,11 +546,11 @@ func (self Seq) appendSlice(bui *Bui, src any) {
 		return
 	}
 
-	for i := range counter(val.Len()) {
-		if i > 0 {
+	for ind := range counter(val.Len()) {
+		if ind > 0 {
 			bui.Str(self.Delim)
 		}
-		bui.SubAny(val.Index(i).Interface())
+		bui.SubAny(val.Index(ind).Interface())
 	}
 }
 

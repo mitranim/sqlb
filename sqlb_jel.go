@@ -311,8 +311,8 @@ func (self *Jel) decodeOpInfix(bui *Bui, name string, args []json.RawMessage) {
 	}
 
 	bui.Str(`(`)
-	for i, arg := range args {
-		if i > 0 {
+	for ind, arg := range args {
+		if ind > 0 {
 			bui.Str(name)
 		}
 		self.decode(bui, arg)
@@ -323,8 +323,8 @@ func (self *Jel) decodeOpInfix(bui *Bui, name string, args []json.RawMessage) {
 func (self *Jel) decodeOpFunc(bui *Bui, name string, args []json.RawMessage) {
 	bui.Str(name)
 	bui.Str(`(`)
-	for i, arg := range args {
-		if i > 0 {
+	for ind, arg := range args {
+		if ind > 0 {
 			bui.Str(`,`)
 		}
 		self.decode(bui, arg)

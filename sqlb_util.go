@@ -55,9 +55,9 @@ func (self *charset) addStr(vals string) *charset {
 }
 
 func (self *charset) addSet(vals *charset) *charset {
-	for i, val := range vals {
+	for ind, val := range vals {
 		if val {
-			self[i] = true
+			self[ind] = true
 		}
 	}
 	return self
@@ -483,8 +483,8 @@ var structDbFieldsCache = cacheOf(func(typ r.Type) []r.StructField {
 	reqStructType(`scanning DB-related struct fields`, typ)
 
 	path := make([]int, 0, expectedStructNestingDepth)
-	for i := range counter(typ.NumField()) {
-		appendStructDbFields(&out, &path, typ, i)
+	for ind := range counter(typ.NumField()) {
+		appendStructDbFields(&out, &path, typ, ind)
 	}
 
 	return out
@@ -505,14 +505,14 @@ var structPathsCache = cacheOf(func(typ r.Type) []structPath {
 	reqStructType(`scanning struct field and method paths`, typ)
 
 	path := make([]int, 0, expectedStructNestingDepth)
-	for i := range counter(typ.NumField()) {
-		appendStructFieldPaths(&out, &path, typ, i)
+	for ind := range counter(typ.NumField()) {
+		appendStructFieldPaths(&out, &path, typ, ind)
 	}
 
-	for i := range counter(typ.NumMethod()) {
-		meth := typ.Method(i)
+	for ind := range counter(typ.NumMethod()) {
+		meth := typ.Method(ind)
 		if isPublic(meth.PkgPath) {
-			out = append(out, structPath{Name: meth.Name, MethodIndex: i})
+			out = append(out, structPath{Name: meth.Name, MethodIndex: ind})
 		}
 	}
 
@@ -548,8 +548,8 @@ var structJsonPathToNestedDbFieldMapCache = cacheOf(func(typ r.Type) map[string]
 	jsonPath := make([]string, 0, expectedStructNestingDepth)
 	dbPath := make([]string, 0, expectedStructNestingDepth)
 
-	for i := range counter(typ.NumField()) {
-		addJsonPathsToDbPaths(buf, &jsonPath, &dbPath, typ.Field(i))
+	for ind := range counter(typ.NumField()) {
+		addJsonPathsToDbPaths(buf, &jsonPath, &dbPath, typ.Field(ind))
 	}
 	return buf
 })
@@ -587,8 +587,8 @@ func appendStructDbFields(buf *[]r.StructField, path *[]int, typ r.Type, index i
 
 	typ = typeDeref(field.Type)
 	if field.Anonymous && typ.Kind() == r.Struct {
-		for i := range counter(typ.NumField()) {
-			appendStructDbFields(buf, path, typ, i)
+		for ind := range counter(typ.NumField()) {
+			appendStructDbFields(buf, path, typ, ind)
 		}
 	}
 }
@@ -605,8 +605,8 @@ func appendStructFieldPaths(buf *[]structPath, path *[]int, typ r.Type, index in
 
 	typ = typeDeref(field.Type)
 	if field.Anonymous && typ.Kind() == r.Struct {
-		for i := range counter(typ.NumField()) {
-			appendStructFieldPaths(buf, path, typ, i)
+		for ind := range counter(typ.NumField()) {
+			appendStructFieldPaths(buf, path, typ, ind)
 		}
 	}
 }
@@ -845,8 +845,8 @@ func structCols(typ r.Type) string {
 	reqStructType(`generating struct columns string from struct type`, typ)
 
 	var buf []byte
-	for i, field := range loadStructDbFields(typ) {
-		if i > 0 {
+	for ind, field := range loadStructDbFields(typ) {
+		if ind > 0 {
 			buf = append(buf, `, `...)
 		}
 		buf = Ident(FieldDbName(field)).Append(buf)
@@ -860,8 +860,8 @@ func structColsDeep(typ r.Type) string {
 	var buf []byte
 	var path []string
 
-	for i := range counter(typ.NumField()) {
-		appendFieldCols(&buf, &path, typ.Field(i))
+	for ind := range counter(typ.NumField()) {
+		appendFieldCols(&buf, &path, typ.Field(ind))
 	}
 	return bytesToMutableString(buf)
 }
@@ -878,8 +878,8 @@ func appendFieldCols(buf *[]byte, path *[]string, field r.StructField) {
 	if dbName == `` {
 		if !ok {
 			if field.Anonymous && typ.Kind() == r.Struct {
-				for i := range counter(typ.NumField()) {
-					appendFieldCols(buf, path, typ.Field(i))
+				for ind := range counter(typ.NumField()) {
+					appendFieldCols(buf, path, typ.Field(ind))
 				}
 			}
 		}
@@ -890,8 +890,8 @@ func appendFieldCols(buf *[]byte, path *[]string, field r.StructField) {
 	*path = append(*path, dbName)
 
 	if isStructType(typ) {
-		for i := range counter(typ.NumField()) {
-			appendFieldCols(buf, path, typ.Field(i))
+		for ind := range counter(typ.NumField()) {
+			appendFieldCols(buf, path, typ.Field(ind))
 		}
 		return
 	}
@@ -921,8 +921,8 @@ func addJsonPathsToDbPaths(
 	if dbName == `` {
 		if !ok {
 			if field.Anonymous && typ.Kind() == r.Struct {
-				for i := range counter(typ.NumField()) {
-					addJsonPathsToDbPaths(buf, jsonPath, dbPath, typ.Field(i))
+				for ind := range counter(typ.NumField()) {
+					addJsonPathsToDbPaths(buf, jsonPath, dbPath, typ.Field(ind))
 				}
 			}
 		}
@@ -941,8 +941,8 @@ func addJsonPathsToDbPaths(
 	}
 
 	if isStructType(typ) {
-		for i := range counter(typ.NumField()) {
-			addJsonPathsToDbPaths(buf, jsonPath, dbPath, typ.Field(i))
+		for ind := range counter(typ.NumField()) {
+			addJsonPathsToDbPaths(buf, jsonPath, dbPath, typ.Field(ind))
 		}
 	}
 }

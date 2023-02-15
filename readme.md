@@ -100,6 +100,10 @@ func Example_composition() {
 
 ## Changelog
 
+### v0.6.8
+
+Added `LaxDict`: dictionary of named arguments similar to `Dict`, but without support for validating unused arguments.
+
 ### v0.6.7
 
 Fixed an edge case bug in `Upsert`.
