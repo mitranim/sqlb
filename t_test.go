@@ -2173,7 +2173,7 @@ func TestSliceCommaAppender(t *testing.T) {
 }
 
 func TestCommaAppender(t *testing.T) {
-	type Type = CommaAppender[Appender]
+	type Type = CommaAppender[AppenderTo]
 
 	test := func(exp string, val Encoder) { testEncoder(t, exp, val) }
 
@@ -2191,8 +2191,8 @@ func TestCommaAppender(t *testing.T) {
 }
 
 func TestArrayAppender(t *testing.T) {
-	type Comma = CommaAppender[Appender]
-	type Type = ArrayAppender[Appender]
+	type Comma = CommaAppender[AppenderTo]
+	type Type = ArrayAppender[AppenderTo]
 
 	test := func(exp string, val Encoder) { testEncoder(t, exp, val) }
 

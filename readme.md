@@ -100,6 +100,12 @@ func Example_composition() {
 
 ## Changelog
 
+### v0.7.0
+
+Renamed method `.Append` in various types to `.AppendTo` for consistency with other libraries.
+
+Renamed interface `Appender` to `AppenderTo`.
+
 ### v0.6.8
 
 Added `LaxDict`: dictionary of named arguments similar to `Dict`, but without support for validating unused arguments.

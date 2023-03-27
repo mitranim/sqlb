@@ -125,7 +125,7 @@ argument.
 */
 func (self *Bui) OrphanParam(val OrdinalParam) {
 	self.Space()
-	self.Text = val.Append(self.Text)
+	self.Text = val.AppendTo(self.Text)
 }
 
 /*

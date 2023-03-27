@@ -12,7 +12,7 @@ parameters such as "$1", renumerating them as necessary.
 This method is allowed to panic. Use `(*Bui).CatchExprs` to catch
 expression-encoding panics and convert them to errors.
 
-All `Expr` types in this package also implement `Appender` and `fmt.Stringer`.
+All `Expr` types in this package also implement `AppenderTo` and `fmt.Stringer`.
 */
 type Expr interface {
 	AppendExpr([]byte, []any) ([]byte, []any)
@@ -31,7 +31,7 @@ type ParamExpr interface {
 Appends a text repesentation. Sometimes allows better efficiency than
 `fmt.Stringer`. Implemented by all `Expr` types in this package.
 */
-type Appender interface{ Append([]byte) []byte }
+type AppenderTo interface{ AppendTo([]byte) []byte }
 
 /*
 Dictionary of arbitrary arguments, ordinal and/or named. Used as input to

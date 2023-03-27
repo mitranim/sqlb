@@ -14,14 +14,19 @@ particular to convert named parameters into other expressions.
 
 Goals:
 
-	* Correctly parse whitespace, comments, quoted content, ordinal parameters,
-	  named parameters.
+	* Correctly parse whitespace, comments, quoted strings and identifiers,
+	  ordinal parameters, named parameters.
 
 	* Decently fast and allocation-free tokenization.
 
 Non-goals:
 
 	* Full SQL parser.
+
+Notable limitations:
+
+	* No special support for dollar-quoted strings, which are rarely if ever used
+	  in dynamically-generated queries.
 */
 type Tokenizer struct {
 	Source    string
@@ -329,8 +334,10 @@ type Token struct {
 	Type TokenType
 }
 
-// True if the token's type is `TokenTypeInvalid`. This is used to detect end of
-// iteration when calling `(*Tokenizer).Next`.
+/*
+True if the token's type is `TokenTypeInvalid`. This is used to detect end of
+iteration when calling `(*Tokenizer).Next`.
+*/
 func (self Token) IsInvalid() bool {
 	return self.Type == TokenTypeInvalid
 }
@@ -338,9 +345,11 @@ func (self Token) IsInvalid() bool {
 // Implement `fmt.Stringer` for debug purposes.
 func (self Token) String() string { return self.Text }
 
-// Assumes that the token has `TokenTypeOrdinalParam` and looks like a
-// Postgres-style ordinal param: "$1", "$2" and so on. Parses and returns the
-// number. Panics if the text had the wrong structure.
+/*
+Assumes that the token has `TokenTypeOrdinalParam` and looks like a
+Postgres-style ordinal param: "$1", "$2" and so on. Parses and returns the
+number. Panics if the text had the wrong structure.
+*/
 func (self Token) ParseOrdinalParam() OrdinalParam {
 	rest, err := trimPrefixByte(self.Text, ordinalParamPrefix)
 	try(errOrdinal(err))
@@ -351,10 +360,11 @@ func (self Token) ParseOrdinalParam() OrdinalParam {
 	return OrdinalParam(val)
 }
 
-// Assumes that the token has `TokenTypeNamedParam` and looks like a
-// Postgres-style named param: ":one", ":two" and so on. Parses and returns the
-// parameter's name without the leading ":". Panics if the text had the wrong
-// structure.
+/*
+Assumes that the token has `TokenTypeNamedParam` and looks like a Postgres-style
+named param: ":one", ":two" and so on. Parses and returns the parameter's name
+without the leading ":". Panics if the text had the wrong structure.
+*/
 func (self Token) ParseNamedParam() NamedParam {
 	rest, err := trimPrefixByte(self.Text, namedParamPrefix)
 	try(errNamed(err))

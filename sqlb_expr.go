@@ -16,12 +16,12 @@ type Str string
 
 // Implement the `Expr` interface, making this a sub-expression.
 func (self Str) AppendExpr(text []byte, args []any) ([]byte, []any) {
-	return self.Append(text), args
+	return self.AppendTo(text), args
 }
 
-// Implement the `Appender` interface, sometimes allowing more efficient text
+// Implement the `AppenderTo` interface, sometimes allowing more efficient text
 // encoding.
-func (self Str) Append(text []byte) []byte {
+func (self Str) AppendTo(text []byte) []byte {
 	return appendMaybeSpaced(text, string(self))
 }
 
@@ -33,12 +33,12 @@ type Ident string
 
 // Implement the `Expr` interface, making this a sub-expression.
 func (self Ident) AppendExpr(text []byte, args []any) ([]byte, []any) {
-	return self.Append(text), args
+	return self.AppendTo(text), args
 }
 
-// Implement the `Appender` interface, sometimes allowing more efficient text
+// Implement the `AppenderTo` interface, sometimes allowing more efficient text
 // encoding.
-func (self Ident) Append(text []byte) []byte {
+func (self Ident) AppendTo(text []byte) []byte {
 	validateIdent(string(self))
 	text = maybeAppendSpace(text)
 	text = append(text, quoteDouble)
@@ -52,7 +52,7 @@ func (self Ident) String() string { return AppenderString(&self) }
 
 // Shortcut for internal use.
 func (self Ident) BuiAppend(bui *Bui) {
-	bui.Text = self.Append(bui.Text)
+	bui.Text = self.AppendTo(bui.Text)
 }
 
 /*
@@ -64,12 +64,12 @@ type Identifier []string
 
 // Implement the `Expr` interface, making this a sub-expression.
 func (self Identifier) AppendExpr(text []byte, args []any) ([]byte, []any) {
-	return self.Append(text), args
+	return self.AppendTo(text), args
 }
 
-// Implement the `Appender` interface, sometimes allowing more efficient text
+// Implement the `AppenderTo` interface, sometimes allowing more efficient text
 // encoding.
-func (self Identifier) Append(text []byte) []byte {
+func (self Identifier) AppendTo(text []byte) []byte {
 	if len(self) == 0 {
 		return text
 	}
@@ -77,7 +77,7 @@ func (self Identifier) Append(text []byte) []byte {
 		if ind > 0 {
 			text = append(text, `.`...)
 		}
-		text = Ident(val).Append(text)
+		text = Ident(val).AppendTo(text)
 	}
 	return text
 }
@@ -108,27 +108,27 @@ type Path []string
 
 // Implement the `Expr` interface, making this a sub-expression.
 func (self Path) AppendExpr(text []byte, args []any) ([]byte, []any) {
-	return self.Append(text), args
+	return self.AppendTo(text), args
 }
 
-// Implement the `Appender` interface, sometimes allowing more efficient text
+// Implement the `AppenderTo` interface, sometimes allowing more efficient text
 // encoding.
-func (self Path) Append(text []byte) []byte {
+func (self Path) AppendTo(text []byte) []byte {
 	if len(self) == 0 {
 		return text
 	}
 
 	if len(self) == 1 {
-		return Ident(self[0]).Append(text)
+		return Ident(self[0]).AppendTo(text)
 	}
 
 	text = appendMaybeSpaced(text, `(`)
-	text = Ident(self[0]).Append(text)
+	text = Ident(self[0]).AppendTo(text)
 	text = append(text, `)`...)
 
 	for _, val := range self[1:] {
 		text = append(text, `.`...)
-		text = Ident(val).Append(text)
+		text = Ident(val).AppendTo(text)
 	}
 	return text
 }
@@ -159,12 +159,12 @@ type PseudoPath []string
 
 // Implement the `Expr` interface, making this a sub-expression.
 func (self PseudoPath) AppendExpr(text []byte, args []any) ([]byte, []any) {
-	return self.Append(text), args
+	return self.AppendTo(text), args
 }
 
-// Implement the `Appender` interface, sometimes allowing more efficient text
+// Implement the `AppenderTo` interface, sometimes allowing more efficient text
 // encoding.
-func (self PseudoPath) Append(text []byte) []byte {
+func (self PseudoPath) AppendTo(text []byte) []byte {
 	if len(self) == 0 {
 		return text
 	}
@@ -209,23 +209,23 @@ type AliasedPath []string
 
 // Implement the `Expr` interface, making this a sub-expression.
 func (self AliasedPath) AppendExpr(text []byte, args []any) ([]byte, []any) {
-	return self.Append(text), args
+	return self.AppendTo(text), args
 }
 
-// Implement the `Appender` interface, sometimes allowing more efficient text
+// Implement the `AppenderTo` interface, sometimes allowing more efficient text
 // encoding.
-func (self AliasedPath) Append(text []byte) []byte {
+func (self AliasedPath) AppendTo(text []byte) []byte {
 	if len(self) == 0 {
 		return text
 	}
 
 	if len(self) == 1 {
-		return Ident(self[0]).Append(text)
+		return Ident(self[0]).AppendTo(text)
 	}
 
-	text = Path(self).Append(text)
+	text = Path(self).AppendTo(text)
 	text = append(text, ` as `...)
-	text = PseudoPath(self).Append(text)
+	text = PseudoPath(self).AppendTo(text)
 	return text
 }
 
@@ -253,17 +253,17 @@ type Table Identifier
 
 // Implement the `Expr` interface, making this a sub-expression.
 func (self Table) AppendExpr(text []byte, args []any) ([]byte, []any) {
-	return self.Append(text), args
+	return self.AppendTo(text), args
 }
 
-// Implement the `Appender` interface, sometimes allowing more efficient text
+// Implement the `AppenderTo` interface, sometimes allowing more efficient text
 // encoding.
-func (self Table) Append(text []byte) []byte {
+func (self Table) AppendTo(text []byte) []byte {
 	if len(self) == 0 {
 		return text
 	}
 	text = appendMaybeSpaced(text, `table`)
-	text = Identifier(self).Append(text)
+	text = Identifier(self).AppendTo(text)
 	return text
 }
 
@@ -285,9 +285,9 @@ func (self Exprs) AppendExpr(text []byte, args []any) ([]byte, []any) {
 	return bui.Get()
 }
 
-// Implement the `Appender` interface, sometimes allowing more efficient text
+// Implement the `AppenderTo` interface, sometimes allowing more efficient text
 // encoding.
-func (self Exprs) Append(text []byte) []byte { return exprAppend(self, text) }
+func (self Exprs) AppendTo(text []byte) []byte { return exprAppend(self, text) }
 
 // Implement the `fmt.Stringer` interface for debug purposes.
 func (self Exprs) String() string { return exprString(self) }
@@ -307,9 +307,9 @@ func (self Any) AppendExpr(text []byte, args []any) ([]byte, []any) {
 	return bui.Get()
 }
 
-// Implement the `Appender` interface, sometimes allowing more efficient text
+// Implement the `AppenderTo` interface, sometimes allowing more efficient text
 // encoding.
-func (self Any) Append(text []byte) []byte { return exprAppend(self, text) }
+func (self Any) AppendTo(text []byte) []byte { return exprAppend(self, text) }
 
 // Implement the `fmt.Stringer` interface for debug purposes.
 func (self Any) String() string { return exprString(self) }
@@ -333,9 +333,9 @@ func (self Assign) AppendExpr(text []byte, args []any) ([]byte, []any) {
 	return bui.Get()
 }
 
-// Implement the `Appender` interface, sometimes allowing more efficient text
+// Implement the `AppenderTo` interface, sometimes allowing more efficient text
 // encoding.
-func (self Assign) Append(text []byte) []byte { return exprAppend(self, text) }
+func (self Assign) AppendTo(text []byte) []byte { return exprAppend(self, text) }
 
 // Implement the `fmt.Stringer` interface for debug purposes.
 func (self Assign) String() string { return exprString(self) }
@@ -353,9 +353,9 @@ func (self Eq) AppendExpr(text []byte, args []any) ([]byte, []any) {
 	return text, args
 }
 
-// Implement the `Appender` interface, sometimes allowing more efficient text
+// Implement the `AppenderTo` interface, sometimes allowing more efficient text
 // encoding.
-func (self Eq) Append(text []byte) []byte { return exprAppend(self, text) }
+func (self Eq) AppendTo(text []byte) []byte { return exprAppend(self, text) }
 
 // Implement the `fmt.Stringer` interface for debug purposes.
 func (self Eq) String() string { return exprString(self) }
@@ -398,9 +398,9 @@ func (self Neq) AppendExpr(text []byte, args []any) ([]byte, []any) {
 	return text, args
 }
 
-// Implement the `Appender` interface, sometimes allowing more efficient text
+// Implement the `AppenderTo` interface, sometimes allowing more efficient text
 // encoding.
-func (self Neq) Append(text []byte) []byte { return exprAppend(self, text) }
+func (self Neq) AppendTo(text []byte) []byte { return exprAppend(self, text) }
 
 // Implement the `fmt.Stringer` interface for debug purposes.
 func (self Neq) String() string { return exprString(self) }
@@ -438,9 +438,9 @@ func (self EqAny) AppendExpr(text []byte, args []any) ([]byte, []any) {
 	return bui.Get()
 }
 
-// Implement the `Appender` interface, sometimes allowing more efficient text
+// Implement the `AppenderTo` interface, sometimes allowing more efficient text
 // encoding.
-func (self EqAny) Append(text []byte) []byte { return exprAppend(self, text) }
+func (self EqAny) AppendTo(text []byte) []byte { return exprAppend(self, text) }
 
 // Implement the `fmt.Stringer` interface for debug purposes.
 func (self EqAny) String() string { return exprString(self) }
@@ -457,9 +457,9 @@ func (self NeqAny) AppendExpr(text []byte, args []any) ([]byte, []any) {
 	return bui.Get()
 }
 
-// Implement the `Appender` interface, sometimes allowing more efficient text
+// Implement the `AppenderTo` interface, sometimes allowing more efficient text
 // encoding.
-func (self NeqAny) Append(text []byte) []byte { return exprAppend(self, text) }
+func (self NeqAny) AppendTo(text []byte) []byte { return exprAppend(self, text) }
 
 // Implement the `fmt.Stringer` interface for debug purposes.
 func (self NeqAny) String() string { return exprString(self) }
@@ -476,9 +476,9 @@ func (self Not) AppendExpr(text []byte, args []any) ([]byte, []any) {
 	return bui.Get()
 }
 
-// Implement the `Appender` interface, sometimes allowing more efficient text
+// Implement the `AppenderTo` interface, sometimes allowing more efficient text
 // encoding.
-func (self Not) Append(text []byte) []byte { return exprAppend(self, text) }
+func (self Not) AppendTo(text []byte) []byte { return exprAppend(self, text) }
 
 // Implement the `fmt.Stringer` interface for debug purposes.
 func (self Not) String() string { return exprString(self) }
@@ -511,9 +511,9 @@ func (self Seq) AppendExpr(text []byte, args []any) ([]byte, []any) {
 	return bui.Get()
 }
 
-// Implement the `Appender` interface, sometimes allowing more efficient text
+// Implement the `AppenderTo` interface, sometimes allowing more efficient text
 // encoding.
-func (self Seq) Append(text []byte) []byte { return exprAppend(self, text) }
+func (self Seq) AppendTo(text []byte) []byte { return exprAppend(self, text) }
 
 // Implement the `fmt.Stringer` interface for debug purposes.
 func (self Seq) String() string { return exprString(self) }
@@ -567,9 +567,9 @@ func (self Comma) AppendExpr(text []byte, args []any) ([]byte, []any) {
 	return Seq{``, `, `, self[0]}.AppendExpr(text, args)
 }
 
-// Implement the `Appender` interface, sometimes allowing more efficient text
+// Implement the `AppenderTo` interface, sometimes allowing more efficient text
 // encoding.
-func (self Comma) Append(text []byte) []byte { return exprAppend(self, text) }
+func (self Comma) AppendTo(text []byte) []byte { return exprAppend(self, text) }
 
 // Implement the `fmt.Stringer` interface for debug purposes.
 func (self Comma) String() string { return exprString(self) }
@@ -590,9 +590,9 @@ func (self And) AppendExpr(text []byte, args []any) ([]byte, []any) {
 	return Cond{`true`, `and`, self[0]}.AppendExpr(text, args)
 }
 
-// Implement the `Appender` interface, sometimes allowing more efficient text
+// Implement the `AppenderTo` interface, sometimes allowing more efficient text
 // encoding.
-func (self And) Append(text []byte) []byte { return exprAppend(self, text) }
+func (self And) AppendTo(text []byte) []byte { return exprAppend(self, text) }
 
 // Implement the `fmt.Stringer` interface for debug purposes.
 func (self And) String() string { return exprString(self) }
@@ -613,9 +613,9 @@ func (self Or) AppendExpr(text []byte, args []any) ([]byte, []any) {
 	return Cond{`false`, `or`, self[0]}.AppendExpr(text, args)
 }
 
-// Implement the `Appender` interface, sometimes allowing more efficient text
+// Implement the `AppenderTo` interface, sometimes allowing more efficient text
 // encoding.
-func (self Or) Append(text []byte) []byte { return exprAppend(self, text) }
+func (self Or) AppendTo(text []byte) []byte { return exprAppend(self, text) }
 
 // Implement the `fmt.Stringer` interface for debug purposes.
 func (self Or) String() string { return exprString(self) }
@@ -631,9 +631,9 @@ func (self Ands) AppendExpr(text []byte, args []any) ([]byte, []any) {
 	return And{[]any(self)}.AppendExpr(text, args)
 }
 
-// Implement the `Appender` interface, sometimes allowing more efficient text
+// Implement the `AppenderTo` interface, sometimes allowing more efficient text
 // encoding.
-func (self Ands) Append(text []byte) []byte { return exprAppend(self, text) }
+func (self Ands) AppendTo(text []byte) []byte { return exprAppend(self, text) }
 
 // Implement the `fmt.Stringer` interface for debug purposes.
 func (self Ands) String() string { return exprString(self) }
@@ -649,9 +649,9 @@ func (self Ors) AppendExpr(text []byte, args []any) ([]byte, []any) {
 	return Or{[]any(self)}.AppendExpr(text, args)
 }
 
-// Implement the `Appender` interface, sometimes allowing more efficient text
+// Implement the `AppenderTo` interface, sometimes allowing more efficient text
 // encoding.
-func (self Ors) Append(text []byte) []byte { return exprAppend(self, text) }
+func (self Ors) AppendTo(text []byte) []byte { return exprAppend(self, text) }
 
 // Implement the `fmt.Stringer` interface for debug purposes.
 func (self Ors) String() string { return exprString(self) }
@@ -682,9 +682,9 @@ func (self Cond) AppendExpr(text []byte, args []any) ([]byte, []any) {
 	return bui.Get()
 }
 
-// Implement the `Appender` interface, sometimes allowing more efficient text
+// Implement the `AppenderTo` interface, sometimes allowing more efficient text
 // encoding.
-func (self Cond) Append(text []byte) []byte { return exprAppend(self, text) }
+func (self Cond) AppendTo(text []byte) []byte { return exprAppend(self, text) }
 
 // Implement the `fmt.Stringer` interface for debug purposes.
 func (self Cond) String() string { return exprString(self) }
@@ -751,12 +751,12 @@ type Cols [1]any
 
 // Implement the `Expr` interface, making this a sub-expression.
 func (self Cols) AppendExpr(text []byte, args []any) ([]byte, []any) {
-	return self.Append(text), args
+	return self.AppendTo(text), args
 }
 
-// Implement the `Appender` interface, sometimes allowing more efficient text
+// Implement the `AppenderTo` interface, sometimes allowing more efficient text
 // encoding.
-func (self Cols) Append(text []byte) []byte {
+func (self Cols) AppendTo(text []byte) []byte {
 	return appendMaybeSpaced(text, self.String())
 }
 
@@ -783,12 +783,12 @@ type ColsDeep [1]any
 
 // Implement the `Expr` interface, making this a sub-expression.
 func (self ColsDeep) AppendExpr(text []byte, args []any) ([]byte, []any) {
-	return self.Append(text), args
+	return self.AppendTo(text), args
 }
 
-// Implement the `Appender` interface, sometimes allowing more efficient text
+// Implement the `AppenderTo` interface, sometimes allowing more efficient text
 // encoding.
-func (self ColsDeep) Append(text []byte) []byte {
+func (self ColsDeep) AppendTo(text []byte) []byte {
 	return appendMaybeSpaced(text, self.String())
 }
 
@@ -819,9 +819,9 @@ func (self StructValues) AppendExpr(text []byte, args []any) ([]byte, []any) {
 	return bui.Get()
 }
 
-// Implement the `Appender` interface, sometimes allowing more efficient text
+// Implement the `AppenderTo` interface, sometimes allowing more efficient text
 // encoding.
-func (self StructValues) Append(text []byte) []byte { return exprAppend(self, text) }
+func (self StructValues) AppendTo(text []byte) []byte { return exprAppend(self, text) }
 
 // Implement the `fmt.Stringer` interface for debug purposes.
 func (self StructValues) String() string { return exprString(self) }
@@ -863,9 +863,9 @@ func (self StructInsert) AppendExpr(text []byte, args []any) ([]byte, []any) {
 	return bui.Get()
 }
 
-// Implement the `Appender` interface, sometimes allowing more efficient text
+// Implement the `AppenderTo` interface, sometimes allowing more efficient text
 // encoding.
-func (self StructInsert) Append(text []byte) []byte { return exprAppend(self, text) }
+func (self StructInsert) AppendTo(text []byte) []byte { return exprAppend(self, text) }
 
 // Implement the `fmt.Stringer` interface for debug purposes.
 func (self StructInsert) String() string { return exprString(self) }
@@ -907,9 +907,9 @@ func (self StructsInsert[A]) AppendExpr(text []byte, args []any) ([]byte, []any)
 	return bui.Get()
 }
 
-// Implement the `Appender` interface, sometimes allowing more efficient text
+// Implement the `AppenderTo` interface, sometimes allowing more efficient text
 // encoding.
-func (self StructsInsert[_]) Append(text []byte) []byte { return exprAppend(self, text) }
+func (self StructsInsert[_]) AppendTo(text []byte) []byte { return exprAppend(self, text) }
 
 // Implement the `fmt.Stringer` interface for debug purposes.
 func (self StructsInsert[_]) String() string { return exprString(self) }
@@ -949,9 +949,9 @@ func (self StructAssign) AppendExpr(text []byte, args []any) ([]byte, []any) {
 	return bui.Get()
 }
 
-// Implement the `Appender` interface, sometimes allowing more efficient text
+// Implement the `AppenderTo` interface, sometimes allowing more efficient text
 // encoding.
-func (self StructAssign) Append(text []byte) []byte { return exprAppend(self, text) }
+func (self StructAssign) AppendTo(text []byte) []byte { return exprAppend(self, text) }
 
 // Implement the `fmt.Stringer` interface for debug purposes.
 func (self StructAssign) String() string { return exprString(self) }
@@ -973,9 +973,9 @@ func (self SelectCols) AppendExpr(text []byte, args []any) ([]byte, []any) {
 	return SelectString{self.From, Cols{self.Type}.String()}.AppendExpr(text, args)
 }
 
-// Implement the `Appender` interface, sometimes allowing more efficient text
+// Implement the `AppenderTo` interface, sometimes allowing more efficient text
 // encoding.
-func (self SelectCols) Append(text []byte) []byte { return exprAppend(self, text) }
+func (self SelectCols) AppendTo(text []byte) []byte { return exprAppend(self, text) }
 
 // Implement the `fmt.Stringer` interface for debug purposes.
 func (self SelectCols) String() string { return exprString(self) }
@@ -997,9 +997,9 @@ func (self SelectColsDeep) AppendExpr(text []byte, args []any) ([]byte, []any) {
 	return SelectString{self.From, ColsDeep{self.Type}.String()}.AppendExpr(text, args)
 }
 
-// Implement the `Appender` interface, sometimes allowing more efficient text
+// Implement the `AppenderTo` interface, sometimes allowing more efficient text
 // encoding.
-func (self SelectColsDeep) Append(text []byte) []byte { return exprAppend(self, text) }
+func (self SelectColsDeep) AppendTo(text []byte) []byte { return exprAppend(self, text) }
 
 // Implement the `fmt.Stringer` interface for debug purposes.
 func (self SelectColsDeep) String() string { return exprString(self) }
@@ -1039,9 +1039,9 @@ func (self SelectString) AppendExpr(text []byte, args []any) ([]byte, []any) {
 	return bui.Get()
 }
 
-// Implement the `Appender` interface, sometimes allowing more efficient text
+// Implement the `AppenderTo` interface, sometimes allowing more efficient text
 // encoding.
-func (self SelectString) Append(text []byte) []byte { return exprAppend(self, text) }
+func (self SelectString) AppendTo(text []byte) []byte { return exprAppend(self, text) }
 
 // Implement the `fmt.Stringer` interface for debug purposes.
 func (self SelectString) String() string { return exprString(self) }
@@ -1061,9 +1061,9 @@ func (self Prefix) AppendExpr(text []byte, args []any) ([]byte, []any) {
 	return Wrap{self.Prefix, self.Expr, ``}.AppendExpr(text, args)
 }
 
-// Implement the `Appender` interface, sometimes allowing more efficient text
+// Implement the `AppenderTo` interface, sometimes allowing more efficient text
 // encoding.
-func (self Prefix) Append(text []byte) []byte { return exprAppend(self, text) }
+func (self Prefix) AppendTo(text []byte) []byte { return exprAppend(self, text) }
 
 // Implement the `fmt.Stringer` interface for debug purposes.
 func (self Prefix) String() string { return exprString(self) }
@@ -1093,9 +1093,9 @@ func (self Wrap) AppendExpr(text []byte, args []any) ([]byte, []any) {
 	return bui.Get()
 }
 
-// Implement the `Appender` interface, sometimes allowing more efficient text
+// Implement the `AppenderTo` interface, sometimes allowing more efficient text
 // encoding.
-func (self Wrap) Append(text []byte) []byte { return exprAppend(self, text) }
+func (self Wrap) AppendTo(text []byte) []byte { return exprAppend(self, text) }
 
 // Implement the `fmt.Stringer` interface for debug purposes.
 func (self Wrap) String() string { return exprString(self) }
@@ -1111,9 +1111,9 @@ func (self OrderBy) AppendExpr(text []byte, args []any) ([]byte, []any) {
 	return Prefix{`order by`, self[0]}.AppendExpr(text, args)
 }
 
-// Implement the `Appender` interface, sometimes allowing more efficient text
+// Implement the `AppenderTo` interface, sometimes allowing more efficient text
 // encoding.
-func (self OrderBy) Append(text []byte) []byte { return exprAppend(self, text) }
+func (self OrderBy) AppendTo(text []byte) []byte { return exprAppend(self, text) }
 
 // Implement the `fmt.Stringer` interface for debug purposes.
 func (self OrderBy) String() string { return exprString(self) }
@@ -1139,9 +1139,9 @@ func (self Select) AppendExpr(text []byte, args []any) ([]byte, []any) {
 	return bui.Get()
 }
 
-// Implement the `Appender` interface, sometimes allowing more efficient text
+// Implement the `AppenderTo` interface, sometimes allowing more efficient text
 // encoding.
-func (self Select) Append(text []byte) []byte { return exprAppend(self, text) }
+func (self Select) AppendTo(text []byte) []byte { return exprAppend(self, text) }
 
 // Implement the `fmt.Stringer` interface for debug purposes.
 func (self Select) String() string { return exprString(self) }
@@ -1165,9 +1165,9 @@ func (self Insert) AppendExpr(text []byte, args []any) ([]byte, []any) {
 	return bui.Get()
 }
 
-// Implement the `Appender` interface, sometimes allowing more efficient text
+// Implement the `AppenderTo` interface, sometimes allowing more efficient text
 // encoding.
-func (self Insert) Append(text []byte) []byte { return exprAppend(self, text) }
+func (self Insert) AppendTo(text []byte) []byte { return exprAppend(self, text) }
 
 // Implement the `fmt.Stringer` interface for debug purposes.
 func (self Insert) String() string { return exprString(self) }
@@ -1202,9 +1202,9 @@ func (self Update) AppendExpr(text []byte, args []any) ([]byte, []any) {
 	return bui.Get()
 }
 
-// Implement the `Appender` interface, sometimes allowing more efficient text
+// Implement the `AppenderTo` interface, sometimes allowing more efficient text
 // encoding.
-func (self Update) Append(text []byte) []byte { return exprAppend(self, text) }
+func (self Update) AppendTo(text []byte) []byte { return exprAppend(self, text) }
 
 // Implement the `fmt.Stringer` interface for debug purposes.
 func (self Update) String() string { return exprString(self) }
@@ -1230,9 +1230,9 @@ func (self Delete) AppendExpr(text []byte, args []any) ([]byte, []any) {
 	return bui.Get()
 }
 
-// Implement the `Appender` interface, sometimes allowing more efficient text
+// Implement the `AppenderTo` interface, sometimes allowing more efficient text
 // encoding.
-func (self Delete) Append(text []byte) []byte { return exprAppend(self, text) }
+func (self Delete) AppendTo(text []byte) []byte { return exprAppend(self, text) }
 
 // Implement the `fmt.Stringer` interface for debug purposes.
 func (self Delete) String() string { return exprString(self) }
@@ -1320,9 +1320,9 @@ func (self Upsert) AppendExpr(text []byte, args []any) ([]byte, []any) {
 	return bui.Get()
 }
 
-// Implement the `Appender` interface, sometimes allowing more efficient text
+// Implement the `AppenderTo` interface, sometimes allowing more efficient text
 // encoding.
-func (self Upsert) Append(text []byte) []byte { return exprAppend(self, text) }
+func (self Upsert) AppendTo(text []byte) []byte { return exprAppend(self, text) }
 
 // Implement the `fmt.Stringer` interface for debug purposes.
 func (self Upsert) String() string { return exprString(self) }
@@ -1369,9 +1369,9 @@ func (self SelectCount) AppendExpr(text []byte, args []any) ([]byte, []any) {
 	return SelectString{self[0], `count(*)`}.AppendExpr(text, args)
 }
 
-// Implement the `Appender` interface, sometimes allowing more efficient text
+// Implement the `AppenderTo` interface, sometimes allowing more efficient text
 // encoding.
-func (self SelectCount) Append(text []byte) []byte { return exprAppend(self, text) }
+func (self SelectCount) AppendTo(text []byte) []byte { return exprAppend(self, text) }
 
 // Implement the `fmt.Stringer` interface for debug purposes.
 func (self SelectCount) String() string { return exprString(self) }
@@ -1400,9 +1400,9 @@ func (self Call) AppendExpr(text []byte, args []any) ([]byte, []any) {
 	return bui.Get()
 }
 
-// Implement the `Appender` interface, sometimes allowing more efficient text
+// Implement the `AppenderTo` interface, sometimes allowing more efficient text
 // encoding.
-func (self Call) Append(text []byte) []byte { return exprAppend(self, text) }
+func (self Call) AppendTo(text []byte) []byte { return exprAppend(self, text) }
 
 // Implement the `fmt.Stringer` interface for debug purposes.
 func (self Call) String() string { return exprString(self) }
@@ -1435,9 +1435,9 @@ func (self RowNumberOver) AppendExpr(text []byte, args []any) ([]byte, []any) {
 	return bui.Get()
 }
 
-// Implement the `Appender` interface, sometimes allowing more efficient text
+// Implement the `AppenderTo` interface, sometimes allowing more efficient text
 // encoding.
-func (self RowNumberOver) Append(text []byte) []byte { return exprAppend(self, text) }
+func (self RowNumberOver) AppendTo(text []byte) []byte { return exprAppend(self, text) }
 
 // Implement the `fmt.Stringer` interface for debug purposes.
 func (self RowNumberOver) String() string { return exprString(self) }
@@ -1469,9 +1469,9 @@ func (self StrQ) AppendExpr(text []byte, args []any) ([]byte, []any) {
 	return Preparse(self.Text).AppendParamExpr(text, args, self.Args)
 }
 
-// Implement the `Appender` interface, sometimes allowing more efficient text
+// Implement the `AppenderTo` interface, sometimes allowing more efficient text
 // encoding.
-func (self StrQ) Append(text []byte) []byte { return exprAppend(self, text) }
+func (self StrQ) AppendTo(text []byte) []byte { return exprAppend(self, text) }
 
 // Implement the `fmt.Stringer` interface for debug purposes.
 func (self StrQ) String() string { return exprString(self) }
@@ -1542,10 +1542,10 @@ func (self Prep) AppendParamExpr(text []byte, args []any, dict ArgDict) ([]byte,
 	return self.appendParametrized(text, args, dict)
 }
 
-// Implement the `Appender` interface, sometimes allowing more efficient text
+// Implement the `AppenderTo` interface, sometimes allowing more efficient text
 // encoding.
-func (self Prep) Append(text []byte) []byte {
-	return Str(self.Source).Append(text)
+func (self Prep) AppendTo(text []byte) []byte {
+	return Str(self.Source).AppendTo(text)
 }
 
 // Implement the `fmt.Stringer` interface for debug purposes.
@@ -1657,12 +1657,12 @@ type OrdinalParam int
 
 // Implement the `Expr` interface, making this a sub-expression.
 func (self OrdinalParam) AppendExpr(text []byte, args []any) ([]byte, []any) {
-	return self.Append(text), args
+	return self.AppendTo(text), args
 }
 
-// Implement the `Appender` interface, sometimes allowing more efficient text
+// Implement the `AppenderTo` interface, sometimes allowing more efficient text
 // encoding.
-func (self OrdinalParam) Append(text []byte) []byte {
+func (self OrdinalParam) AppendTo(text []byte) []byte {
 	text = append(text, ordinalParamPrefix)
 	text = strconv.AppendInt(text, int64(self), 10)
 	return text
@@ -1682,12 +1682,12 @@ type NamedParam string
 
 // Implement the `Expr` interface, making this a sub-expression.
 func (self NamedParam) AppendExpr(text []byte, args []any) ([]byte, []any) {
-	return self.Append(text), args
+	return self.AppendTo(text), args
 }
 
-// Implement the `Appender` interface, sometimes allowing more efficient text
+// Implement the `AppenderTo` interface, sometimes allowing more efficient text
 // encoding.
-func (self NamedParam) Append(text []byte) []byte {
+func (self NamedParam) AppendTo(text []byte) []byte {
 	text = append(text, namedParamPrefix)
 	text = append(text, self...)
 	return text
@@ -1715,9 +1715,9 @@ func (self Limit) AppendExpr(text []byte, args []any) ([]byte, []any) {
 	return appendPrefixSub(text, args, `limit`, self[0])
 }
 
-// Implement the `Appender` interface, sometimes allowing more efficient text
+// Implement the `AppenderTo` interface, sometimes allowing more efficient text
 // encoding.
-func (self Limit) Append(text []byte) []byte { return exprAppend(self, text) }
+func (self Limit) AppendTo(text []byte) []byte { return exprAppend(self, text) }
 
 // Implement the `fmt.Stringer` interface for debug purposes.
 func (self Limit) String() string { return AppenderString(&self) }
@@ -1737,9 +1737,9 @@ func (self Offset) AppendExpr(text []byte, args []any) ([]byte, []any) {
 	return appendPrefixSub(text, args, `offset`, self[0])
 }
 
-// Implement the `Appender` interface, sometimes allowing more efficient text
+// Implement the `AppenderTo` interface, sometimes allowing more efficient text
 // encoding.
-func (self Offset) Append(text []byte) []byte { return exprAppend(self, text) }
+func (self Offset) AppendTo(text []byte) []byte { return exprAppend(self, text) }
 
 // Implement the `fmt.Stringer` interface for debug purposes.
 func (self Offset) String() string { return AppenderString(&self) }
@@ -1757,12 +1757,12 @@ type LimitUint uint64
 
 // Implement the `Expr` interface, making this a sub-expression.
 func (self LimitUint) AppendExpr(text []byte, args []any) ([]byte, []any) {
-	return self.Append(text), args
+	return self.AppendTo(text), args
 }
 
-// Implement the `Appender` interface, sometimes allowing more efficient text
+// Implement the `AppenderTo` interface, sometimes allowing more efficient text
 // encoding.
-func (self LimitUint) Append(text []byte) []byte {
+func (self LimitUint) AppendTo(text []byte) []byte {
 	return appendIntWith(text, `limit`, int64(self))
 }
 
@@ -1782,12 +1782,12 @@ type OffsetUint uint64
 
 // Implement the `Expr` interface, making this a sub-expression.
 func (self OffsetUint) AppendExpr(text []byte, args []any) ([]byte, []any) {
-	return self.Append(text), args
+	return self.AppendTo(text), args
 }
 
-// Implement the `Appender` interface, sometimes allowing more efficient text
+// Implement the `AppenderTo` interface, sometimes allowing more efficient text
 // encoding.
-func (self OffsetUint) Append(text []byte) []byte {
+func (self OffsetUint) AppendTo(text []byte) []byte {
 	return appendIntWith(text, `offset`, int64(self))
 }
 

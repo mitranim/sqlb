@@ -61,9 +61,9 @@ func (self Ords) AppendExpr(text []byte, args []any) ([]byte, []any) {
 	return bui.Get()
 }
 
-// Implement the `Appender` interface, sometimes allowing more efficient text
+// Implement the `AppenderTo` interface, sometimes allowing more efficient text
 // encoding.
-func (self Ords) Append(text []byte) []byte { return exprAppend(&self, text) }
+func (self Ords) AppendTo(text []byte) []byte { return exprAppend(&self, text) }
 
 // Implement the `fmt.Stringer` interface for debug purposes.
 func (self Ords) String() string { return exprString(&self) }
@@ -156,8 +156,8 @@ func (self Ordering) AppendExpr(text []byte, args []any) ([]byte, []any) {
 	}
 
 	text, args = self.Expr.AppendExpr(text, args)
-	text = self.Dir.Append(text)
-	text = self.Nulls.Append(text)
+	text = self.Dir.AppendTo(text)
+	text = self.Nulls.AppendTo(text)
 
 	if self.Using != nil {
 		text = appendMaybeSpaced(text, `using `)
@@ -167,9 +167,9 @@ func (self Ordering) AppendExpr(text []byte, args []any) ([]byte, []any) {
 	return text, args
 }
 
-// Implement the `Appender` interface, sometimes allowing more efficient text
+// Implement the `AppenderTo` interface, sometimes allowing more efficient text
 // encoding.
-func (self Ordering) Append(text []byte) []byte { return exprAppend(&self, text) }
+func (self Ordering) AppendTo(text []byte) []byte { return exprAppend(&self, text) }
 
 // Implement the `fmt.Stringer` interface for debug purposes.
 func (self Ordering) String() string { return exprString(&self) }
@@ -187,16 +187,16 @@ type Ord struct {
 
 // Implement the `Expr` interface, making this a sub-expression.
 func (self Ord) AppendExpr(text []byte, args []any) ([]byte, []any) {
-	return self.Append(text), args
+	return self.AppendTo(text), args
 }
 
-// Implement the `Appender` interface, sometimes allowing more efficient text
+// Implement the `AppenderTo` interface, sometimes allowing more efficient text
 // encoding.
-func (self Ord) Append(text []byte) []byte {
+func (self Ord) AppendTo(text []byte) []byte {
 	if len(self.Path) > 0 {
-		text = self.Path.Append(text)
-		text = self.Dir.Append(text)
-		text = self.Nulls.Append(text)
+		text = self.Path.AppendTo(text)
+		text = self.Dir.AppendTo(text)
+		text = self.Nulls.AppendTo(text)
 	}
 	return text
 }
@@ -216,9 +216,9 @@ func (self OrdAsc) AppendExpr(text []byte, args []any) ([]byte, []any) {
 	return Ord{Path: Path(self), Dir: DirAsc}.AppendExpr(text, args)
 }
 
-// Implement the `Appender` interface, sometimes allowing more efficient text
+// Implement the `AppenderTo` interface, sometimes allowing more efficient text
 // encoding.
-func (self OrdAsc) Append(text []byte) []byte { return exprAppend(&self, text) }
+func (self OrdAsc) AppendTo(text []byte) []byte { return exprAppend(&self, text) }
 
 // Implement the `fmt.Stringer` interface for debug purposes.
 func (self OrdAsc) String() string { return exprString(&self) }
@@ -232,9 +232,9 @@ func (self OrdDesc) AppendExpr(text []byte, args []any) ([]byte, []any) {
 	return Ord{Path: Path(self), Dir: DirDesc}.AppendExpr(text, args)
 }
 
-// Implement the `Appender` interface, sometimes allowing more efficient text
+// Implement the `AppenderTo` interface, sometimes allowing more efficient text
 // encoding.
-func (self OrdDesc) Append(text []byte) []byte { return exprAppend(&self, text) }
+func (self OrdDesc) AppendTo(text []byte) []byte { return exprAppend(&self, text) }
 
 // Implement the `fmt.Stringer` interface for debug purposes.
 func (self OrdDesc) String() string { return exprString(&self) }
@@ -248,9 +248,9 @@ func (self OrdNullsFirst) AppendExpr(text []byte, args []any) ([]byte, []any) {
 	return Ord{Path: Path(self), Nulls: NullsFirst}.AppendExpr(text, args)
 }
 
-// Implement the `Appender` interface, sometimes allowing more efficient text
+// Implement the `AppenderTo` interface, sometimes allowing more efficient text
 // encoding.
-func (self OrdNullsFirst) Append(text []byte) []byte { return exprAppend(&self, text) }
+func (self OrdNullsFirst) AppendTo(text []byte) []byte { return exprAppend(&self, text) }
 
 // Implement the `fmt.Stringer` interface for debug purposes.
 func (self OrdNullsFirst) String() string { return exprString(&self) }
@@ -264,9 +264,9 @@ func (self OrdNullsLast) AppendExpr(text []byte, args []any) ([]byte, []any) {
 	return Ord{Path: Path(self), Nulls: NullsLast}.AppendExpr(text, args)
 }
 
-// Implement the `Appender` interface, sometimes allowing more efficient text
+// Implement the `AppenderTo` interface, sometimes allowing more efficient text
 // encoding.
-func (self OrdNullsLast) Append(text []byte) []byte { return exprAppend(&self, text) }
+func (self OrdNullsLast) AppendTo(text []byte) []byte { return exprAppend(&self, text) }
 
 // Implement the `fmt.Stringer` interface for debug purposes.
 func (self OrdNullsLast) String() string { return exprString(&self) }
@@ -280,9 +280,9 @@ func (self OrdAscNullsFirst) AppendExpr(text []byte, args []any) ([]byte, []any)
 	return Ord{Path: Path(self), Dir: DirAsc, Nulls: NullsFirst}.AppendExpr(text, args)
 }
 
-// Implement the `Appender` interface, sometimes allowing more efficient text
+// Implement the `AppenderTo` interface, sometimes allowing more efficient text
 // encoding.
-func (self OrdAscNullsFirst) Append(text []byte) []byte { return exprAppend(&self, text) }
+func (self OrdAscNullsFirst) AppendTo(text []byte) []byte { return exprAppend(&self, text) }
 
 // Implement the `fmt.Stringer` interface for debug purposes.
 func (self OrdAscNullsFirst) String() string { return exprString(&self) }
@@ -296,9 +296,9 @@ func (self OrdAscNullsLast) AppendExpr(text []byte, args []any) ([]byte, []any) 
 	return Ord{Path: Path(self), Dir: DirAsc, Nulls: NullsLast}.AppendExpr(text, args)
 }
 
-// Implement the `Appender` interface, sometimes allowing more efficient text
+// Implement the `AppenderTo` interface, sometimes allowing more efficient text
 // encoding.
-func (self OrdAscNullsLast) Append(text []byte) []byte { return exprAppend(&self, text) }
+func (self OrdAscNullsLast) AppendTo(text []byte) []byte { return exprAppend(&self, text) }
 
 // Implement the `fmt.Stringer` interface for debug purposes.
 func (self OrdAscNullsLast) String() string { return exprString(&self) }
@@ -312,9 +312,9 @@ func (self OrdDescNullsFirst) AppendExpr(text []byte, args []any) ([]byte, []any
 	return Ord{Path: Path(self), Dir: DirDesc, Nulls: NullsFirst}.AppendExpr(text, args)
 }
 
-// Implement the `Appender` interface, sometimes allowing more efficient text
+// Implement the `AppenderTo` interface, sometimes allowing more efficient text
 // encoding.
-func (self OrdDescNullsFirst) Append(text []byte) []byte { return exprAppend(&self, text) }
+func (self OrdDescNullsFirst) AppendTo(text []byte) []byte { return exprAppend(&self, text) }
 
 // Implement the `fmt.Stringer` interface for debug purposes.
 func (self OrdDescNullsFirst) String() string { return exprString(&self) }
@@ -328,9 +328,9 @@ func (self OrdDescNullsLast) AppendExpr(text []byte, args []any) ([]byte, []any)
 	return Ord{Path: Path(self), Dir: DirDesc, Nulls: NullsLast}.AppendExpr(text, args)
 }
 
-// Implement the `Appender` interface, sometimes allowing more efficient text
+// Implement the `AppenderTo` interface, sometimes allowing more efficient text
 // encoding.
-func (self OrdDescNullsLast) Append(text []byte) []byte { return exprAppend(&self, text) }
+func (self OrdDescNullsLast) AppendTo(text []byte) []byte { return exprAppend(&self, text) }
 
 // Implement the `fmt.Stringer` interface for debug purposes.
 func (self OrdDescNullsLast) String() string { return exprString(&self) }

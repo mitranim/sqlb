@@ -36,7 +36,7 @@ func (self Err) format(typ string) string {
 
 	if typ != `` {
 		bui.Space()
-		bui.Text = Ident(typ).Append(bui.Text)
+		bui.Text = Ident(typ).AppendTo(bui.Text)
 	}
 
 	if self.While != `` {

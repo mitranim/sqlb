@@ -168,9 +168,9 @@ func (self Jel) AppendExpr(text []byte, args []any) ([]byte, []any) {
 	return bui.Get()
 }
 
-// Implement the `Appender` interface, sometimes allowing more efficient text
+// Implement the `AppenderTo` interface, sometimes allowing more efficient text
 // encoding.
-func (self Jel) Append(text []byte) []byte { return exprAppend(&self, text) }
+func (self Jel) AppendTo(text []byte) []byte { return exprAppend(&self, text) }
 
 // Implement the `fmt.Stringer` interface for debug purposes.
 func (self Jel) String() string { return exprString(&self) }

@@ -849,7 +849,7 @@ func structCols(typ r.Type) string {
 		if ind > 0 {
 			buf = append(buf, `, `...)
 		}
-		buf = Ident(FieldDbName(field)).Append(buf)
+		buf = Ident(FieldDbName(field)).AppendTo(buf)
 	}
 	return bytesToMutableString(buf)
 }
@@ -901,7 +901,7 @@ func appendFieldCols(buf *[]byte, path *[]string, field r.StructField) {
 	if len(text) > 0 {
 		text = append(text, `, `...)
 	}
-	text = AliasedPath(*path).Append(text)
+	text = AliasedPath(*path).AppendTo(text)
 
 	*buf = text
 }

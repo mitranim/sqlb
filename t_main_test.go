@@ -93,7 +93,7 @@ type list = []any
 
 type Encoder interface {
 	fmt.Stringer
-	Appender
+	AppenderTo
 }
 
 type EncoderExpr interface {
@@ -104,7 +104,7 @@ type EncoderExpr interface {
 func testEncoder(t testing.TB, exp string, val Encoder) {
 	t.Helper()
 	eq(t, exp, val.String())
-	eq(t, exp, string(val.Append(nil)))
+	eq(t, exp, string(val.AppendTo(nil)))
 }
 
 func testEncoderExpr(t testing.TB, exp string, val EncoderExpr) {
@@ -401,6 +401,6 @@ func (self Stringer) String() string {
 	return fmt.Sprint(self[0])
 }
 
-func (self Stringer) Append(buf []byte) []byte {
+func (self Stringer) AppendTo(buf []byte) []byte {
 	return append(buf, self.String()...)
 }

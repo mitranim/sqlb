@@ -8,14 +8,14 @@ import (
 )
 
 /*
-Tiny shortcut for encoding an `Appender` implementation to a string by using its
-`.Append` method, without paying for a string-to-byte conversion. Used
+Tiny shortcut for encoding an `AppenderTo` implementation to a string by using its
+`.AppendTo` method, without paying for a string-to-byte conversion. Used
 internally by many `Expr` implementations. Exported because it's handy for
 defining new types.
 */
-func AppenderString(val Appender) string {
+func AppenderString(val AppenderTo) string {
 	if val != nil {
-		return bytesToMutableString(val.Append(nil))
+		return bytesToMutableString(val.AppendTo(nil))
 	}
 	return ``
 }
@@ -38,7 +38,7 @@ encodable types, without swallowing errors. Differences from `fmt.Sprint`:
 	  types, returns an error.
 
 		* `fmt.Stringer`
-		* `Appender`
+		* `AppenderTo`
 		* `encoding.TextMarshaler`
 		* Built-in primitive types.
 			* Encodes floats without the scientific notation.
@@ -54,9 +54,9 @@ func String(src any) (string, error) {
 		return stringer.String(), nil
 	}
 
-	appender, _ := src.(Appender)
+	appender, _ := src.(AppenderTo)
 	if appender != nil {
-		return bytesToMutableString(appender.Append(nil)), nil
+		return bytesToMutableString(appender.AppendTo(nil)), nil
 	}
 
 	marshaler, _ := src.(encoding.TextMarshaler)
@@ -115,8 +115,8 @@ func String(src any) (string, error) {
 	}
 }
 
-// Variant of `Append` that panics on error.
-func TryAppend(buf []byte, src any) []byte { return try1(Append(buf, src)) }
+// Variant of `AppendTo` that panics on error.
+func TryAppend(buf []byte, src any) []byte { return try1(AppendTo(buf, src)) }
 
 /*
 Missing feature of the standard library: append the text representation of an
@@ -127,7 +127,7 @@ representations, and without swallowing errors.
 Supports ONLY the following types, in this order of priority. For other types,
 returns an error.
 
-	* `Appender`
+	* `AppenderTo`
 	* `encoding.TextMarshaler`
 	* `fmt.Stringer`
 	* Built-in primitive types.
@@ -141,14 +141,14 @@ Special cases:
 
 Used internally by `CommaAppender`, exported for advanced users.
 */
-func Append(buf []byte, src any) ([]byte, error) {
+func AppendTo(buf []byte, src any) ([]byte, error) {
 	if src == nil {
 		return buf, nil
 	}
 
-	appender, _ := src.(Appender)
+	appender, _ := src.(AppenderTo)
 	if appender != nil {
-		return appender.Append(buf), nil
+		return appender.AppendTo(buf), nil
 	}
 
 	marshaler, _ := src.(encoding.TextMarshaler)
@@ -218,7 +218,7 @@ func TryAppendWith(buf *[]byte, delim string, val any) bool {
 
 /*
 Attempts to append the given delimiter and the text representation of the given
-value, via `Append`. If after delimiter non-zero amount of bytes was appended,
+value, via `AppendTo`. If after delimiter non-zero amount of bytes was appended,
 returns true. Otherwise reverts the buffer to the original length and returns
 false. If the buffer got reallocated with increased capacity, preserves the new
 capacity.
@@ -232,7 +232,7 @@ func AppendWith(buf *[]byte, delim string, val any) (bool, error) {
 	*buf = append(*buf, delim...)
 
 	mid := len(*buf)
-	out, err := Append(*buf, val)
+	out, err := AppendTo(*buf, val)
 	if err != nil {
 		return false, err
 	}

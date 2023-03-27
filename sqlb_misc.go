@@ -100,9 +100,9 @@ const (
 // Short for "direction". Enum for ordering direction: none, "asc", "desc".
 type Dir byte
 
-// Implement the `Appender` interface, sometimes allowing more efficient text
+// Implement the `AppenderTo` interface, sometimes allowing more efficient text
 // encoding.
-func (self Dir) Append(text []byte) []byte {
+func (self Dir) AppendTo(text []byte) []byte {
 	return appendMaybeSpaced(text, self.String())
 }
 
@@ -182,9 +182,9 @@ const (
 // Enum for nulls handling in ordering: none, "nulls first", "nulls last".
 type Nulls byte
 
-// Implement the `Appender` interface, sometimes allowing more efficient text
+// Implement the `AppenderTo` interface, sometimes allowing more efficient text
 // encoding.
-func (self Nulls) Append(text []byte) []byte {
+func (self Nulls) AppendTo(text []byte) []byte {
 	return appendMaybeSpaced(text, self.String())
 }
 
