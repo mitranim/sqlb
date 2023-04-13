@@ -2282,3 +2282,9 @@ func TestOffsetUint(t *testing.T) {
 		OffsetUint(40),
 	)
 }
+
+func TestReturningAll(t *testing.T) {
+	testExpr(t, rei(`returning *`), ReturningAll{})
+	testExprs(t, rei(`returning *`), ReturningAll{})
+	testExprs(t, rei(`returning * returning *`), ReturningAll{}, ReturningAll{})
+}

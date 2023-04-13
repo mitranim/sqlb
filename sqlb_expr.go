@@ -1146,23 +1146,40 @@ func (self Select) AppendTo(text []byte) []byte { return exprAppend(self, text) 
 // Implement the `fmt.Stringer` interface for debug purposes.
 func (self Select) String() string { return exprString(self) }
 
-// Shortcut for simple "insert into A (B) values (C) returning *" expressions.
-// See the examples.
-type Insert struct {
+// Shortcut for simple `insert into A (B) values (C)` expressions.
+// Also see `Insert` which appends `returning *`.
+type InsertVoid struct {
 	Into   Ident
 	Fields any
 }
 
 // Implement the `Expr` interface, making this a sub-expression.
-func (self Insert) AppendExpr(text []byte, args []any) ([]byte, []any) {
+func (self InsertVoid) AppendExpr(text []byte, args []any) ([]byte, []any) {
 	bui := Bui{text, args}
 
 	bui.Str(`insert into`)
 	bui.Set(self.Into.AppendExpr(bui.Get()))
 	bui.Set(StructInsert{self.Fields}.AppendExpr(bui.Get()))
-	bui.Str(`returning *`)
 
 	return bui.Get()
+}
+
+// Implement the `AppenderTo` interface, sometimes allowing more efficient text
+// encoding.
+func (self InsertVoid) AppendTo(text []byte) []byte { return exprAppend(self, text) }
+
+// Implement the `fmt.Stringer` interface for debug purposes.
+func (self InsertVoid) String() string { return exprString(self) }
+
+// Shortcut for simple `insert into A (B) values (C) returning *` expressions.
+// See the examples. Also see `InsertVoid` which doesn't have `returning *`.
+type Insert InsertVoid
+
+// Implement the `Expr` interface, making this a sub-expression.
+func (self Insert) AppendExpr(text []byte, args []any) ([]byte, []any) {
+	text, args = InsertVoid(self).AppendExpr(text, args)
+	text, args = ReturningAll{}.AppendExpr(text, args)
+	return text, args
 }
 
 // Implement the `AppenderTo` interface, sometimes allowing more efficient text
@@ -1172,16 +1189,16 @@ func (self Insert) AppendTo(text []byte) []byte { return exprAppend(self, text) 
 // Implement the `fmt.Stringer` interface for debug purposes.
 func (self Insert) String() string { return exprString(self) }
 
-// Shortcut for simple "update A set B where C returning *" expressions. See the
-// examples.
-type Update struct {
+// Shortcut for simple `update A set B where C` expressions.
+// Also see `Update` which appends `returning *`.
+type UpdateVoid struct {
 	What   Ident
 	Where  any
 	Fields any
 }
 
 // Implement the `Expr` interface, making this a sub-expression.
-func (self Update) AppendExpr(text []byte, args []any) ([]byte, []any) {
+func (self UpdateVoid) AppendExpr(text []byte, args []any) ([]byte, []any) {
 	bui := Bui{text, args}
 
 	bui.Str(`update`)
@@ -1198,8 +1215,25 @@ func (self Update) AppendExpr(text []byte, args []any) ([]byte, []any) {
 		bui.Set(Cond{`null`, `and`, self.Where}.AppendExpr(bui.Get()))
 	}
 
-	bui.Str(`returning *`)
 	return bui.Get()
+}
+
+// Implement the `AppenderTo` interface, sometimes allowing more efficient text
+// encoding.
+func (self UpdateVoid) AppendTo(text []byte) []byte { return exprAppend(self, text) }
+
+// Implement the `fmt.Stringer` interface for debug purposes.
+func (self UpdateVoid) String() string { return exprString(self) }
+
+// Shortcut for simple `update A set B where C returning *` expressions.
+// See the examples. Also see `UpdateVoid` which doesn't have `returning *`.
+type Update UpdateVoid
+
+// Implement the `Expr` interface, making this a sub-expression.
+func (self Update) AppendExpr(text []byte, args []any) ([]byte, []any) {
+	text, args = UpdateVoid(self).AppendExpr(text, args)
+	text, args = ReturningAll{}.AppendExpr(text, args)
+	return text, args
 }
 
 // Implement the `AppenderTo` interface, sometimes allowing more efficient text
@@ -1209,14 +1243,15 @@ func (self Update) AppendTo(text []byte) []byte { return exprAppend(self, text) 
 // Implement the `fmt.Stringer` interface for debug purposes.
 func (self Update) String() string { return exprString(self) }
 
-// Shortcut for simple "delete from A where B returning *" expressions. See the examples.
-type Delete struct {
+// Shortcut for simple `delete from A where B` expressions.
+// Also see `Delete` which appends `returning *`.
+type DeleteVoid struct {
 	From  Ident
 	Where any
 }
 
 // Implement the `Expr` interface, making this a sub-expression.
-func (self Delete) AppendExpr(text []byte, args []any) ([]byte, []any) {
+func (self DeleteVoid) AppendExpr(text []byte, args []any) ([]byte, []any) {
 	bui := Bui{text, args}
 
 	bui.Str(`delete from`)
@@ -1226,8 +1261,25 @@ func (self Delete) AppendExpr(text []byte, args []any) ([]byte, []any) {
 	bui.Str(`where`)
 	bui.Set(Cond{`null`, `and`, self.Where}.AppendExpr(bui.Get()))
 
-	bui.Str(`returning *`)
 	return bui.Get()
+}
+
+// Implement the `AppenderTo` interface, sometimes allowing more efficient text
+// encoding.
+func (self DeleteVoid) AppendTo(text []byte) []byte { return exprAppend(self, text) }
+
+// Implement the `fmt.Stringer` interface for debug purposes.
+func (self DeleteVoid) String() string { return exprString(self) }
+
+// Shortcut for simple `delete from A where B returning *` expressions.
+// See the examples. Also see `DeleteVoid` which doesn't have `returning *`.
+type Delete DeleteVoid
+
+// Implement the `Expr` interface, making this a sub-expression.
+func (self Delete) AppendExpr(text []byte, args []any) ([]byte, []any) {
+	text, args = DeleteVoid(self).AppendExpr(text, args)
+	text, args = ReturningAll{}.AppendExpr(text, args)
+	return text, args
 }
 
 // Implement the `AppenderTo` interface, sometimes allowing more efficient text
@@ -1250,7 +1302,6 @@ Represents an SQL upsert query like this:
 		key_1 = excluded.key_1,
 		col_2 = excluded.col_2,
 		col_3 = excluded.col_3
-	returning *
 
 Notes:
 
@@ -1260,20 +1311,22 @@ Notes:
 	* `.Cols` must be a struct.
 	* `.Cols` supports `Sparse` and may be empty.
 	* `.Keys` provides names and values for key columns which participate
-	  in the `on conflict` clause.
+		in the `on conflict` clause.
 	* `.Cols` provides names and values for other columns.
+
+Also see `Upsert` which appends the `returning *` clause.
 */
-type Upsert struct {
+type UpsertVoid struct {
 	What Ident
 	Keys any
 	Cols any
 }
 
 // Implement the `Expr` interface, making this a sub-expression.
-func (self Upsert) AppendExpr(text []byte, args []any) ([]byte, []any) {
+func (self UpsertVoid) AppendExpr(text []byte, args []any) ([]byte, []any) {
 	keysIter := makeIter(self.Keys)
 	if !keysIter.has() {
-		return Insert{self.What, self.Cols}.AppendExpr(text, args)
+		return InsertVoid{self.What, self.Cols}.AppendExpr(text, args)
 	}
 
 	bui := Bui{text, args}
@@ -1316,8 +1369,24 @@ func (self Upsert) AppendExpr(text []byte, args []any) ([]byte, []any) {
 		upsertAppendAssignExcluded(&bui, colsIter, true)
 	}
 
-	bui.Str(`returning *`)
 	return bui.Get()
+}
+
+// Implement the `AppenderTo` interface, sometimes allowing more efficient text
+// encoding.
+func (self UpsertVoid) AppendTo(text []byte) []byte { return exprAppend(self, text) }
+
+// Implement the `fmt.Stringer` interface for debug purposes.
+func (self UpsertVoid) String() string { return exprString(self) }
+
+// Same as `UpsertVoid` but also appends `returning *`.
+type Upsert UpsertVoid
+
+// Implement the `Expr` interface, making this a sub-expression.
+func (self Upsert) AppendExpr(text []byte, args []any) ([]byte, []any) {
+	text, args = UpsertVoid(self).AppendExpr(text, args)
+	text, args = ReturningAll{}.AppendExpr(text, args)
+	return text, args
 }
 
 // Implement the `AppenderTo` interface, sometimes allowing more efficient text
@@ -1704,9 +1773,9 @@ func (self NamedParam) Key() string { return string(self) }
 Represents SQL expression "limit N" with an arbitrary argument or
 sub-expression. Implements `Expr`:
 
-  * If nil  -> append nothing.
-  * If expr -> append "limit (<sub-expression>)".
-  * If val  -> append "limit $N" with the corresponding argument.
+	* If nil  -> append nothing.
+	* If expr -> append "limit (<sub-expression>)".
+	* If val  -> append "limit $N" with the corresponding argument.
 */
 type Limit [1]any
 
@@ -1726,9 +1795,9 @@ func (self Limit) String() string { return AppenderString(&self) }
 Represents SQL expression "offset N" with an arbitrary sub-expression.
 Implements `Expr`:
 
-  * If nil  -> append nothing.
-  * If expr -> append "offset (<sub-expression>)".
-  * If val  -> append "offset $N" with the corresponding argument.
+	* If nil  -> append nothing.
+	* If expr -> append "offset (<sub-expression>)".
+	* If val  -> append "offset $N" with the corresponding argument.
 */
 type Offset [1]any
 
@@ -1793,3 +1862,20 @@ func (self OffsetUint) AppendTo(text []byte) []byte {
 
 // Implement the `fmt.Stringer` interface for debug purposes.
 func (self OffsetUint) String() string { return AppenderString(&self) }
+
+// Represents the Postgres `returning *` clause.
+type ReturningAll struct{}
+
+// Implement the `Expr` interface, making this a sub-expression.
+func (self ReturningAll) AppendExpr(text []byte, args []any) ([]byte, []any) {
+	return self.AppendTo(text), args
+}
+
+// Implement the `AppenderTo` interface, sometimes allowing more efficient text
+// encoding.
+func (self ReturningAll) AppendTo(text []byte) []byte {
+	return appendMaybeSpaced(text, self.String())
+}
+
+// Implement the `fmt.Stringer` interface for debug purposes.
+func (ReturningAll) String() string { return `returning *` }

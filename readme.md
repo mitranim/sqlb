@@ -100,6 +100,10 @@ func Example_composition() {
 
 ## Changelog
 
+### v0.7.1
+
+Added `InsertVoid`, `UpdateVoid`, `DeleteVoid`, `UpsertVoid`.
+
 ### v0.7.0
 
 Renamed method `.Append` in various types to `.AppendTo` for consistency with other libraries.
