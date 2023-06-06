@@ -211,7 +211,7 @@ func (self *Jel) decode(bui *Bui, input []byte) {
 	if isJsonDict(input) {
 		panic(ErrInvalidInput{Err{
 			`decoding JEL`,
-			fmt.Errorf(`unexpected dict in input: %q`, input),
+			errf(`unexpected dict in input: %q`, input),
 		}})
 	} else if isJsonList(input) {
 		self.decodeList(bui, input)
@@ -235,7 +235,7 @@ func (self *Jel) decodeList(bui *Bui, input []byte) {
 	if !(len(list) > 0) {
 		panic(ErrInvalidInput{Err{
 			`decoding JEL list`,
-			fmt.Errorf(`lists must have at least one element, found empty list`),
+			ErrStr(`lists must have at least one element, found empty list`),
 		}})
 	}
 
@@ -243,7 +243,7 @@ func (self *Jel) decodeList(bui *Bui, input []byte) {
 	if !isJsonString(head) {
 		panic(ErrInvalidInput{Err{
 			`decoding JEL list`,
-			fmt.Errorf(`first list element must be a string, found %q`, head),
+			errf(`first list element must be a string, found %q`, head),
 		}})
 	}
 
@@ -278,7 +278,7 @@ func (self *Jel) decodeOpPrefix(bui *Bui, name string, args []json.RawMessage) {
 	if len(args) != 1 {
 		panic(ErrInvalidInput{Err{
 			`decoding JEL op (prefix)`,
-			fmt.Errorf(`prefix operation %q must have exactly 1 argument, found %v`, name, len(args)),
+			errf(`prefix operation %q must have exactly 1 argument, found %v`, name, len(args)),
 		}})
 	}
 
@@ -292,7 +292,7 @@ func (self *Jel) decodeOpPostfix(bui *Bui, name string, args []json.RawMessage) 
 	if len(args) != 1 {
 		panic(ErrInvalidInput{Err{
 			`decoding JEL op (postfix)`,
-			fmt.Errorf(`postfix operation %q must have exactly 1 argument, found %v`, name, len(args)),
+			errf(`postfix operation %q must have exactly 1 argument, found %v`, name, len(args)),
 		}})
 	}
 
@@ -306,7 +306,7 @@ func (self *Jel) decodeOpInfix(bui *Bui, name string, args []json.RawMessage) {
 	if !(len(args) >= 2) {
 		panic(ErrInvalidInput{Err{
 			`decoding JEL op (infix)`,
-			fmt.Errorf(`infix operation %q must have at least 2 arguments, found %v`, name, len(args)),
+			errf(`infix operation %q must have at least 2 arguments, found %v`, name, len(args)),
 		}})
 	}
 
@@ -336,7 +336,7 @@ func (self *Jel) decodeOpAny(bui *Bui, name string, args []json.RawMessage) {
 	if len(args) != 2 {
 		panic(ErrInvalidInput{Err{
 			`decoding JEL op`,
-			fmt.Errorf(`operation %q must have exactly 2 arguments, found %v`, name, len(args)),
+			errf(`operation %q must have exactly 2 arguments, found %v`, name, len(args)),
 		}})
 	}
 
@@ -354,7 +354,7 @@ func (self *Jel) decodeOpBetween(bui *Bui, name string, args []json.RawMessage) 
 	if len(args) != 3 {
 		panic(ErrInvalidInput{Err{
 			`decoding JEL op (between)`,
-			fmt.Errorf(`operation %q must have exactly 3 arguments, found %v`, name, len(args)),
+			errf(`operation %q must have exactly 3 arguments, found %v`, name, len(args)),
 		}})
 	}
 
@@ -371,7 +371,7 @@ func (self *Jel) decodeCast(bui *Bui, name string, args []json.RawMessage) {
 	if len(args) != 1 {
 		panic(ErrInvalidInput{Err{
 			`decoding JEL op (cast)`,
-			fmt.Errorf(`cast into %q must have exactly 1 argument, found %v`, name, len(args)),
+			errf(`cast into %q must have exactly 1 argument, found %v`, name, len(args)),
 		}})
 	}
 

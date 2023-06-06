@@ -1,7 +1,6 @@
 package sqlb
 
 import (
-	"fmt"
 	r "reflect"
 	"testing"
 )
@@ -512,10 +511,9 @@ func Benchmark_error_make(b *testing.B) {
 	}
 }
 
-var (
-	benchErr      = benchErrorMake()
-	benchErrCause = fmt.Errorf(`some cause`)
-)
+var benchErr = benchErrorMake()
+
+const benchErrCause = ErrStr(`some cause`)
 
 //go:noinline
 func benchErrorMake() error {

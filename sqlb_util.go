@@ -266,7 +266,7 @@ func copyInts(src []int) []int {
 
 func trimPrefixByte(val string, prefix byte) (string, error) {
 	if !(len(val) >= byteLen && val[0] == prefix) {
-		return ``, fmt.Errorf(`expected %q to begin with %q`, val, rune(prefix))
+		return ``, errf(`expected %q to begin with %q`, val, rune(prefix))
 	}
 	return val[byteLen:], nil
 }
@@ -440,7 +440,7 @@ func validateIdent(val string) {
 	if strings.ContainsRune(val, quoteDouble) {
 		panic(ErrInvalidInput{Err{
 			`encoding ident`,
-			fmt.Errorf(`unexpected %q in SQL identifier %q`, rune(quoteDouble), val),
+			errf(`unexpected %q in SQL identifier %q`, rune(quoteDouble), val),
 		}})
 	}
 }
@@ -746,7 +746,7 @@ func reqGetter(val, method r.Type, name string) {
 	if inputs != 0 {
 		panic(ErrInternal{Err{
 			`evaluating method`,
-			fmt.Errorf(
+			errf(
 				`can't evaluate %q of %v: expected 0 parameters, found %v parameters`,
 				name, val, inputs,
 			),
@@ -757,7 +757,7 @@ func reqGetter(val, method r.Type, name string) {
 	if outputs != 1 {
 		panic(ErrInternal{Err{
 			`evaluating method`,
-			fmt.Errorf(
+			errf(
 				`can't evaluate %q of %v: expected 1 return parameter, found %v return parameters`,
 				name, val, outputs,
 			),
@@ -778,6 +778,8 @@ func typeName(typ r.Type) string {
 	}
 	return typ.Name()
 }
+
+func typeNameOf[A any](val A) string { return typeName(r.TypeOf(val)) }
 
 func isNil(val any) bool {
 	return val == nil || isValueNil(r.ValueOf(val))
@@ -1002,3 +1004,20 @@ func noescape(src unsafe.Pointer) unsafe.Pointer {
 	// nolint:staticcheck
 	return unsafe.Pointer(out ^ 0)
 }
+
+type formatState []byte
+
+var _ = fmt.Stringer(formatState(nil))
+
+func (self formatState) String() string { return bytesToMutableString(self) }
+
+var _ = fmt.State((*formatState)(nil))
+
+func (self *formatState) Write(src []byte) (int, error) {
+	*self = append(*self, src...)
+	return len(src), nil
+}
+
+func (self *formatState) Width() (int, bool)     { return 0, false }
+func (self *formatState) Precision() (int, bool) { return 0, false }
+func (self *formatState) Flag(int) bool          { return false }

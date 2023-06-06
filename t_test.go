@@ -1381,6 +1381,15 @@ func TestListQ_invalid(t *testing.T) {
 	panics(t, `unused ordinal argument "$2" (index 1)`, func() {
 		ListQ(`$1`, 10, 20).AppendExpr(nil, nil)
 	})
+
+	t.Run(`ValidateUnusedArguments`, func(t *testing.T) {
+		prev := ValidateUnusedArguments
+		ValidateUnusedArguments = false
+		t.Cleanup(func() { ValidateUnusedArguments = prev })
+
+		// No panic when validation is disabled.
+		ListQ(`$1`, 10, 20).AppendExpr(nil, nil)
+	})
 }
 
 func TestListQ_empty_args(t *testing.T) {

@@ -117,7 +117,7 @@ func (self *Tokenizer) setNext(val Token) {
 	if !self.next.IsInvalid() {
 		panic(ErrInternal{Err{
 			`parsing SQL`,
-			fmt.Errorf(
+			errf(
 				`internal error: attempted to overwrite non-empty pending token %#v with %#v`,
 				self.next, val,
 			),
@@ -152,6 +152,7 @@ func (self *Tokenizer) maybeCommentLine() {
 	}
 }
 
+// TODO support nested block comments, which are valid in SQL.
 func (self *Tokenizer) maybeCommentBlock() {
 	self.maybeStringBetween(commentBlockPrefix, commentBlockSuffix)
 }

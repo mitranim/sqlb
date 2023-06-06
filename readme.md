@@ -100,6 +100,12 @@ func Example_composition() {
 
 ## Changelog
 
+### v0.7.2
+
+Added `ValidateUnusedArguments` that globally disables or enables argument validation.
+
+Internal improvements in errors.
+
 ### v0.7.1
 
 Added `InsertVoid`, `UpdateVoid`, `DeleteVoid`, `UpsertVoid`.

@@ -3,6 +3,15 @@ package sqlb
 import r "reflect"
 
 /*
+Enables validation of unused arguments in parametrized queries generated via
+`ListQ` / `DictQ` / `StructQ` / `StrQ` / `Preparse` / `Prep`. By default,
+validation is enabled. It can be disabled in two ways: globally by changing
+this variable to `false`, or by using an argument dictionary without support
+for argument validation, such as `LaxDict`.
+*/
+var ValidateUnusedArguments = true
+
+/*
 Short for "expression". Defines an arbitrary SQL expression. The method appends
 arbitrary SQL text. In both the input and output, the arguments must correspond
 to the parameters in the SQL text. Different databases support different styles

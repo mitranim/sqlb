@@ -1,7 +1,6 @@
 package sqlb
 
 import (
-	"fmt"
 	r "reflect"
 )
 
@@ -133,7 +132,7 @@ func (self *Dir) Parse(src string) error {
 	default:
 		return ErrInvalidInput{Err{
 			`parsing order direction`,
-			fmt.Errorf(`unrecognized direction %q`, src),
+			errf(`unrecognized direction %q`, src),
 		}}
 	}
 }

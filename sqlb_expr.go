@@ -1653,7 +1653,9 @@ func (self Prep) appendParametrized(text []byte, args []any, dict ArgDict) ([]by
 		}
 	}
 
-	tracker.validate(dict)
+	if ValidateUnusedArguments {
+		tracker.validate(dict)
+	}
 	return bui.Get()
 }
 
