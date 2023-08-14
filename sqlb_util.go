@@ -1021,3 +1021,34 @@ func (self *formatState) Write(src []byte) (int, error) {
 func (self *formatState) Width() (int, bool)     { return 0, false }
 func (self *formatState) Precision() (int, bool) { return 0, false }
 func (self *formatState) Flag(int) bool          { return false }
+
+func iterAppendCols(bui *Bui, iter iter, continued bool) {
+	for iter.next() {
+		if continued || !iter.first() {
+			bui.Str(`,`)
+		}
+		Ident(FieldDbName(iter.field)).BuiAppend(bui)
+	}
+}
+
+func iterAppendVals(bui *Bui, iter iter, continued bool) {
+	for iter.next() {
+		if continued || !iter.first() {
+			bui.Str(`,`)
+		}
+		bui.SubAny(iter.value.Interface())
+	}
+}
+
+func upsertAppendAssignExcluded(bui *Bui, iter iter, continued bool) {
+	for iter.next() {
+		if continued || !iter.first() {
+			bui.Str(`,`)
+		}
+
+		name := Ident(FieldDbName(iter.field))
+		name.BuiAppend(bui)
+		bui.Str(` = excluded.`)
+		name.BuiAppend(bui)
+	}
+}

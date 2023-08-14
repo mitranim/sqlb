@@ -1272,6 +1272,40 @@ func TestUpsert_sparse(t *testing.T) {
 	)
 }
 
+func TestUpsertConflict(t *testing.T) {
+	test := exprTest(t)
+
+	test(
+		rei(`insert into "" default values returning *`),
+		UpsertConflict{},
+	)
+
+	test(
+		rei(`insert into "table" default values returning *`),
+		UpsertConflict{`table`, ``, Void{}},
+	)
+
+	test(
+		rei(`insert into "" ("one") values ($1) on conflict do update set "one" = excluded."one" returning *`, 10),
+		UpsertConflict{``, ``, UnitStruct{10}},
+	)
+
+	test(
+		rei(`insert into "table" ("one") values ($1) on conflict do update set "one" = excluded."one" returning *`, 10),
+		UpsertConflict{`table`, ``, UnitStruct{10}},
+	)
+
+	test(
+		rei(`insert into "table" ("one", "two") values ($1, $2) on conflict do update set "one" = excluded."one", "two" = excluded."two" returning *`, 10, 20),
+		UpsertConflict{`table`, ``, PairStruct{10, 20}},
+	)
+
+	test(
+		rei(`insert into "table" ("one", "two") values ($1, $2) on conflict do update set "one" = excluded."one", "two" = excluded."two" returning *`, 10, 20),
+		UpsertConflict{`table`, ``, PairStruct{10, 20}},
+	)
+}
+
 func TestSelectCount(t *testing.T) {
 	test := exprTest(t)
 

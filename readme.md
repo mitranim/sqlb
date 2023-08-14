@@ -100,6 +100,10 @@ func Example_composition() {
 
 ## Changelog
 
+### v0.7.3
+
+Added `UpsertConflictVoid`, `UpsertConflict`.
+
 ### v0.7.2
 
 Added `ValidateUnusedArguments` that globally disables or enables argument validation.

@@ -24,13 +24,13 @@ func (self FakeTracedErr) Format(out fmt.State, _ rune) {
 
 func Benchmark_errf(b *testing.B) {
 	for ind := 0; ind < b.N; ind++ {
-		errf(`error %v`, `message`)
+		_ = errf(`error %v`, `message`)
 	}
 }
 
 func Benchmark_fmt_Errorf(b *testing.B) {
 	for ind := 0; ind < b.N; ind++ {
-		fmt.Errorf(`error %v`, `message`)
+		_ = fmt.Errorf(`error %v`, `message`)
 	}
 }
 

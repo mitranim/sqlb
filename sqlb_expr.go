@@ -1396,36 +1396,60 @@ func (self Upsert) AppendTo(text []byte) []byte { return exprAppend(self, text) 
 // Implement the `fmt.Stringer` interface for debug purposes.
 func (self Upsert) String() string { return exprString(self) }
 
-func iterAppendCols(bui *Bui, iter iter, continued bool) {
-	for iter.next() {
-		if continued || !iter.first() {
-			bui.Str(`,`)
-		}
-		Ident(FieldDbName(iter.field)).BuiAppend(bui)
-	}
+/*
+Represents an SQL upsert query. Similar to `UpsertVoid` (see its comment / doc),
+but instead of generating the conflict clause from the provided "key" fields,
+requires the caller to provide a hardcoded conflict target string (the `.Conf`
+field). Useful for conflicts that involve partial indexes. Also see
+`UpsertConflict` which appends the `returning *` clause.
+*/
+type UpsertConflictVoid struct {
+	What Ident
+	Conf Str
+	Cols any
 }
 
-func iterAppendVals(bui *Bui, iter iter, continued bool) {
-	for iter.next() {
-		if continued || !iter.first() {
-			bui.Str(`,`)
-		}
-		bui.SubAny(iter.value.Interface())
+// Implement the `Expr` interface, making this a sub-expression.
+func (self UpsertConflictVoid) AppendExpr(text []byte, args []any) ([]byte, []any) {
+	text, args = InsertVoid{self.What, self.Cols}.AppendExpr(text, args)
+
+	iter := makeIter(self.Cols)
+	if !iter.has() {
+		return text, args
 	}
+
+	bui := Bui{text, args}
+	bui.Str(`on conflict`)
+	bui.Str(string(self.Conf))
+	bui.Str(`do update set`)
+	upsertAppendAssignExcluded(&bui, iter, false)
+
+	return bui.Get()
 }
 
-func upsertAppendAssignExcluded(bui *Bui, iter iter, continued bool) {
-	for iter.next() {
-		if continued || !iter.first() {
-			bui.Str(`,`)
-		}
+// Implement the `AppenderTo` interface, sometimes allowing more efficient text
+// encoding.
+func (self UpsertConflictVoid) AppendTo(text []byte) []byte { return exprAppend(self, text) }
 
-		name := Ident(FieldDbName(iter.field))
-		name.BuiAppend(bui)
-		bui.Str(` = excluded.`)
-		name.BuiAppend(bui)
-	}
+// Implement the `fmt.Stringer` interface for debug purposes.
+func (self UpsertConflictVoid) String() string { return exprString(self) }
+
+// Same as `UpsertConflictVoid` but also appends `returning *`.
+type UpsertConflict UpsertConflictVoid
+
+// Implement the `Expr` interface, making this a sub-expression.
+func (self UpsertConflict) AppendExpr(text []byte, args []any) ([]byte, []any) {
+	text, args = UpsertConflictVoid(self).AppendExpr(text, args)
+	text, args = ReturningAll{}.AppendExpr(text, args)
+	return text, args
 }
+
+// Implement the `AppenderTo` interface, sometimes allowing more efficient text
+// encoding.
+func (self UpsertConflict) AppendTo(text []byte) []byte { return exprAppend(self, text) }
+
+// Implement the `fmt.Stringer` interface for debug purposes.
+func (self UpsertConflict) String() string { return exprString(self) }
 
 /*
 Shortcut for selecting `count(*)` from an arbitrary sub-expression. Equivalent
