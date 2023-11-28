@@ -95,7 +95,7 @@ func (self *Tokenizer) nextToken() Token {
 		if self.maybeNamedParam(); self.cursor > mid {
 			return self.choose(start, mid, TokenTypeNamedParam)
 		}
-		self.char()
+		self.skipChar()
 	}
 
 	if self.cursor > start {
@@ -128,7 +128,7 @@ func (self *Tokenizer) setNext(val Token) {
 
 func (self *Tokenizer) maybeWhitespace() {
 	for self.more() && charsetWhitespace.has(self.headByte()) {
-		self.scan(1)
+		self.skipBytes(1)
 	}
 }
 
@@ -145,10 +145,10 @@ func (self *Tokenizer) maybeQuotedGrave() {
 }
 
 func (self *Tokenizer) maybeCommentLine() {
-	if !self.scannedString(commentLinePrefix) {
+	if !self.skippedString(commentLinePrefix) {
 		return
 	}
-	for self.more() && !self.scannedNewline() && self.scannedChar() {
+	for self.more() && !self.skippedNewline() && self.skippedChar() {
 	}
 }
 
@@ -163,85 +163,85 @@ func (self *Tokenizer) maybeDoubleColon() {
 
 func (self *Tokenizer) maybeOrdinalParam() {
 	start := self.cursor
-	if !self.scannedByte(ordinalParamPrefix) {
+	if !self.skippedByte(ordinalParamPrefix) {
 		return
 	}
-	if !self.scannedDigits() {
+	if !self.skippedDigits() {
 		self.cursor = start
 	}
 }
 
 func (self *Tokenizer) maybeNamedParam() {
 	start := self.cursor
-	if !self.scannedByte(namedParamPrefix) {
+	if !self.skippedByte(namedParamPrefix) {
 		return
 	}
-	if !self.scannedIdent() {
+	if !self.skippedIdent() {
 		self.cursor = start
 	}
 }
 
 func (self *Tokenizer) maybeString(val string) {
-	_ = self.scannedString(val)
+	_ = self.skippedString(val)
 }
 
-func (self *Tokenizer) scannedNewline() bool {
+func (self *Tokenizer) skippedNewline() bool {
 	start := self.cursor
 	self.maybeNewline()
 	return self.cursor > start
 }
 
 func (self *Tokenizer) maybeNewline() {
-	self.scan(leadingNewlineSize(self.rest()))
+	self.skipBytes(leadingNewlineSize(self.rest()))
 }
 
-func (self *Tokenizer) scannedChar() bool {
+func (self *Tokenizer) skippedChar() bool {
 	start := self.cursor
-	self.char()
+	self.skipChar()
 	return self.cursor > start
 }
 
-func (self *Tokenizer) char() {
+func (self *Tokenizer) skipChar() {
 	_, size := utf8.DecodeRuneInString(self.rest())
-	self.scan(size)
+	self.skipBytes(size)
 }
 
-func (self *Tokenizer) scannedDigits() bool {
+func (self *Tokenizer) skippedDigits() bool {
 	start := self.cursor
-	self.maybeDigits()
+	self.maybeSkipDigits()
 	return self.cursor > start
 }
 
-func (self *Tokenizer) maybeDigits() {
+func (self *Tokenizer) maybeSkipDigits() {
 	for self.more() && charsetDigitDec.has(self.headByte()) {
-		self.scan(1)
+		self.skipBytes(1)
 	}
 }
 
-func (self *Tokenizer) scannedIdent() bool {
+func (self *Tokenizer) skippedIdent() bool {
 	start := self.cursor
 	self.maybeIdent()
 	return self.cursor > start
 }
 
 func (self *Tokenizer) maybeIdent() {
-	if !self.scannedByteIn(charsetIdentStart) {
+	if !self.skippedByteFromCharset(charsetIdentStart) {
 		return
 	}
-	for self.more() && self.scannedByteIn(charsetIdent) {
+	for self.more() && self.skippedByteFromCharset(charsetIdent) {
 	}
 }
 
 func (self *Tokenizer) maybeStringBetween(prefix, suffix string) {
-	if !self.scannedString(prefix) {
+	if !self.skippedString(prefix) {
 		return
 	}
 
 	for self.more() {
-		if self.scannedString(suffix) {
+		if self.skippedString(suffix) {
 			return
 		}
-		self.char()
+		self.skipChar()
 	}
 
 	panic(ErrUnexpectedEOF{Err{
@@ -251,15 +251,15 @@ func (self *Tokenizer) maybeStringBetween(prefix, suffix string) {
 }
 
 func (self *Tokenizer) maybeStringBetweenBytes(prefix, suffix byte) {
-	if !self.scannedByte(prefix) {
+	if !self.skippedByte(prefix) {
 		return
 	}
 
 	for self.more() {
-		if self.scannedByte(suffix) {
+		if self.skippedByte(suffix) {
 			return
 		}
-		self.char()
+		self.skipChar()
 	}
 
 	panic(ErrUnexpectedEOF{Err{
@@ -268,7 +268,7 @@ func (self *Tokenizer) maybeStringBetweenBytes(prefix, suffix byte) {
 	}})
 }
 
-func (self *Tokenizer) scan(val int) {
+func (self *Tokenizer) skipBytes(val int) {
 	self.cursor += val
 }
 
@@ -288,32 +288,29 @@ func (self *Tokenizer) headByte() byte {
 	return self.Source[self.cursor]
 }
 
-func (self *Tokenizer) scannedByte(val byte) bool {
+func (self *Tokenizer) skippedByte(val byte) bool {
 	if self.headByte() == val {
-		self.scan(1)
+		self.skipBytes(1)
 		return true
 	}
 	return false
 }
 
-func (self *Tokenizer) scannedByteIn(val *charset) bool {
+func (self *Tokenizer) skippedByteFromCharset(val *charset) bool {
 	if val.has(self.headByte()) {
-		self.scan(1)
+		self.skipBytes(1)
 		return true
 	}
 	return false
 }
 
-func (self *Tokenizer) scannedString(val string) bool {
+func (self *Tokenizer) skippedString(val string) bool {
 	if strings.HasPrefix(self.rest(), val) {
-		self.scan(len(val))
+		self.skipBytes(len(val))
 		return true
 	}
 	return false
 }
-
-// Part of `Token`.
-type TokenType byte
 
 const (
 	TokenTypeInvalid TokenType = iota
@@ -328,6 +325,9 @@ const (
 	TokenTypeOrdinalParam
 	TokenTypeNamedParam
 )
+
+// Part of `Token`.
+type TokenType byte
 
 // Represents an arbitrary chunk of SQL text parsed by `Tokenizer`.
 type Token struct {

@@ -10,7 +10,7 @@ shortcut.
 type List []any
 
 // Implement part of the `ArgDict` interface.
-func (self List) IsEmpty() bool { return self.Len() == 0 }
+func (self List) IsEmpty() bool { return self.Len() <= 0 }
 
 // Implement part of the `ArgDict` interface.
 func (self List) Len() int { return len(self) }
@@ -43,7 +43,7 @@ the `DictQ` shortcut.
 type Dict map[string]any
 
 // Implement part of the `ArgDict` interface.
-func (self Dict) IsEmpty() bool { return self.Len() == 0 }
+func (self Dict) IsEmpty() bool { return self.Len() <= 0 }
 
 // Implement part of the `ArgDict` interface.
 func (self Dict) Len() int { return len(self) }

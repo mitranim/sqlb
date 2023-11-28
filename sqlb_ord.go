@@ -88,7 +88,7 @@ func (self Ords) RowNumberOver() RowNumberOver {
 }
 
 // Returns true if there are no non-nil items.
-func (self Ords) IsEmpty() bool { return self.Len() == 0 }
+func (self Ords) IsEmpty() bool { return self.Len() <= 0 }
 
 // Returns the amount of non-nil items.
 func (self Ords) Len() (count int) {
@@ -205,7 +205,7 @@ func (self Ord) AppendTo(text []byte) []byte {
 func (self Ord) String() string { return AppenderString(&self) }
 
 // True if the path is empty.
-func (self Ord) IsEmpty() bool { return len(self.Path) == 0 }
+func (self Ord) IsEmpty() bool { return len(self.Path) <= 0 }
 
 // Same as `Ord{Path: path, Dir: DirAsc}` but more syntactically convenient
 // and uses less memory.

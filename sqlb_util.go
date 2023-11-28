@@ -45,7 +45,9 @@ var (
 
 type charset [256]bool
 
-func (self *charset) has(val byte) bool { return self[val] }
+func (self *charset) has(val byte) bool {
+	return self != nil && self[val]
+}
 
 func (self *charset) addStr(vals string) *charset {
 	for _, val := range vals {
@@ -164,11 +166,11 @@ func appendMaybeSpaced(text []byte, suffix string) []byte {
 }
 
 func hasDelimPrefix(text string) bool {
-	return len(text) == 0 || charsetDelimEnd.has(text[0])
+	return len(text) <= 0 || charsetDelimEnd.has(text[0])
 }
 
 func hasDelimSuffix(text string) bool {
-	return len(text) == 0 || charsetDelimStart.has(text[len(text)-1])
+	return len(text) <= 0 || charsetDelimStart.has(text[len(text)-1])
 }
 
 var ordReg = regexp.MustCompile(
@@ -677,7 +679,7 @@ func (self *iter) next() bool {
 	return false
 }
 
-func (self *iter) empty() bool { return self.count == 0 }
+func (self *iter) empty() bool { return self.count <= 0 }
 func (self *iter) first() bool { return self.count == 1 }
 
 /*
@@ -738,7 +740,7 @@ func kindOf(val any) r.Kind {
 
 func isStructTypeEmpty(typ r.Type) bool {
 	typ = typeDeref(typ)
-	return typ == nil || typ.Kind() != r.Struct || typ.NumField() == 0
+	return typ == nil || typ.Kind() != r.Struct || typ.NumField() <= 0
 }
 
 func reqGetter(val, method r.Type, name string) {
@@ -767,7 +769,7 @@ func reqGetter(val, method r.Type, name string) {
 
 func reqStructType(while string, typ r.Type) {
 	if typ.Kind() != r.Struct {
-		panic(errExpectedStruct(while, typ.Name()))
+		panic(errExpectedStruct(while, typ.String()))
 	}
 }
 
@@ -776,7 +778,7 @@ func typeName(typ r.Type) string {
 	if typ == nil {
 		return `nil`
 	}
-	return typ.Name()
+	return typ.String()
 }
 
 func typeNameOf[A any](val A) string { return typeName(r.TypeOf(val)) }

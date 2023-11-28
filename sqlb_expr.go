@@ -70,7 +70,7 @@ func (self Identifier) AppendExpr(text []byte, args []any) ([]byte, []any) {
 // Implement the `AppenderTo` interface, sometimes allowing more efficient text
 // encoding.
 func (self Identifier) AppendTo(text []byte) []byte {
-	if len(self) == 0 {
+	if len(self) <= 0 {
 		return text
 	}
 	for ind, val := range self {
@@ -114,7 +114,7 @@ func (self Path) AppendExpr(text []byte, args []any) ([]byte, []any) {
 // Implement the `AppenderTo` interface, sometimes allowing more efficient text
 // encoding.
 func (self Path) AppendTo(text []byte) []byte {
-	if len(self) == 0 {
+	if len(self) <= 0 {
 		return text
 	}
 
@@ -165,7 +165,7 @@ func (self PseudoPath) AppendExpr(text []byte, args []any) ([]byte, []any) {
 // Implement the `AppenderTo` interface, sometimes allowing more efficient text
 // encoding.
 func (self PseudoPath) AppendTo(text []byte) []byte {
-	if len(self) == 0 {
+	if len(self) <= 0 {
 		return text
 	}
 
@@ -215,7 +215,7 @@ func (self AliasedPath) AppendExpr(text []byte, args []any) ([]byte, []any) {
 // Implement the `AppenderTo` interface, sometimes allowing more efficient text
 // encoding.
 func (self AliasedPath) AppendTo(text []byte) []byte {
-	if len(self) == 0 {
+	if len(self) <= 0 {
 		return text
 	}
 
@@ -259,7 +259,7 @@ func (self Table) AppendExpr(text []byte, args []any) ([]byte, []any) {
 // Implement the `AppenderTo` interface, sometimes allowing more efficient text
 // encoding.
 func (self Table) AppendTo(text []byte) []byte {
-	if len(self) == 0 {
+	if len(self) <= 0 {
 		return text
 	}
 	text = appendMaybeSpaced(text, `table`)
@@ -536,7 +536,7 @@ func (self *Seq) appendEmpty(bui *Bui) {
 func (self Seq) appendSlice(bui *Bui, src any) {
 	val := valueOf(src)
 
-	if val.Len() == 0 {
+	if val.Len() <= 0 {
 		self.appendEmpty(bui)
 		return
 	}
@@ -625,7 +625,7 @@ type Ands []any
 
 // Implement the `Expr` interface, making this a sub-expression.
 func (self Ands) AppendExpr(text []byte, args []any) ([]byte, []any) {
-	if len(self) == 0 {
+	if len(self) <= 0 {
 		return And{}.AppendExpr(text, args)
 	}
 	return And{[]any(self)}.AppendExpr(text, args)
@@ -643,7 +643,7 @@ type Ors []any
 
 // Implement the `Expr` interface, making this a sub-expression.
 func (self Ors) AppendExpr(text []byte, args []any) ([]byte, []any) {
-	if len(self) == 0 {
+	if len(self) <= 0 {
 		return Or{}.AppendExpr(text, args)
 	}
 	return Or{[]any(self)}.AppendExpr(text, args)
@@ -885,7 +885,7 @@ type StructsInsert[A any] []A
 
 // Implement the `Expr` interface, making this a sub-expression.
 func (self StructsInsert[A]) AppendExpr(text []byte, args []any) ([]byte, []any) {
-	if len(self) == 0 {
+	if len(self) <= 0 {
 		return text, args
 	}
 

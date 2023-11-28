@@ -36,9 +36,9 @@ func TypeCols(typ r.Type) string {
 
 /*
 Returns the output of `ColsDeep` for the given type, but takes `reflect.Type` as
-input, rather than a type-carrying `any`. Used internally by
-`ColsDeep`. The result is cached and reused. Subsequent calls for the same type
-are nearly free.
+input, rather than a type-carrying `any`. Used internally by `ColsDeep`. The
+result is cached and reused. Subsequent calls for the same type are nearly
+free.
 */
 func TypeColsDeep(typ r.Type) string {
 	return colsDeepCache.Get(typeElem(typ))
@@ -54,7 +54,7 @@ func Preparse(val string) Prep { return prepCache.Get(val) }
 
 // Shortcut for `StrQ{text, List(args)}`.
 func ListQ(text string, args ...any) StrQ {
-	if len(args) == 0 {
+	if len(args) <= 0 {
 		return StrQ{text, nil}
 	}
 	return StrQ{text, List(args)}
@@ -62,7 +62,7 @@ func ListQ(text string, args ...any) StrQ {
 
 // Shortcut for `StrQ{text, Dict(args)}`.
 func DictQ(text string, args map[string]any) StrQ {
-	if len(args) == 0 {
+	if len(args) <= 0 {
 		return StrQ{text, nil}
 	}
 	return StrQ{text, Dict(args)}

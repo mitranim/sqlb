@@ -1683,14 +1683,14 @@ func TestPrep_Parse(t *testing.T) {
 		t.Helper()
 		prep := Prep{Source: src}
 		prep.Parse()
-		eq(t, Prep{src, tokens, hasParams}, prep)
+		eq(t, Prep{Source: src, Tokens: tokens, HasParams: hasParams}, prep)
 	})
 }
 
 func TestPreparse(t *testing.T) {
 	testPrepParse(t, func(src string, tokens []Token, hasParams bool) {
 		t.Helper()
-		eq(t, Prep{src, tokens, hasParams}, Preparse(src))
+		eq(t, Prep{Source: src, Tokens: tokens, HasParams: hasParams}, Preparse(src))
 	})
 }
 

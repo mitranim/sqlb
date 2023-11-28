@@ -159,7 +159,7 @@ falling back on "true" if empty.
 func (self Jel) AppendExpr(text []byte, args []any) ([]byte, []any) {
 	bui := Bui{text, args}
 
-	if len(self.Text) == 0 {
+	if len(self.Text) <= 0 {
 		bui.Str(`true`)
 	} else {
 		self.decode(&bui, stringToBytesUnsafe(self.Text))
